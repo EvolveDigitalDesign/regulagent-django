@@ -1,0 +1,18 @@
+-r base.txt
+
+# Runtime server
+gunicorn>=21.2
+uvicorn>=0.30
+
+# Observability (keep light; leverage AWS CloudWatch/X-Ray via sidecars/agents)
+opentelemetry-api>=1.25
+opentelemetry-sdk>=1.25
+opentelemetry-instrumentation-django>=0.46
+opentelemetry-instrumentation-psycopg2>=0.46
+opentelemetry-instrumentation-redis>=0.46
+opentelemetry-exporter-otlp>=1.25
+
+# Security
+argon2-cffi>=23.0
+
+

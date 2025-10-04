@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    platform: linux/amd64
+    container_name: regulagent_db
+    environment:
+      - POSTGRES_DB=${DB_NAME:-regulagent}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-regulagent}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: regulagent_redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: regulagent_web
+    entrypoint: ["/app/docker/entrypoint.sh"]
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ..:/app
+    ports:
+      - "8001:8000"
+    env_file:
+      - ../.env
+    environment:
+      - DB_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=ra_config.settings.development
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: regulagent_celery
+    entrypoint: ["/app/docker/entrypoint.sh"]
+    command: celery -A ra_config worker -l INFO
+    volumes:
+      - ..:/app
+    env_file:
+      - ../.env
+    environment:
+      - DB_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=ra_config.settings.development
+    depends_on:
+      - web
+      - redis
+
+  beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: regulagent_beat
+    entrypoint: ["/app/docker/entrypoint.sh"]
+    command: celery -A ra_config beat -l INFO
+    volumes:
+      - ..:/app
+    env_file:
+      - ../.env
+    environment:
+      - DB_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=ra_config.settings.development
+    depends_on:
+      - celery
+
+  flower:
+    image: mher/flower:2.0
+    container_name: regulagent_flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+
+volumes:
+  db_data:
+  redis_data:
+
+

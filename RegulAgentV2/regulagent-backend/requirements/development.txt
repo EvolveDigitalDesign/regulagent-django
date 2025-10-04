@@ -1,0 +1,25 @@
+-r base.txt
+
+# Developer experience
+black>=23.0
+flake8>=6.1
+isort>=5.12
+mypy>=1.10
+pre-commit>=3.6
+pip-tools>=7.4  # for compiling pinned prod locks later
+
+# Testing
+pytest>=7.4
+pytest-django>=4.7
+pytest-cov>=4.1
+factory-boy>=3.3
+coverage>=7.3
+
+# Django dev utilities
+django-debug-toolbar>=4.2
+django-extensions>=3.2
+ipython>=8.12
+watchdog>=3.0
+flower>=2.0  # Celery monitoring
+
+

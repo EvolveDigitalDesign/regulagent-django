@@ -1,0 +1,113 @@
+version: '3.8'
+
+# Production-oriented compose for parity and local validation only.
+# In AWS we will run these as separate ECS Fargate services with:
+# - API/Workers: ECS Fargate tasks behind an ALB (cost: pay-per-use, no EC2 mgmt)
+# - DB: RDS Postgres (with PostGIS + pgvector extension enabled)
+# - Cache/Broker: ElastiCache Redis (start small; consider SQS broker later if costs justify)
+# - Storage: S3 with lifecycle to Glacier for old artifacts
+# - Secrets: AWS Secrets Manager (rotate, least-privilege)
+# This compose file keeps environment contracts identical and allows staging or on-prem deploys.
+
+services:
+  # NOTE: No DB service here. In production use RDS. Provide DB_* via environment/Secrets Manager.
+
+  redis:
+    image: redis:7
+    container_name: regulagent_redis_prod
+    command: redis-server --appendonly yes
+    # In AWS, replace with ElastiCache; keep this only for staging/on-prem.
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    # In AWS, use an image built by CI and deployed to ECR. Here we build locally for parity.
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: regulagent_web_prod
+    # Use ASGI for websocket/headroom; keep workers conservative to control cost.
+    entrypoint: ["/app/docker/entrypoint.sh"]
+    command: >-
+      gunicorn ra_config.asgi:application
+      -k uvicorn.workers.UvicornWorker
+      -b 0.0.0.0:8000
+      --workers ${WEB_WORKERS:-2}
+      --threads ${WEB_THREADS:-4}
+      --timeout 60
+    # For local staging, expose 8000; in AWS, use ALB target group instead.
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env.production
+    environment:
+      - DJANGO_SETTINGS_MODULE=ra_config.settings.production
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      # OCR provider selection: textract|gdocai|auto (router chooses based on confidence/page type)
+      - OCR_PROVIDER=${OCR_PROVIDER:-auto}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+
+  celery:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: regulagent_celery_prod
+    entrypoint: ["/app/docker/entrypoint.sh"]
+    command: >-
+      celery -A ra_config worker
+      -l INFO
+      --concurrency=${CELERY_CONCURRENCY:-2}
+      -Q default,parsing,planning
+    env_file:
+      - ../.env.production
+    environment:
+      - DJANGO_SETTINGS_MODULE=ra_config.settings.production
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - OCR_PROVIDER=${OCR_PROVIDER:-auto}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+
+  beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: regulagent_beat_prod
+    entrypoint: ["/app/docker/entrypoint.sh"]
+    command: >-
+      celery -A ra_config beat
+      -l INFO
+      --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    env_file:
+      - ../.env.production
+    environment:
+      - DJANGO_SETTINGS_MODULE=ra_config.settings.production
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+
+volumes:
+  redis_data:
+
+# Cost notes:
+# - Start with t4g.medium (or similar) for ECS tasks and scale via CPU/Memory utilization. Keep WEB_WORKERS low.
+# - Use RDS burstable class (e.g., db.t4g.medium) and enable storage autoscaling; turn on pg_stat_statements for tuning.
+# - ElastiCache: start with cache.t4g.small, scale when Celery queue depth/latency justifies.
+# - S3 lifecycle: transition artifacts to Glacier after 90 days to cut storage costs.
+
