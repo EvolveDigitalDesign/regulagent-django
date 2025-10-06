@@ -83,4 +83,31 @@ docker compose -f docker/compose.dev.yml exec web python manage.py shell
 ## License
 Proprietary
 
+ ## Current functionality (alpha)
+
+- Public Core (read-only APIs)
+  - GET /api/public/wells/
+  - GET /api/public/facts/
+  - GET /api/public/casing/
+  - GET /api/public/perforations/
+  - GET /api/public/depths/
+
+- Tenant Overlay
+  - Models: WellEngagement, CanonicalFacts
+  - Resolver: merges Canonical → Public → Registry with provenance
+  - GET /api/overlay/engagements/{id}/resolved-facts
+
+- Seed example (optional)
+  - One fictional TX well (api14=42013312340000) with public facts and overlay
+  - Use a one-off `docker compose exec web python -` script (see setup in PR notes)
+
+## Architecture notes
+
+- Data layers
+  - Public Core (global): WellRegistry, PublicFacts, PublicCasingString, PublicPerforation, PublicWellDepths, PublicArtifacts
+  - Tenant Overlay (private): WellEngagement, CanonicalFacts (drafts/overrides)
+- Fact precedence: CanonicalFacts → PublicFacts → WellRegistry
+- Resolver output is the single source of truth for kernel/materials/UI
+
+
 

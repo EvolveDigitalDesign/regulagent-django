@@ -1,0 +1,81 @@
+policy_id: tx.w3a
+policy_version: 2025.10.0
+jurisdiction: TX
+form: W-3A
+effective_from: 2025-10-01
+
+base:
+  citations:
+    surface_plug: tx.tac.16.3.14
+    casing_shoe: tx.tac.16.3.14
+    duqw: tx.tac.16.3.14
+  requirements:
+    surface_plug:
+      citation_keys: ["tx.tac.16.3.14(b)"]
+    surface_casing_shoe_plug_min_ft:
+      value: 100
+      citation_keys: ["tx.tac.16.3.14(e)(2)"]
+    uqw_isolation_min_len_ft:
+      value: 100
+      citation_keys: ["tx.tac.16.3.14(g)(1)"]
+    uqw_below_base_ft:
+      value: 50
+      citation_keys: ["tx.tac.16.3.14(g)(1)"]
+    uqw_above_base_ft:
+      value: 50
+      citation_keys: ["tx.tac.16.3.14(g)(1)"]
+    cement_above_cibp_min_ft:
+      value: 20
+      citation_keys: ["tx.tac.16.3.14(g)(3)"]
+    cap_above_highest_perf_ft:
+      # base TAC has no generic cap above perf; district overlays can set
+      # value: null
+      citation_keys: []
+    never_below_cibp:
+      # value: true/false
+      citation_keys: ["tx.tac.16.3.14(b)"]
+    duqw_isolation_required:
+      # value: true/false
+      citation_keys: ["tx.tac.16.3.14(g)(1)"]
+    squeeze_factor_default:
+      # value:
+      citation_keys: ["tx.tac.16.3.14(b)"]
+    open_hole_excess_default:
+      # value:
+      citation_keys: ["tx.tac.16.3.14(b)"]
+    casing_shoe_coverage_ft:
+      value: 100
+      citation_keys: ["tx.tac.16.3.14(e)(2)"]
+    duqw_coverage_ft:
+      value: 100
+      citation_keys: ["tx.tac.16.3.14(g)(1)"]
+    tag_wait_hours:
+      value: 4
+      citation_keys: []
+  cement_class:
+    cutoff_ft: 0
+    shallow_class: ["A", "C"]
+    deep_class: ["H", "G"]
+
+district_overlays:
+  '08':
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        policy_section_ids: []
+        citation_keys: []
+  '08A':
+    notes:
+      - TAG surface casing shoe plugs in open hole
+  '7C':
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        policy_section_ids: []
+        citation_keys: []
+    notes:
+      - Give district office ≥4-hour notice before setting plugs
+
+preferences:
+  allow_merge_caps_within_ft:
+  prefer_bridge_plug_cap:

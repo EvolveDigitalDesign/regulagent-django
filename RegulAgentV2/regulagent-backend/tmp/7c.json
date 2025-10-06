@@ -1,0 +1,5435 @@
+{
+  "metadata": {
+    "title": "District 7C Plugging Book",
+    "dateAmended": "February 26, 2016",
+    "district": "7C District Office",
+    "contactPhone": "(325) 657-7450",
+    "totalSheets": 16,
+    "conversionDate": "2025-09-13T15:04:33.223928",
+    "summary": {
+      "totalProcedures": 11,
+      "totalCounties": 14,
+      "totalFieldSpecs": 1011
+    }
+  },
+  "generalProcedures": [
+    {
+      "number": 1,
+      "text": "The San Angelo District Office must be given a minimum of four hours notice prior to setting any plugs  (325) 657-7450."
+    },
+    {
+      "number": 2,
+      "text": "The operator of a well must have a representative on location during the setting of all plugs.  The operator's representative cannot be an employee of the plugging contractor unless the contractor and the operator are the same entity."
+    },
+    {
+      "number": 3,
+      "text": "All water flows, loss circulation, holes in pipe, gas pressure, well control, hydrogen sulfide, and junked hole problems should immediately be brought to the attention of the Railroad Commission’s District Office."
+    },
+    {
+      "number": 4,
+      "text": "The well must be circulated with mud prior to setting plugs.  The mud must have a minimum weight of 9.5 lbs./gal. and a  funnel viscosity of at least 40 seconds.  The well should be in a static condition before cement is pumped."
+    },
+    {
+      "number": 5,
+      "text": "The cementing contractor must have an active Organization Report and be on the Commission’s Approved Cementer’s List.   Revisions to Statewide Rule 3.14 effective December 28, 1999, allow for the operator and  plugging contractor to be held responsible for the proper plugging of a well."
+    },
+    {
+      "number": 6,
+      "text": "All cement plugs must be pumped through tubing or drill pipe (casing is not allowed).  When casing is not recovered, the casing must be perforated and cement pumped under a packer of cement retainer.  The casing should be pressure tested prior to perforating."
+    },
+    {
+      "number": 7,
+      "text": "Class C cement must be used for all plugs.    The cement must meet API specifications for cement commonly used in West Texas for normal oilfield applications, and  the cement should be “neat” cement with no fillers or additives. Class C should have a slurry weight of 14.8 Lbs./Gal  and Class H 16.4 Lbs./Gal."
+    },
+    {
+      "number": 8,
+      "text": "Plugs placed across the base of usable quality water, across the surface casing shoe, above the Coleman Junction and                 San Andres, and above perforations that were used to produce out of or inject into must be tagged."
+    },
+    {
+      "number": 9,
+      "text": "All cast iron bridge plugs must have a minimum of 20’ of cement on top of the plug in order to be considered a proper plug."
+    },
+    {
+      "number": 10,
+      "text": "Pits must be emptied immediately.  Revisions to SWR 3.14 effective December 28, 1999, require that pits be backfilled and piping, vessels, tanks, equipment, loose junk and trash be removed from a plugged well within 120 days of  the time plugging operations are completed."
+    },
+    {
+      "number": 11,
+      "text": "No permanent dry hole caps or welded plates may be left on a well after plugging operations are completed."
+    }
+  ],
+  "pluggingChart": {
+    "openHole": {
+      "description": "Cement sacks for open hole",
+      "diameters": [
+        "6.75",
+        "7.875",
+        "8.75",
+        "11",
+        "12.25"
+      ],
+      "data": [
+        {
+          "depth": "surface",
+          "values": [
+            40,
+            45,
+            50,
+            65,
+            75
+          ]
+        },
+        {
+          "depth": "1000",
+          "values": [
+            40,
+            45,
+            50,
+            65,
+            75
+          ]
+        },
+        {
+          "depth": "2000",
+          "values": [
+            40,
+            45,
+            50,
+            65,
+            85
+          ]
+        },
+        {
+          "depth": "3000",
+          "values": [
+            40,
+            45,
+            50,
+            75,
+            90
+          ]
+        },
+        {
+          "depth": "4000",
+          "values": [
+            40,
+            45,
+            50,
+            80,
+            100
+          ]
+        },
+        {
+          "depth": "5000",
+          "values": [
+            40,
+            45,
+            55,
+            85,
+            105
+          ]
+        },
+        {
+          "depth": "6000",
+          "values": [
+            40,
+            45,
+            60,
+            90,
+            null
+          ]
+        },
+        {
+          "depth": "7000",
+          "values": [
+            40,
+            50,
+            65,
+            null,
+            null
+          ]
+        },
+        {
+          "depth": "8000",
+          "values": [
+            40,
+            55,
+            65,
+            null,
+            null
+          ]
+        },
+        {
+          "depth": "9000",
+          "values": [
+            45,
+            55,
+            75,
+            null,
+            null
+          ]
+        },
+        {
+          "depth": "10000",
+          "values": [
+            50,
+            60,
+            80,
+            null,
+            null
+          ]
+        }
+      ]
+    },
+    "casing": {
+      "description": "Cement sacks for casing",
+      "diameters": [
+        "2.875",
+        "4.5",
+        "5.5",
+        "7",
+        "8.625",
+        "9.625",
+        "13.375"
+      ],
+      "data": [
+        {
+          "depth": "Surface",
+          "values": [
+            2,
+            20,
+            20,
+            25,
+            35,
+            40,
+            75
+          ]
+        },
+        {
+          "depth": "1000",
+          "values": [
+            2,
+            20,
+            20,
+            25,
+            35,
+            40,
+            80
+          ]
+        },
+        {
+          "depth": "2000",
+          "values": [
+            3,
+            20,
+            20,
+            25,
+            35,
+            40,
+            85
+          ]
+        },
+        {
+          "depth": "3000",
+          "values": [
+            3,
+            20,
+            20,
+            25,
+            40,
+            45,
+            90
+          ]
+        },
+        {
+          "depth": "4000",
+          "values": [
+            3,
+            20,
+            20,
+            25,
+            40,
+            50,
+            95
+          ]
+        },
+        {
+          "depth": "5000",
+          "values": [
+            3,
+            20,
+            20,
+            30,
+            45,
+            55,
+            110
+          ]
+        },
+        {
+          "depth": "6000",
+          "values": [
+            3,
+            20,
+            20,
+            30,
+            45,
+            60,
+            null
+          ]
+        },
+        {
+          "depth": "7000",
+          "values": [
+            3,
+            20,
+            20,
+            30,
+            50,
+            60,
+            null
+          ]
+        },
+        {
+          "depth": "8000",
+          "values": [
+            4,
+            20,
+            20,
+            30,
+            50,
+            65,
+            null
+          ]
+        },
+        {
+          "depth": "9000",
+          "values": [
+            4,
+            20,
+            25,
+            35,
+            55,
+            70,
+            null
+          ]
+        },
+        {
+          "depth": "10000",
+          "values": [
+            4,
+            20,
+            25,
+            35,
+            60,
+            70,
+            null
+          ]
+        }
+      ]
+    },
+    "casingOpenHole": {
+      "description": "Cement sacks for casing/open hole",
+      "combinations": [
+        "85/8-77/8",
+        "95/8-81/4",
+        "103/4-83/4",
+        "123/4-11",
+        "133/8-121/2"
+      ],
+      "data": [
+        {
+          "depth": "Surface",
+          "values": [
+            55,
+            60,
+            65,
+            75,
+            85
+          ]
+        },
+        {
+          "depth": "1000",
+          "values": [
+            55,
+            65,
+            75,
+            85,
+            95
+          ]
+        },
+        {
+          "depth": "2000",
+          "values": [
+            60,
+            70,
+            80,
+            95,
+            105
+          ]
+        },
+        {
+          "depth": "3000",
+          "values": [
+            65,
+            80,
+            85,
+            105,
+            null
+          ]
+        },
+        {
+          "depth": "4000",
+          "values": [
+            70,
+            90,
+            90,
+            115,
+            null
+          ]
+        },
+        {
+          "depth": "5000",
+          "values": [
+            75,
+            95,
+            null,
+            null,
+            null
+          ]
+        }
+      ]
+    }
+  },
+  "counties": {
+    "coke": {
+      "name": "Coke County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the bottom of",
+        "the plug should be roughly 50 FT. above the perfs.  We also need a plug placed",
+        "immediately above each formation listed.  If the field in question is not present, please either",
+        "use known tops in the subject field or the tops in a listed nearby field.  In addition, we need",
+        "a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the shoe.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest",
+        "usable quality water stratum, an additional 100 FT. cement plug must be placed inside"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "Arledge",
+          "formations": "Penn",
+          "tops": 5100,
+          "distance_and_direction_from_nearby_town_": "10 East Silver"
+        },
+        {
+          "formations": "Canyon ",
+          "tops": 4950
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 2900,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 2000
+        },
+        {
+          "field_name": "Bronte",
+          "formations": "Gardner",
+          "tops": 5000,
+          "distance_and_direction_from_nearby_town_": "1 West Bronte"
+        },
+        {
+          "formations": "Capps Lime",
+          "tops": 4500
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Buffalo Creek",
+          "formations": "Caddo",
+          "tops": 6200,
+          "distance_and_direction_from_nearby_town_": "5 South Robert Lee"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 4800
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Fort Chadbourne",
+          "formations": "Odom Lime",
+          "tops": 5500,
+          "distance_and_direction_from_nearby_town_": "15 North Bronte"
+        },
+        {
+          "formations": "Gardner",
+          "tops": 5200
+        },
+        {
+          "formations": "Gray ",
+          "tops": 5000
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Higgins Ranch",
+          "formations": "Canyon",
+          "tops": 4300
+        },
+        {
+          "formations": "Cisco",
+          "tops": 4100
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "I. A. B.",
+          "formations": "Strawn",
+          "tops": 5800,
+          "distance_and_direction_from_nearby_town_": "10 S.E. Silver"
+        },
+        {
+          "formations": "Harris",
+          "tops": 5500
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5400
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 2800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 2000
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 1000
+        },
+        {
+          "field_name": "Jameson",
+          "formations": "Reef",
+          "tops": 6100,
+          "distance_and_direction_from_nearby_town_": "15 S.W. Silver"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 5700
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 3100,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 2000
+        },
+        {
+          "field_name": "Leppart",
+          "formations": "Palo Pinto",
+          "tops": 4200,
+          "distance_and_direction_from_nearby_town_": "1 E. Bronte"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 3100
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Lygay",
+          "formations": "Canyon",
+          "tops": 5800,
+          "distance_and_direction_from_nearby_town_": "10 South Silver"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 3400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 2000
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 1000
+        },
+        {
+          "field_name": "Meadow Creek ",
+          "formations": "Canyon",
+          "tops": 5200,
+          "distance_and_direction_from_nearby_town_": "5 S.E. Silver"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 2900,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 2000
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 1000
+        },
+        {
+          "field_name": "Millican",
+          "formations": "Strawn",
+          "tops": 5700,
+          "distance_and_direction_from_nearby_town_": "10 West Robert Lee"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 2800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 2000
+        },
+        {
+          "field_name": "Rawlings",
+          "formations": "Gardner",
+          "tops": 5300,
+          "distance_and_direction_from_nearby_town_": "4 North Bronte"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 4100
+        },
+        {
+          "formations": "Coleman Junction ",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Ray",
+          "formations": "Cisco",
+          "tops": 3900,
+          "distance_and_direction_from_nearby_town_": "15 East Silver"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 2600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 2000
+        },
+        {
+          "field_name": "Schuch",
+          "formations": "Caddo",
+          "tops": 6200,
+          "distance_and_direction_from_nearby_town_": "12 S. Robert Lee"
+        },
+        {
+          "formations": "Palo Pinto",
+          "tops": 4900
+        },
+        {
+          "formations": "Cisco",
+          "tops": 3400
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Silver",
+          "formations": "Odom ",
+          "tops": 6800,
+          "distance_and_direction_from_nearby_town_": "1 S. of Silver"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5750
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 3400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 2000
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 1000
+        },
+        {
+          "field_name": "Weaver Ranch",
+          "formations": "Ellen.",
+          "tops": 6350,
+          "distance_and_direction_from_nearby_town_": "15 South Robert Lee"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 5400
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Wendkirk",
+          "formations": "Crosscut",
+          "tops": 5000,
+          "distance_and_direction_from_nearby_town_": "6 S.W. Bronte"
+        },
+        {
+          "formations": "Cisco Sd.",
+          "tops": 3700
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        }
+      ]
+    },
+    "concho": {
+      "name": "Concho County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the bottom of",
+        "the plug should be roughly 50 FT. above the perfs.  We also need a plug placed",
+        "immediately above each formation listed.  If the field in question is not present, please either",
+        "use known tops in the subject field or the tops in a listed nearby field.  In addition, we need",
+        "a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the shoe.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest",
+        "usable qualtiy water stratum, an additional 100 FT. cement plug must be placed inside"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "Agaritta",
+          "formations": "King",
+          "tops": 2050,
+          "distance_and_direction_from_nearby_town_": "4 S.W. Eden"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Bilmik",
+          "formations": "Harkey",
+          "tops": 3050,
+          "distance_and_direction_from_nearby_town_": "7 S.W. Eden"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Brady Mountain",
+          "formations": "Canyon",
+          "tops": 3300,
+          "distance_and_direction_from_nearby_town_": "5 North Eden"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Bunger",
+          "formations": "Goen",
+          "tops": 3800,
+          "distance_and_direction_from_nearby_town_": "12 S.W. Eden"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 2500
+        },
+        {
+          "formations": "Coleman Juction",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Canning",
+          "formations": "Strawn",
+          "tops": 3700,
+          "distance_and_direction_from_nearby_town_": "10 S.W. Eden"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 2600
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Chambers Ranch",
+          "formations": "Cisco",
+          "tops": 2550,
+          "distance_and_direction_from_nearby_town_": "8 West Eden"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 900,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Dare I",
+          "formations": "Hope Sand",
+          "tops": 1500,
+          "distance_and_direction_from_nearby_town_": "4 South Eden "
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Don Pfluger (Detrital)",
+          "formations": "Hickory Sand",
+          "tops": "4140-4180 TAG",
+          "distance_and_direction_from_nearby_town_": "6 South Eden"
+        },
+        {
+          "formations": "Welch Sand",
+          "tops": 3650
+        },
+        {
+          "formations": "Strawn",
+          "tops": 3160
+        },
+        {
+          "formations": "Palo Pinto",
+          "tops": 2700
+        },
+        {
+          "formations": "Hope Sd",
+          "tops": 1680
+        },
+        {
+          "formations": "Coleman Junction ",
+          "tops": 500
+        },
+        {
+          "field_name": "Frog Pond Creek",
+          "formations": "Cook",
+          "tops": 3100,
+          "distance_and_direction_from_nearby_town_": "11 West Eden"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 900,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Fuzzy Creek",
+          "formations": "Goen",
+          "tops": 3300,
+          "distance_and_direction_from_nearby_town_": "4 North Paint Rock"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Ha-Jo",
+          "formations": "Canyon",
+          "tops": 4000,
+          "distance_and_direction_from_nearby_town_": "10 S.W. Eden"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 2600
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Halloran",
+          "formations": "Cross Cut",
+          "tops": 3200,
+          "distance_and_direction_from_nearby_town_": "6 S.W. Eden"
+        },
+        {
+          "formations": "Coleman Jucntion",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Hartgrove",
+          "formations": "Harkey",
+          "tops": 2500,
+          "distance_and_direction_from_nearby_town_": "7 East Paint Rock"
+        },
+        {
+          "formations": "Tannehill",
+          "tops": 1000
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Janor",
+          "formations": "Ranger",
+          "tops": 2200,
+          "distance_and_direction_from_nearby_town_": "2 South Millersview"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Ki-Sim",
+          "formations": "Palo Pinto",
+          "tops": 2700,
+          "distance_and_direction_from_nearby_town_": "8 North Eden"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Letcher",
+          "formations": "Winchell",
+          "tops": 2250,
+          "distance_and_direction_from_nearby_town_": "5 South Eden"
+        },
+        {
+          "formations": "Cook",
+          "tops": 1300
+        },
+        {
+          "formations": "Coleman Juction",
+          "tops": 400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Lightsey",
+          "formations": "Harkey",
+          "tops": 3450,
+          "distance_and_direction_from_nearby_town_": "4 South Eola"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Millersview",
+          "formations": "Harkey",
+          "tops": 2400,
+          "distance_and_direction_from_nearby_town_": "1 North Millersview"
+        },
+        {
+          "formations": "Swastika",
+          "tops": 1650
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Mozelle Nutt",
+          "formations": "Caddo",
+          "tops": 3950,
+          "distance_and_direction_from_nearby_town_": "8 West Eden"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 3500
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Osburn",
+          "formations": "Palo Pinto",
+          "tops": 2100,
+          "distance_and_direction_from_nearby_town_": "7 South Eden"
+        },
+        {
+          "formations": "Cook ",
+          "tops": 1300
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Paint Rock ",
+          "formations": "Gardner",
+          "tops": 3750,
+          "distance_and_direction_from_nearby_town_": "3 South Paint Rock"
+        },
+        {
+          "formations": "Goen",
+          "tops": 3550
+        },
+        {
+          "formations": "Canyon",
+          "tops": 3100
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Paint Rock, West",
+          "formations": "Gardner",
+          "tops": 3650,
+          "distance_and_direction_from_nearby_town_": "5 South Paint Rock"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 3150
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Pate",
+          "formations": "Strawn",
+          "tops": 4050,
+          "distance_and_direction_from_nearby_town_": "14 S.W. Eden"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 2500
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Pipe Dream",
+          "formations": "King",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "6 S.W. Eden"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Sunbelt",
+          "formations": "Strawn",
+          "tops": 1400,
+          "distance_and_direction_from_nearby_town_": "10 S.E. Eden"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 450,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Terry Norman",
+          "formations": "King",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "9 S.W. Eden"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        }
+      ]
+    },
+    "crockett": {
+      "name": "Crockett County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the bottom",
+        "of the plug should be roughly 50 FT. above the perfs.  We also need a plug placed",
+        "immediately above each formation listed.  If the field in question is not present, please",
+        "either use known tops in the subject field or the tops in a listed nearby field.  In addition,",
+        "we need a plug placed 50 FT. below the shoe of the surface/intermediate casing",
+        "to 50 FT. above the casing.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "Adams - Baggett Ranch",
+          "formations": "Canyon",
+          "tops": 4800,
+          "distance_and_direction_from_nearby_town_": "25 South Ozona"
+        },
+        {
+          "formations": "Spaberry",
+          "tops": 3100
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 1600
+        },
+        {
+          "field_name": "American",
+          "formations": "Canyon",
+          "tops": 5600,
+          "distance_and_direction_from_nearby_town_": "35 S.W. Ozona"
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 3800
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2300
+        },
+        {
+          "field_name": "Angus",
+          "formations": "Strawn",
+          "tops": 8500,
+          "distance_and_direction_from_nearby_town_": "10 S.E. Ozona"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5700
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3900
+        },
+        {
+          "formations": "Glorieta",
+          "tops": 2400
+        },
+        {
+          "field_name": "Bachelor Hill",
+          "formations": "Grayburg",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "25 West Ozona"
+        },
+        {
+          "field_name": "Baggett",
+          "formations": "Ellen",
+          "tops": 7900,
+          "distance_and_direction_from_nearby_town_": "12 S.E. Ozona"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5700
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3900
+        },
+        {
+          "formations": "Glorieta",
+          "tops": 2400
+        },
+        {
+          "field_name": "Block 44",
+          "formations": "Shallow",
+          "tops": 1700,
+          "distance_and_direction_from_nearby_town_": "25 N. Ozona"
+        },
+        {
+          "field_name": "Bluegrass",
+          "formations": "Wolf",
+          "tops": 4900,
+          "distance_and_direction_from_nearby_town_": "2 N.E. Iraan"
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3100
+        },
+        {
+          "field_name": "Brown-Bassett",
+          "formations": "Ellen",
+          "tops": 13400,
+          "distance_and_direction_from_nearby_town_": "20 South Sheffield"
+        },
+        {
+          "formations": "Devonian",
+          "tops": 11900
+        },
+        {
+          "formations": "Strawn",
+          "tops": 11600
+        },
+        {
+          "formations": "Canyon",
+          "tops": 8800
+        },
+        {
+          "formations": "Wolf",
+          "tops": 6000
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3000
+        },
+        {
+          "formations": "Glorieta",
+          "tops": 1500
+        },
+        {
+          "field_name": "Buckhorn",
+          "formations": "Ellen",
+          "tops": 7900,
+          "distance_and_direction_from_nearby_town_": "25 South Barnhart"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5000
+        },
+        {
+          "formations": "Clearfork ",
+          "tops": 1800
+        },
+        {
+          "field_name": "Carpenter, NW",
+          "formations": "Wolf",
+          "tops": 6300,
+          "distance_and_direction_from_nearby_town_": "15 N.W. Iraan"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3500
+        },
+        {
+          "formations": "Gray",
+          "tops": 1300
+        },
+        {
+          "field_name": "Condo",
+          "formations": "Ellen",
+          "tops": 7100,
+          "distance_and_direction_from_nearby_town_": "40 N.W. Ozona"
+        },
+        {
+          "formations": "Permo Penn Detrital",
+          "tops": 6800
+        },
+        {
+          "formations": "Leonard",
+          "tops": 4200
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2000
+        },
+        {
+          "field_name": "Cox",
+          "formations": "Strawn",
+          "tops": 9500,
+          "distance_and_direction_from_nearby_town_": "25 S.W. Ozona"
+        },
+        {
+          "formations": "Canyon ",
+          "tops": 5700
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2100
+        },
+        {
+          "formations": "Queen",
+          "tops": 840
+        },
+        {
+          "field_name": "Dudley",
+          "formations": "Dev.",
+          "tops": 8900,
+          "distance_and_direction_from_nearby_town_": "20 S.W. Ozona"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5800
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2200
+        },
+        {
+          "formations": "Queen",
+          "tops": 900
+        },
+        {
+          "field_name": "Elkhorn",
+          "formations": "Ellen",
+          "tops": 7100,
+          "distance_and_direction_from_nearby_town_": "20 N.W. Ozona"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 4900
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1000
+        },
+        {
+          "field_name": "Escondido",
+          "formations": "Fuss",
+          "tops": 8500,
+          "distance_and_direction_from_nearby_town_": "40 N.W. Ozona"
+        },
+        {
+          "formations": "Strawn ",
+          "tops": 7600
+        },
+        {
+          "formations": "Leonard",
+          "tops": 4200
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2500
+        },
+        {
+          "field_name": "Farmer",
+          "formations": "San Andres",
+          "tops": 1900,
+          "distance_and_direction_from_nearby_town_": "30 N.W. Ozona"
+        },
+        {
+          "field_name": "Holt Ranch",
+          "formations": "Ellen",
+          "tops": 7900,
+          "distance_and_direction_from_nearby_town_": "14 mi NE Ozona"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 7650
+        },
+        {
+          "formations": "T/Consol. Sand",
+          "tops": 3900
+        },
+        {
+          "formations": "SA/Grayburg",
+          "tops": 1200
+        },
+        {
+          "field_name": "Hoover",
+          "formations": "San Andres",
+          "tops": 1400,
+          "distance_and_direction_from_nearby_town_": "22 East Sheffield"
+        },
+        {
+          "field_name": "Howard Draw",
+          "formations": "Shallow",
+          "tops": 1200,
+          "distance_and_direction_from_nearby_town_": "20 West Ozona"
+        },
+        {
+          "formations": "Queen",
+          "tops": 780
+        },
+        {
+          "field_name": "Hudspeth",
+          "formations": "Canyon",
+          "tops": 4000,
+          "distance_and_direction_from_nearby_town_": "25 S.W. Ozona"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 3400
+        },
+        {
+          "field_name": "JM",
+          "formations": "Ellen",
+          "tops": 12800,
+          "distance_and_direction_from_nearby_town_": "40 S.W. Ozona"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 11000
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5400
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2100
+        },
+        {
+          "field_name": "Lin (Wolfcamp)",
+          "formations": "Wolfcamp",
+          "tops": 6000,
+          "distance_and_direction_from_nearby_town_": "Northeast Crockett Co"
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 5000
+        },
+        {
+          "formations": "Canyon",
+          "tops": 4400
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1900
+        },
+        {
+          "formations": "Queen",
+          "tops": 1300
+        },
+        {
+          "field_name": "Lita",
+          "formations": "Canyon",
+          "tops": 5700,
+          "distance_and_direction_from_nearby_town_": "30 S.W. Ozona"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2100
+        },
+        {
+          "field_name": "Live Oak Draw N.",
+          "formations": "Strawn",
+          "tops": 8900,
+          "distance_and_direction_from_nearby_town_": "10 S.E. Ozona"
+        },
+        {
+          "formations": "Penn",
+          "tops": 7750
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5500
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3500
+        },
+        {
+          "field_name": "Maggie Neal",
+          "formations": "Grayburg",
+          "tops": 2200,
+          "distance_and_direction_from_nearby_town_": "30 N.W. Ozona"
+        },
+        {
+          "field_name": "Midway Lane",
+          "formations": "Ellen",
+          "tops": 7300,
+          "distance_and_direction_from_nearby_town_": "15 N. Ozona"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 7100
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5300
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 4100
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1800
+        },
+        {
+          "formations": "Permian",
+          "tops": 1100
+        },
+        {
+          "field_name": "Miller",
+          "formations": "Ellen",
+          "tops": 11400,
+          "distance_and_direction_from_nearby_town_": "20 South Ozona"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 10000
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5000
+        },
+        {
+          "formations": "Glorieta",
+          "tops": 2400
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 1800
+        },
+        {
+          "field_name": "Morrison",
+          "formations": "Wolf Lower",
+          "tops": 3600,
+          "distance_and_direction_from_nearby_town_": "33 S.E. Sheffield"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 1700
+        },
+        {
+          "field_name": "Noelke",
+          "formations": "Wolf",
+          "tops": 4950,
+          "distance_and_direction_from_nearby_town_": "5 S.E. Iraan"
+        },
+        {
+          "formations": "Queen",
+          "tops": 1900
+        },
+        {
+          "formations": "Felker",
+          "tops": 1000
+        },
+        {
+          "field_name": "Olson",
+          "formations": "San Andres",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "15 S.E. Iraan"
+        },
+        {
+          "formations": "Yates",
+          "tops": 1100
+        },
+        {
+          "field_name": "Ozona (Canyon Sand)",
+          "formations": "Canyon",
+          "tops": 5100,
+          "distance_and_direction_from_nearby_town_": "18 S.W. Ozona"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 4000
+        },
+        {
+          "formations": "Refoil 3200",
+          "tops": 3200
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2200
+        },
+        {
+          "field_name": "Ozona, N. E. ",
+          "formations": "Canyon",
+          "tops": 7500,
+          "distance_and_direction_from_nearby_town_": "12 N.E. Ozona"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5100
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2000
+        },
+        {
+          "field_name": "Ozona, SW. (Strawn)",
+          "formations": "Strawn",
+          "tops": 9300,
+          "distance_and_direction_from_nearby_town_": "14 S.W. Ozona"
+        },
+        {
+          "formations": "Canyon ",
+          "tops": 5800
+        },
+        {
+          "formations": "Refoil 3200",
+          "tops": 3200
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 1800
+        },
+        {
+          "field_name": "Page-Taurus",
+          "formations": "Wolf",
+          "tops": 8300,
+          "distance_and_direction_from_nearby_town_": "10 North Iraan"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 5700
+        },
+        {
+          "formations": "San Andres",
+          "tops": 3700
+        },
+        {
+          "field_name": "Pikes Peak Draw",
+          "formations": "Ellen",
+          "tops": 6900,
+          "distance_and_direction_from_nearby_town_": "12 N.W. Ozona"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5800
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3100
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1200
+        },
+        {
+          "field_name": "Pure-Bean",
+          "formations": "San Andres",
+          "tops": 1200,
+          "distance_and_direction_from_nearby_town_": "10 N.W. Ozona"
+        },
+        {
+          "field_name": "Sheep Mountain",
+          "formations": "Wolf",
+          "tops": 7200,
+          "distance_and_direction_from_nearby_town_": "15 S.E. Rankin"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 5700
+        },
+        {
+          "formations": "San Andres",
+          "tops": 3700
+        },
+        {
+          "field_name": "Shannon",
+          "formations": "Strawn",
+          "tops": 8400,
+          "distance_and_direction_from_nearby_town_": "20 mi NW Ozona"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 6400
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2400
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 2000
+        },
+        {
+          "field_name": "Simpson",
+          "formations": "Wolf",
+          "tops": 5500,
+          "distance_and_direction_from_nearby_town_": "12 N.E. Sheffield"
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3500,
+          "distance_and_direction_from_nearby_town_": "28 mi NW Ozona"
+        },
+        {
+          "formations": "SA",
+          "tops": 2200
+        },
+        {
+          "formations": "Gray ",
+          "tops": 1900
+        },
+        {
+          "formations": "Queen",
+          "tops": 1500
+        },
+        {
+          "field_name": "Tippett, North",
+          "formations": "Ellen",
+          "tops": 6500,
+          "distance_and_direction_from_nearby_town_": "15 S.W. Rankin"
+        },
+        {
+          "formations": "McKee",
+          "tops": 5800
+        },
+        {
+          "formations": "Glor",
+          "tops": 2250
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1700
+        },
+        {
+          "field_name": "Todd",
+          "formations": "Ellen",
+          "tops": 6900
+        },
+        {
+          "formations": "Strawn",
+          "tops": 6400
+        },
+        {
+          "formations": "Crinoidal",
+          "tops": 5700
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3800
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1800
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 1400
+        },
+        {
+          "field_name": "V. I. P.",
+          "formations": "Canyon",
+          "tops": 5600,
+          "distance_and_direction_from_nearby_town_": "22 S.W. Ozona"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2000
+        },
+        {
+          "field_name": "Vaughn",
+          "formations": "Ellen",
+          "tops": 7500,
+          "distance_and_direction_from_nearby_town_": "16 N.W. Ozona"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5200
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1300
+        },
+        {
+          "formations": "Queen",
+          "tops": 1000
+        },
+        {
+          "field_name": "Whitehead",
+          "formations": "Strawn",
+          "tops": 8100,
+          "distance_and_direction_from_nearby_town_": "16 S.E. Ozona"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 6000
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2400
+        },
+        {
+          "field_name": "World",
+          "formations": "Grayburg",
+          "tops": 2600,
+          "distance_and_direction_from_nearby_town_": "35 N.W. Ozona"
+        },
+        {
+          "field_name": "Wyatt",
+          "formations": "San Andres",
+          "tops": 1200,
+          "distance_and_direction_from_nearby_town_": "15 N.W. Ozona"
+        }
+      ]
+    },
+    "irion": {
+      "name": "Irion County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the bottom of",
+        "the plug should be roughly 50 FT. above the perfs.  We also need a plug placed",
+        "immediately above each formation listed.  If the field in question is not present, please either",
+        "use known tops in the subject field or the tops in a listed nearby field.  In addition, we need",
+        "a plug placed 50 FT. below the shoe of the surface/intermediate casing to 50 FT. above",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "Andrew A.",
+          "formations": "Canyon",
+          "tops": 6300,
+          "distance_and_direction_from_nearby_town_": "25 North Barnhart"
+        },
+        {
+          "formations": "Wolf.",
+          "tops": 5000
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 4000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1300,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Arden, S.",
+          "formations": "Canyon",
+          "tops": 6200,
+          "distance_and_direction_from_nearby_town_": "20 N. Mertzon"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 4200
+        },
+        {
+          "formations": "Clearfork ",
+          "tops": 1700
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Barnhart",
+          "formations": "Ellen",
+          "tops": 8800,
+          "distance_and_direction_from_nearby_town_": "5 W. Barnhart"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 6200
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 4400
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 2200,
+          "distance_and_direction_from_nearby_town_": "Tag   "
+        },
+        {
+          "formations": "Queen",
+          "tops": 1700,
+          "distance_and_direction_from_nearby_town_": "Tag - H2S Disposal"
+        },
+        {
+          "field_name": "Brooks",
+          "formations": "Canyon",
+          "tops": 5700,
+          "distance_and_direction_from_nearby_town_": "5 E. Mertzon"
+        },
+        {
+          "formations": "Permian Lime",
+          "tops": 4500
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2300
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 900,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Buttes",
+          "formations": "Strawn",
+          "tops": 7150,
+          "distance_and_direction_from_nearby_town_": "10 S. Mertzon"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5200
+        },
+        {
+          "formations": "Wichita Albany",
+          "tops": 4200
+        },
+        {
+          "formations": "Clear Fork",
+          "tops": 2700
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 900,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Causey Draw ",
+          "formations": "Fusselman",
+          "tops": 8900,
+          "distance_and_direction_from_nearby_town_": "20 North Barnhart"
+        },
+        {
+          "formations": "Wolf.",
+          "tops": 6300
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 4700
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 1500
+        },
+        {
+          "field_name": "Christi",
+          "formations": "Canyon",
+          "tops": 6400,
+          "distance_and_direction_from_nearby_town_": "2 S.W. Mertzon"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1100,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Gray",
+          "tops": 950
+        },
+        {
+          "field_name": "Dove Creek",
+          "formations": "Canyon",
+          "tops": 6300,
+          "distance_and_direction_from_nearby_town_": "5 S.E. Mertzon"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 5500
+        },
+        {
+          "formations": "Permian Lime",
+          "tops": 4500
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2300
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 850,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Funk",
+          "formations": "San Andres",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "20 N. Mertzon Tag"
+        },
+        {
+          "field_name": "Howda",
+          "formations": "Wolf",
+          "tops": 6400,
+          "distance_and_direction_from_nearby_town_": "15 North Barnhart"
+        },
+        {
+          "formations": "Clear Fork",
+          "tops": 4000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 1500
+        },
+        {
+          "field_name": "Ketchum MT.",
+          "formations": "Clear Fork",
+          "tops": 4000,
+          "distance_and_direction_from_nearby_town_": "15 West Mertzon"
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 1500
+        },
+        {
+          "field_name": "Las Perlas",
+          "formations": "Canyon",
+          "tops": 6300,
+          "distance_and_direction_from_nearby_town_": "10 S. Mertzon"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 5900
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2700
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 850,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Lin (Wolfcamp)",
+          "formations": "Ellenberger",
+          "tops": 8800,
+          "distance_and_direction_from_nearby_town_": "Southeast Irion Co. "
+        },
+        {
+          "formations": "Wolfcamp",
+          "tops": 6200
+        },
+        {
+          "formations": "Spraberry ",
+          "tops": 4400
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1900,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 1670
+        },
+        {
+          "formations": "Queen",
+          "tops": 1500
+        },
+        {
+          "field_name": "Lone Joe Deep",
+          "formations": "Fusselman",
+          "tops": 9000,
+          "distance_and_direction_from_nearby_town_": "30 North Barnhart"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 6400
+        },
+        {
+          "formations": "Spraberry ",
+          "tops": 4600
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1900,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 1600
+        },
+        {
+          "field_name": "MWJ",
+          "formations": "Canyon",
+          "tops": 7500,
+          "distance_and_direction_from_nearby_town_": "25 North Barnhart"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 6200
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 4500
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Gray",
+          "tops": 1500
+        },
+        {
+          "field_name": "Monument",
+          "formations": "Spraberry",
+          "tops": 3200,
+          "distance_and_direction_from_nearby_town_": "15 S.W. Mertzon"
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1200,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Probandt",
+          "distance_and_direction_from_nearby_town_": "See Tom Green County"
+        },
+        {
+          "field_name": "Rocker B",
+          "formations": "Fusselman",
+          "tops": 8800,
+          "distance_and_direction_from_nearby_town_": "15 North Barnhart"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 7700
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3200
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 1500
+        },
+        {
+          "field_name": "Sixty-Seven",
+          "formations": "Strawn",
+          "tops": 6850,
+          "distance_and_direction_from_nearby_town_": "10 S.W. Mertzon"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 6600
+        },
+        {
+          "formations": "Clear Fork",
+          "tops": 2800
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1100,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Sugg",
+          "formations": "Clear Fork",
+          "tops": 4400,
+          "distance_and_direction_from_nearby_town_": "20 N.W. Mertzon"
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Sugg",
+          "formations": "Clear Fork",
+          "tops": 4400,
+          "distance_and_direction_from_nearby_town_": "5 North Barnhart"
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Spraberry Trend Area",
+          "formations": "Spraberry",
+          "tops": 5800,
+          "distance_and_direction_from_nearby_town_": "8 N.W. Barnhart"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3200
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 1500
+        },
+        {
+          "field_name": "Tankersley",
+          "formations": "Wolf",
+          "tops": 5200,
+          "distance_and_direction_from_nearby_town_": "10 W.E. Mertzon"
+        },
+        {
+          "formations": "Clear Fork",
+          "tops": 2700
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 900,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Taos",
+          "formations": "Fusselman",
+          "tops": 8600,
+          "distance_and_direction_from_nearby_town_": "30 North Barnhart"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 7300
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 4300
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Tom Ketchum ",
+          "formations": "Canyon",
+          "tops": 7200,
+          "distance_and_direction_from_nearby_town_": "20 N.E. Barnhart"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 6450
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 4400
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Tucker",
+          "formations": "Canyon",
+          "tops": 7600,
+          "distance_and_direction_from_nearby_town_": "20 North Barnhart"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 4400
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 1500
+        },
+        {
+          "field_name": "Van Keuren",
+          "formations": "San Angelo",
+          "tops": 1700,
+          "distance_and_direction_from_nearby_town_": "5 N.W. Mertzon - Tag"
+        },
+        {
+          "formations": "Gray",
+          "tops": 1200
+        }
+      ]
+    },
+    "kimble": {
+      "name": "Kimble County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the bottom of",
+        "the plug should be roughly 50 FT. above the perfs.  We also need a plug placed",
+        "immediately above each formation listed.  If the field in question is not present, please either",
+        "use known tops in the subject field or the tops in a listed nearby field.  In addition, we need",
+        "a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the shoe.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest",
+        "usable quality water stratum, an additional 100 FT. cement plug must be placed inside"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "Doreen",
+          "formations": "Strawn",
+          "tops": 1100,
+          "distance_and_direction_from_nearby_town_": "6 S. W. Junction"
+        },
+        {
+          "formations": "Adams Branch",
+          "tops": 600
+        },
+        {
+          "field_name": "Kothmann",
+          "formations": "Strawn",
+          "tops": 1400,
+          "distance_and_direction_from_nearby_town_": "13 N.E. Junction"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 900
+        },
+        {
+          "field_name": "Maynard Creek",
+          "formations": "Ellen.",
+          "tops": 3100,
+          "distance_and_direction_from_nearby_town_": "17 West Junction"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 2300
+        },
+        {
+          "formations": "Canyon",
+          "tops": 1800
+        },
+        {
+          "field_name": "Shajumar",
+          "formations": "Strawn",
+          "tops": 1700,
+          "distance_and_direction_from_nearby_town_": "10 West Junction"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 1450
+        }
+      ]
+    },
+    "mcculloch": {
+      "name": "McCulloch County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the",
+        "bottom of the plug should be roughly 50 FT. above the perfs.  We also need a plug",
+        "placed immediately above each formation listed.  If the field in question is not present,",
+        "please either use known tops in the subject field or the tops in a listed nearby field.",
+        "In addition, we need a plug placed 50 FT. below the shoe of the surface casing to",
+        "50 FT. above the shoe.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "Bratton",
+          "formations": "Strawn",
+          "tops": 650,
+          "distance_and_direction_from_nearby_town_": "10 North Brady"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 450
+        },
+        {
+          "field_name": "Byrd",
+          "formations": "Strawn ",
+          "tops": 600,
+          "distance_and_direction_from_nearby_town_": "10 North Brady"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 450
+        },
+        {
+          "field_name": "Deitz",
+          "formations": "Strawn ",
+          "tops": 1750,
+          "distance_and_direction_from_nearby_town_": "15 West Brady"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 500
+        },
+        {
+          "field_name": "Dutton Ranch",
+          "formations": "Strawn",
+          "tops": 800,
+          "distance_and_direction_from_nearby_town_": "8 North Brady"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 450
+        },
+        {
+          "field_name": "Exoc",
+          "formations": "Strawn",
+          "tops": 950,
+          "distance_and_direction_from_nearby_town_": "1 North Lohn"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 450
+        },
+        {
+          "field_name": "Fife",
+          "formations": "Caddo",
+          "tops": 1500,
+          "distance_and_direction_from_nearby_town_": "7 North Fife"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 500
+        },
+        {
+          "field_name": "Hall",
+          "formations": "Miss.",
+          "tops": 1300,
+          "distance_and_direction_from_nearby_town_": "3 East Fife"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 800
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 450
+        },
+        {
+          "field_name": "Heart of Texas",
+          "formations": "Penn",
+          "tops": 1500,
+          "distance_and_direction_from_nearby_town_": "6 East Fife"
+        },
+        {
+          "formations": "Marble Falls",
+          "tops": 700
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 450
+        },
+        {
+          "field_name": "Ivy",
+          "formations": "Caddo",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "4 S.E. Lohn"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 450
+        },
+        {
+          "field_name": "Jones Ranch",
+          "formations": "Caddo",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "7 N.E. Fife"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 450
+        },
+        {
+          "field_name": "Lillis",
+          "formations": "Strawn",
+          "tops": 800,
+          "distance_and_direction_from_nearby_town_": "8 North Brady"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 450
+        },
+        {
+          "field_name": "Lohn",
+          "formations": "Strawn ",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "2 N.E. Lohn"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 500
+        },
+        {
+          "field_name": "Needle Creek",
+          "formations": "Canyon",
+          "tops": 1200,
+          "distance_and_direction_from_nearby_town_": "5 S.E. Melvin"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 1100
+        },
+        {
+          "formations": "Home Ck Lime",
+          "tops": 550
+        },
+        {
+          "field_name": "Walker-Grant",
+          "formations": "Strawn",
+          "tops": 1350,
+          "distance_and_direction_from_nearby_town_": "3 East Doole"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 500
+        },
+        {
+          "field_name": "Wallope Creek",
+          "formations": "Cross cut",
+          "tops": 1650,
+          "distance_and_direction_from_nearby_town_": "4 North Doole"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 500
+        },
+        {
+          "field_name": "Warren",
+          "formations": "Canyon",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "7 North Lohn"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 500
+        },
+        {
+          "field_name": "Wulff",
+          "formations": "Caddo",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "5 N.E. Fife"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 450
+        }
+      ]
+    },
+    "menard": {
+      "name": "Menard County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the bottom of",
+        "the plug should be roughly 50 FT. above the perfs.  We also need a plug placed",
+        "immediately above each formation listed.  If the field in question is not present, please either",
+        "use known tops in the subject field or the tops in a listed nearby field.  In addition, we need",
+        "a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the shoe.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest",
+        "usable quality water stratum, an additional 100 FT. cement plug must be placed inside"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "BSA",
+          "formations": "Strawn",
+          "tops": 3600,
+          "distance_and_direction_from_nearby_town_": "15 West Menard"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 3400
+        },
+        {
+          "formations": "Cisco",
+          "tops": 1600
+        },
+        {
+          "formations": "Coleman Juncton",
+          "tops": 700
+        },
+        {
+          "field_name": "Branch S.",
+          "formations": "Bunger",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "10 N. Menard"
+        },
+        {
+          "formations": "Ivan, Upper",
+          "tops": 1400
+        },
+        {
+          "formations": "Cook",
+          "tops": 1100
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 700
+        },
+        {
+          "field_name": "Celery",
+          "formations": "Palo Pinto",
+          "tops": 3900,
+          "distance_and_direction_from_nearby_town_": "10 North Menard"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 2700
+        },
+        {
+          "formations": "Gunsight",
+          "tops": 1600
+        },
+        {
+          "formations": "Cook",
+          "tops": 1100
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 700
+        },
+        {
+          "field_name": "Clear Creek",
+          "formations": "Cisco",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "10 West Menard"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 700
+        },
+        {
+          "field_name": "F & H",
+          "formations": "Cisco",
+          "tops": 2500,
+          "distance_and_direction_from_nearby_town_": "20 N.W. Menard"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 800
+        },
+        {
+          "field_name": "Ferris",
+          "formations": "King",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "10 N.W. Menard"
+        },
+        {
+          "formations": "Hope",
+          "tops": 1500
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 700
+        },
+        {
+          "field_name": "Las Moras",
+          "formations": "Caddo",
+          "tops": 2700,
+          "distance_and_direction_from_nearby_town_": "7 W Menard"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 1500
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 700
+        },
+        {
+          "field_name": "Wilhelm Lane",
+          "formations": "Goen",
+          "tops": 3500,
+          "distance_and_direction_from_nearby_town_": "15 N. W. Menard"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 3200
+        },
+        {
+          "formations": "Canyon",
+          "tops": 3000
+        },
+        {
+          "formations": "Hope Lime",
+          "tops": 1700
+        },
+        {
+          "formations": "Coleman Junciton",
+          "tops": 800
+        }
+      ]
+    },
+    "reagan": {
+      "name": "Reagan County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the",
+        "bottom of the plug should be roughly 50 FT. above the perfs.  We also need a plug",
+        "placed immediately above each formation listed.  If the field in question is not present,",
+        "please either use known tops in the subject field or the tops in a listed nearby field.",
+        "In addition, we need a plug placed 50 FT. below the shoe of the surface/intermediate",
+        "casing to 50 FT. above the shoe.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "Barnhart",
+          "formations": "Fuss",
+          "tops": 8800,
+          "distance_and_direction_from_nearby_town_": "7 East Big Lake"
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 6300
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 2200
+        },
+        {
+          "formations": "Queen",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "H2S Injection"
+        },
+        {
+          "field_name": "Big Lake",
+          "formations": "Ellen",
+          "tops": 8700,
+          "distance_and_direction_from_nearby_town_": "3 West Big Lake"
+        },
+        {
+          "formations": "Fuss",
+          "tops": 8500
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 6300
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 2700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2000
+        },
+        {
+          "field_name": "Cope",
+          "formations": "Spraberry",
+          "tops": 5000,
+          "distance_and_direction_from_nearby_town_": "25 Miles N.E. Big Lake"
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 1900,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 1000
+        },
+        {
+          "field_name": "Farmer",
+          "formations": "San Andres",
+          "tops": 1900,
+          "distance_and_direction_from_nearby_town_": "Tag            6 S. E. Big Lake      "
+        },
+        {
+          "formations": "Gray",
+          "tops": 1700
+        },
+        {
+          "field_name": "Grayson",
+          "formations": "Spraberry",
+          "tops": 5800,
+          "distance_and_direction_from_nearby_town_": "9 S. W. Big Lake"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 4000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 3000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 2700
+        },
+        {
+          "formations": "Queen",
+          "tops": 2200
+        },
+        {
+          "field_name": "Grierson Spring",
+          "formations": "Strawn",
+          "tops": 8700,
+          "distance_and_direction_from_nearby_town_": "11 S.W. Big Lake"
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 5800
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 4000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 3200,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 3000
+        },
+        {
+          "formations": "Queen",
+          "tops": 2400
+        },
+        {
+          "field_name": "John Scott ",
+          "formations": "Grayburg",
+          "tops": 2500,
+          "distance_and_direction_from_nearby_town_": "3 N.E. Big Lake"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2000
+        },
+        {
+          "field_name": "Lin (Wolfcamp)",
+          "formations": "Pennslyvanian",
+          "tops": 9000,
+          "distance_and_direction_from_nearby_town_": "Penns: Cisco, Canyon, Strawn, Atoka, Morrow"
+        },
+        {
+          "formations": "Wolfcamp",
+          "tops": 7000
+        },
+        {
+          "formations": "Spraberry",
+          "tops": "Use Spra-Trend field depths"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": "\""
+        },
+        {
+          "formations": "San Andres",
+          "tops": "\"",
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg/Queen",
+          "tops": "\""
+        },
+        {
+          "field_name": "Lone Joe Deep",
+          "formations": "Fusselman",
+          "tops": 8900,
+          "distance_and_direction_from_nearby_town_": "25 N.E. Big Lake"
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 5200
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 1900,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 1000
+        },
+        {
+          "field_name": "Pink Draw",
+          "formations": "Ellen.",
+          "tops": 9900,
+          "distance_and_direction_from_nearby_town_": "15 N.E. Big Lake"
+        },
+        {
+          "formations": "Fuss.",
+          "tops": 9800
+        },
+        {
+          "formations": "Siluro-Dev.",
+          "tops": 9600
+        },
+        {
+          "formations": "Sprayberry",
+          "tops": 5400
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3800
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 2500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2000
+        },
+        {
+          "field_name": "Red House",
+          "formations": "Ellen",
+          "tops": 10300,
+          "distance_and_direction_from_nearby_town_": "16 N. Big Lake"
+        },
+        {
+          "formations": "Fuss",
+          "tops": 10200
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 5600
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 4500
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 2800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2200
+        },
+        {
+          "field_name": "Roach",
+          "formations": "Fusselman",
+          "tops": 11000,
+          "distance_and_direction_from_nearby_town_": "18 N.W. Big Lake"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 10200
+        },
+        {
+          "formations": "Dean",
+          "tops": 7000
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 6200
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 4500
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 3300,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2500
+        },
+        {
+          "field_name": "SRH",
+          "formations": "Spraberry",
+          "tops": 5300,
+          "distance_and_direction_from_nearby_town_": "7 N.E. Big Lake"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 3800
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 2200
+        },
+        {
+          "formations": "Queen",
+          "tops": 2000
+        },
+        {
+          "field_name": "Seven D",
+          "formations": "Spraberry",
+          "tops": 5500,
+          "distance_and_direction_from_nearby_town_": "25 N. Big Lake"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 4000
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 2800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "75 sks"
+        },
+        {
+          "field_name": "Sledgehammer",
+          "formations": "Fuss",
+          "tops": 9500,
+          "distance_and_direction_from_nearby_town_": "15 N.E. Big Lake"
+        },
+        {
+          "formations": "Atoka",
+          "tops": 9100
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 5400
+        },
+        {
+          "formations": "Clearfork ",
+          "tops": 3800
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 1500
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 5800
+        },
+        {
+          "field_name": "Northeast ",
+          "formations": "Clearfork",
+          "tops": 4000
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 2800,
+          "distance_and_direction_from_nearby_town_": "75 sks/Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "75 sks   Bad flow area"
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 6000
+        },
+        {
+          "field_name": "North Central",
+          "formations": "Clearfork",
+          "tops": 4500
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 3000,
+          "distance_and_direction_from_nearby_town_": "75 sks/Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2200
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 6000
+        },
+        {
+          "field_name": "Northwest",
+          "formations": "Clearfork",
+          "tops": 4500
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 3300,
+          "distance_and_direction_from_nearby_town_": "75 sks/Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2500
+        },
+        {
+          "formations": "Santa Rosa",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 5800
+        },
+        {
+          "field_name": "East Central",
+          "formations": "Clearfork",
+          "tops": 3800
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2400,
+          "distance_and_direction_from_nearby_town_": "75 sks/Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 2000
+        },
+        {
+          "formations": "Queen",
+          "tops": 1700
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 6000
+        },
+        {
+          "field_name": "Central",
+          "formations": "Clearfork",
+          "tops": 4000
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 2800,
+          "distance_and_direction_from_nearby_town_": "75 sks/Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2200
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 6200
+        },
+        {
+          "field_name": "West Central",
+          "formations": "Clearfork",
+          "tops": 4500
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 3300,
+          "distance_and_direction_from_nearby_town_": "75 sks/Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2500
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 5800
+        },
+        {
+          "field_name": "Southeast ",
+          "formations": "Clearfork",
+          "tops": 3800
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2600,
+          "distance_and_direction_from_nearby_town_": "75 sks/Tag"
+        },
+        {
+          "formations": "Grayburg",
+          "tops": 2200
+        },
+        {
+          "formations": "Queen",
+          "tops": 2000
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 5800
+        },
+        {
+          "field_name": "South Central ",
+          "formations": "Clearfork",
+          "tops": 3800
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 2700,
+          "distance_and_direction_from_nearby_town_": "75 sks/Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2000
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 6000
+        },
+        {
+          "field_name": "Southwest ",
+          "formations": "Clearfork",
+          "tops": 4000
+        },
+        {
+          "formations": "San Andres/Gray",
+          "tops": 3200,
+          "distance_and_direction_from_nearby_town_": "75 sks/Tag"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2500
+        },
+        {
+          "field_name": "Texon S.",
+          "formations": "Grayburg",
+          "tops": 3200,
+          "distance_and_direction_from_nearby_town_": "2 S. Texon"
+        },
+        {
+          "formations": "Queen",
+          "tops": 2500
+        }
+      ]
+    },
+    "runnels": {
+      "name": "Runnels County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the",
+        "bottom of the plug should be roughly 50 FT. above the perfs.  We also need a plug",
+        "placed immediately above each formation listed.  If the field in question is not present,",
+        "please either use known tops in the subject field or the tops in a listed nearby field.",
+        "In addition, we need a plug placed 50 FT. below the shoe of the surface casing to 50 FT.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "Ashton",
+          "formations": "Dog Bend",
+          "tops": 3400,
+          "distance_and_direction_from_nearby_town_": "5 S.W. Crews"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Ballinger",
+          "formations": "Gardner",
+          "tops": 4200,
+          "distance_and_direction_from_nearby_town_": "1 South Ballinger"
+        },
+        {
+          "formations": "Gray ",
+          "tops": 4000
+        },
+        {
+          "formations": "Palo Pinto",
+          "tops": 3400
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Buffalo Bluff",
+          "formations": "Goen",
+          "tops": 3300,
+          "distance_and_direction_from_nearby_town_": "15 S.E. Ballinger"
+        },
+        {
+          "formations": "Dog Bend",
+          "tops": 3000
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Cree-Sykes",
+          "formations": "Gardner",
+          "tops": 3900,
+          "distance_and_direction_from_nearby_town_": "3 North Crews"
+        },
+        {
+          "formations": "Morris",
+          "tops": 3700
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "D-H-B",
+          "formations": "Palo Pinto",
+          "tops": 3700,
+          "distance_and_direction_from_nearby_town_": "15 West Ballinger"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Dick Richardson",
+          "formations": "Gardner Lime",
+          "tops": 4100,
+          "distance_and_direction_from_nearby_town_": "5 South Winters"
+        },
+        {
+          "formations": "Goen",
+          "tops": 4000
+        },
+        {
+          "formations": "Serrattt",
+          "tops": 2500
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1200,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Dorman",
+          "formations": "Goen",
+          "tops": 4400,
+          "distance_and_direction_from_nearby_town_": "10 West Winters"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Fisher-Goebel",
+          "formations": "Gray",
+          "tops": 5100,
+          "distance_and_direction_from_nearby_town_": "15 West Winters"
+        },
+        {
+          "formations": "Cook",
+          "tops": 3000
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Fort Chadbourne",
+          "formations": "Odom Lime",
+          "tops": 5400,
+          "distance_and_direction_from_nearby_town_": "10  N.W.  Wingate"
+        },
+        {
+          "formations": "Gardner",
+          "tops": 5100
+        },
+        {
+          "formations": "Gray ",
+          "tops": 4900
+        },
+        {
+          "formations": "Cook",
+          "tops": 3000
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Fuzzy Creek",
+          "formations": "Goen",
+          "tops": 3300
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "H & R",
+          "formations": "Goen",
+          "tops": 3800,
+          "distance_and_direction_from_nearby_town_": "5 West Ballinger"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 3400
+        },
+        {
+          "formations": "Canyon",
+          "tops": 3000
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1100,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Indiana",
+          "formations": "Gray",
+          "tops": 4000,
+          "distance_and_direction_from_nearby_town_": "10 North Crews"
+        },
+        {
+          "formations": "Fry ",
+          "tops": 3800
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Kendrick",
+          "formations": "Gardner",
+          "tops": 4200,
+          "distance_and_direction_from_nearby_town_": "3 N.E. Winters"
+        },
+        {
+          "formations": "Morris ",
+          "tops": 3800
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1300,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Midstates",
+          "formations": "Winchell",
+          "tops": 2400,
+          "distance_and_direction_from_nearby_town_": "10 S.E. Ballinger"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Nordic",
+          "formations": "Dog Bend",
+          "tops": 3200,
+          "distance_and_direction_from_nearby_town_": "5 South Crews"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Rowena",
+          "formations": "Jennings",
+          "tops": 3900,
+          "distance_and_direction_from_nearby_town_": "1 N.E. Rowena"
+        },
+        {
+          "formations": "Capps",
+          "tops": 3600
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "S.S.R.",
+          "formations": "Canyon",
+          "tops": 4000,
+          "distance_and_direction_from_nearby_town_": "3 S.W. Miles"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Saltwater Flow",
+          "formations": "Problem Zone",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "75 SX plug  5 mile radius around Miles"
+        },
+        {
+          "field_name": "Salvation",
+          "formations": "Capps",
+          "tops": 4000,
+          "distance_and_direction_from_nearby_town_": "5 West Rowena"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1100,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Sanford",
+          "formations": "Fry",
+          "tops": 4500,
+          "distance_and_direction_from_nearby_town_": "5 North Wingate"
+        },
+        {
+          "formations": "Palo Pinto",
+          "tops": 4000
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Stacie Beth",
+          "formations": "Morris",
+          "tops": 3200,
+          "distance_and_direction_from_nearby_town_": "15 East Ballinger"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Urban",
+          "formations": "Miles",
+          "tops": 4200
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Saltwater Flow",
+          "formations": "Problem Zone",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "75 SX plug  5 mile radius around Miles"
+        },
+        {
+          "field_name": "Vogelsang",
+          "formations": "Palo Pinto",
+          "tops": 3800,
+          "distance_and_direction_from_nearby_town_": "5 S.W. Winters"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Wingate, N. W.",
+          "formations": "Gray",
+          "tops": 5100,
+          "distance_and_direction_from_nearby_town_": "5 West Wingate"
+        },
+        {
+          "formations": "Gardner",
+          "tops": 5000
+        },
+        {
+          "formations": "Palo Pinto",
+          "tops": 4200
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        }
+      ]
+    },
+    "schleicher": {
+      "name": "Schleicher County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the bottom of",
+        "the plug should be roughly 50 FT. above the perfs.  We also need a plug placed",
+        "immediately above each formation listed.  If the field in question is not present, please either",
+        "use known tops in the subject field or the tops in a listed nearby field.  In addition, we need",
+        "a plug placed 50 FT. below the shoe of the surface/intermediate casing to 50 FT. above the shoe.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest",
+        "usable quality water stratum, an additional 100 FT. cement plug must be placed inside"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "Buckhorn",
+          "formations": "Ellen",
+          "tops": 6700,
+          "distance_and_direction_from_nearby_town_": "10 South Eldorado"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 6400
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2100
+        },
+        {
+          "formations": "Permian",
+          "tops": 900
+        },
+        {
+          "field_name": "Camar",
+          "formations": "Strawn ",
+          "tops": 4000,
+          "distance_and_direction_from_nearby_town_": "20 East Eldorado"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 3600
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1100
+        },
+        {
+          "field_name": "Cheaney",
+          "formations": "Strawn",
+          "tops": 4600,
+          "distance_and_direction_from_nearby_town_": "20 N.E. Eldorado"
+        },
+        {
+          "formations": "Harkey",
+          "tops": 4100
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1000
+        },
+        {
+          "field_name": "Cody Bell",
+          "formations": "Canyon",
+          "tops": 6200,
+          "distance_and_direction_from_nearby_town_": "5 N. Eldorado"
+        },
+        {
+          "formations": "Wolf.",
+          "tops": 4700
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1200
+        },
+        {
+          "field_name": "Eldorado",
+          "formations": "Canyon",
+          "tops": 6300,
+          "distance_and_direction_from_nearby_town_": "2 N.W. Eldorado"
+        },
+        {
+          "formations": "Wolf.",
+          "tops": 4600
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2100
+        },
+        {
+          "field_name": "Farrington",
+          "formations": "Canyon",
+          "tops": 6000,
+          "distance_and_direction_from_nearby_town_": "5 S.W. Eldorado"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 3700,
+          "distance_and_direction_from_nearby_town_": "Nearby well had a 250 BBL/Hr. Water Flow"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2300
+        },
+        {
+          "field_name": "Flying Anchor",
+          "formations": "Strawn",
+          "tops": 6400,
+          "distance_and_direction_from_nearby_town_": "3 S.E. Eldorado"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5200
+        },
+        {
+          "formations": "Wolf",
+          "tops": 2700
+        },
+        {
+          "formations": "Clear Fork",
+          "tops": 1300
+        },
+        {
+          "field_name": "Four Corners",
+          "formations": "Cross Cut",
+          "tops": 3700,
+          "distance_and_direction_from_nearby_town_": "25 N.E. Eldorado"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1000
+        },
+        {
+          "field_name": "Gustav",
+          "formations": "Canyon",
+          "tops": 6400,
+          "distance_and_direction_from_nearby_town_": "20 N.W. Eldorado"
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3200
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1500
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 800
+        },
+        {
+          "field_name": "H-J",
+          "formations": "Strawn",
+          "tops": 5300,
+          "distance_and_direction_from_nearby_town_": "15 N. Eldorado"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 4700
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1400
+        },
+        {
+          "field_name": "Henry-Speck",
+          "formations": "Canyon",
+          "tops": 5800,
+          "distance_and_direction_from_nearby_town_": "10 West Eldorado"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2700
+        },
+        {
+          "field_name": "Hulldale",
+          "formations": "Penn",
+          "tops": 5600,
+          "distance_and_direction_from_nearby_town_": "10 N.E. Eldorado"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1100
+        },
+        {
+          "field_name": "Kama",
+          "formations": "Strawn",
+          "tops": 8200,
+          "distance_and_direction_from_nearby_town_": "20 W. Eldorado"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 6500
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2700
+        },
+        {
+          "formations": "Permian",
+          "tops": 900
+        },
+        {
+          "field_name": "Otto",
+          "formations": "Strawn",
+          "tops": 5100,
+          "distance_and_direction_from_nearby_town_": "15 N.E. Eldorado"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 4500
+        },
+        {
+          "formations": "Cisco",
+          "tops": 3000
+        },
+        {
+          "field_name": "Ozona, N. E.",
+          "formations": "Canyon",
+          "tops": 6100,
+          "distance_and_direction_from_nearby_town_": "20 West Eldorado"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2700
+        },
+        {
+          "field_name": "Rebecca ",
+          "formations": "Harkey",
+          "tops": 5200,
+          "distance_and_direction_from_nearby_town_": "10 N.E. Eldorado"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 3300
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1100
+        },
+        {
+          "field_name": "Tillery",
+          "formations": "Penn",
+          "tops": 3600,
+          "distance_and_direction_from_nearby_town_": "15 East Eldorado"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 3200
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1100
+        },
+        {
+          "field_name": "Toe Nail",
+          "formations": "Strawn",
+          "tops": 5200,
+          "distance_and_direction_from_nearby_town_": "20 N.E. Eldorado"
+        },
+        {
+          "formations": "Harkey ",
+          "tops": 4600
+        },
+        {
+          "formations": "Cisco",
+          "tops": 3300,
+          "distance_and_direction_from_nearby_town_": "S.W. Disposal Zone"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1000
+        },
+        {
+          "field_name": "University 54",
+          "formations": "Ellen",
+          "tops": 7900,
+          "distance_and_direction_from_nearby_town_": "20 N.W. Eldorado"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 6600
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3400
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 800
+        },
+        {
+          "field_name": "Velrex",
+          "formations": "Ellen.",
+          "tops": 7300,
+          "distance_and_direction_from_nearby_town_": "15 N. W. Eldorado"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 6200
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3200
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1500
+        },
+        {
+          "field_name": "Williams Ranch",
+          "formations": "Strawn",
+          "tops": 7100,
+          "distance_and_direction_from_nearby_town_": "18 N. W. Eldorado"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 6100
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3200
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1500
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 700
+        }
+      ]
+    },
+    "sutton": {
+      "name": "Sutton County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the bottom of",
+        "the plug should be roughly 50 FT. above the perfs.  We also need a plug placed",
+        "immediately above each formation listed.  If the field in question is not present, please either",
+        "use known tops in the subject field or the tops in a listed nearby field.  In addition, we need",
+        "a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the shoe.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest",
+        "usable quality water stratum, an additional 100 FT. cement plug must be placed inside"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "Adams",
+          "formations": "Canyon",
+          "tops": 2200,
+          "distance_and_direction_from_nearby_town_": "15 S.E. Sonora"
+        },
+        {
+          "field_name": "Aldwell Ranch",
+          "formations": "Canyon",
+          "tops": 4900,
+          "distance_and_direction_from_nearby_town_": "20 S.W. Sonora"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 2200
+        },
+        {
+          "field_name": "Blue Bonnet",
+          "formations": "Canyon",
+          "tops": 2700,
+          "distance_and_direction_from_nearby_town_": "15 N.E. Sonora"
+        },
+        {
+          "field_name": "Brushy Top",
+          "formations": "Permian",
+          "tops": 750,
+          "distance_and_direction_from_nearby_town_": "10 North Sonora"
+        },
+        {
+          "field_name": "Cauthorn Ranch",
+          "formations": "Strawn",
+          "tops": 8000,
+          "distance_and_direction_from_nearby_town_": "20 South Sonora"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 4500
+        },
+        {
+          "formations": "Wolf",
+          "tops": 2200
+        },
+        {
+          "field_name": "Cedar Rock",
+          "formations": "Strawn",
+          "tops": 5400,
+          "distance_and_direction_from_nearby_town_": "9 S.E. Sonora"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 3700
+        },
+        {
+          "formations": "Wolf",
+          "tops": 2900
+        },
+        {
+          "field_name": "Fawcett",
+          "formations": "Canyon",
+          "tops": 5300,
+          "distance_and_direction_from_nearby_town_": "10 W. Sonora"
+        },
+        {
+          "formations": "Wolf.",
+          "tops": 2600
+        },
+        {
+          "field_name": "Interstate",
+          "formations": "Ellen",
+          "tops": 4600,
+          "distance_and_direction_from_nearby_town_": "15 S.E. Sonora"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 3900
+        },
+        {
+          "formations": "Canyon",
+          "tops": 2900
+        },
+        {
+          "field_name": "Ken",
+          "formations": "Strawn",
+          "tops": 2600,
+          "distance_and_direction_from_nearby_town_": "20 S.E. Sonora"
+        },
+        {
+          "formations": "Cross Cut",
+          "tops": 2400
+        },
+        {
+          "formations": "Canyon",
+          "tops": 1800
+        },
+        {
+          "field_name": "Mayer",
+          "formations": "Canyon",
+          "tops": 6500,
+          "distance_and_direction_from_nearby_town_": "10 N.W. Sonora"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 3800
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 1800
+        },
+        {
+          "field_name": "Miers",
+          "formations": "Strawn",
+          "tops": 4200,
+          "distance_and_direction_from_nearby_town_": "20 S.E. Sonora"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 2800
+        },
+        {
+          "field_name": "Roberts",
+          "formations": "Strawn",
+          "tops": 4500,
+          "distance_and_direction_from_nearby_town_": "15 East Sonora"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 3000
+        },
+        {
+          "field_name": "Sawyer",
+          "formations": "Upper Canyon",
+          "tops": 5500,
+          "distance_and_direction_from_nearby_town_": "10 S.W. Sonora"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 2800
+        },
+        {
+          "formations": "Leonard",
+          "tops": 2100
+        },
+        {
+          "field_name": "Schwiening Ranch",
+          "formations": "Ellen",
+          "tops": 3800,
+          "distance_and_direction_from_nearby_town_": "25 East Sonora"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 3100
+        },
+        {
+          "formations": "Canyon",
+          "tops": 2000
+        },
+        {
+          "field_name": "Steen",
+          "formations": "Canyon ",
+          "tops": 5200,
+          "distance_and_direction_from_nearby_town_": "8 N.E. Sonora"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 2500
+        },
+        {
+          "formations": "Permian",
+          "tops": 750
+        },
+        {
+          "field_name": "Whitehead",
+          "formations": "Strawn",
+          "tops": 8200,
+          "distance_and_direction_from_nearby_town_": "15 S.W. Sonora"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 6000
+        },
+        {
+          "formations": "Wolf",
+          "tops": 3300
+        },
+        {
+          "formations": "Leonard",
+          "tops": 1800
+        }
+      ]
+    },
+    "terrell": {
+      "name": "Terrell County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the bottom",
+        "of the plug should be roughly 50 FT. above the perfs.  We also need a plug placed",
+        "immediately above each formation listed.  If the field in question is not present, please",
+        "either use known tops in the subject field or the tops in a listed nearby field.  In addition,",
+        "we need a plug placed 50 FT. below the shoe of the surface/intermediate casing",
+        "to 50 FT. above the casing.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "ACU",
+          "formations": "Strawn",
+          "tops": 10850,
+          "distance_and_direction_from_nearby_town_": "20 miles S.W. Sheffield"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 9300
+        },
+        {
+          "formations": "Wolf",
+          "tops": 6400
+        },
+        {
+          "formations": "Leonard",
+          "tops": 4300
+        },
+        {
+          "field_name": "Allison",
+          "formations": "Fusselman",
+          "tops": 11150,
+          "distance_and_direction_from_nearby_town_": "5 South Sheffield"
+        },
+        {
+          "formations": "Devonian",
+          "tops": 10650
+        },
+        {
+          "formations": "Detrital",
+          "tops": 9200
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5000
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3300
+        },
+        {
+          "field_name": "Brown-Bassett, W",
+          "formations": "Silurian",
+          "tops": 12750,
+          "distance_and_direction_from_nearby_town_": "20 South Sheffield"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 11600
+        },
+        {
+          "formations": "Canyon",
+          "tops": 10100
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5300
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3300
+        },
+        {
+          "field_name": "Chandler",
+          "formations": "Wolf.",
+          "tops": 5100,
+          "distance_and_direction_from_nearby_town_": "20 S.E. Sheffield"
+        },
+        {
+          "field_name": "Cobblestone",
+          "formations": "Strawn",
+          "tops": 11300,
+          "distance_and_direction_from_nearby_town_": "15 South Sheffield"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 9800
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5800
+        },
+        {
+          "formations": "Leonard",
+          "tops": 4300
+        },
+        {
+          "field_name": "Deer Canyon",
+          "formations": "Penn",
+          "tops": 10750,
+          "distance_and_direction_from_nearby_town_": "20 S.W. Sheffield"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 10200
+        },
+        {
+          "formations": "Canyon",
+          "tops": 8700
+        },
+        {
+          "formations": "Wolf",
+          "tops": 6400
+        },
+        {
+          "formations": "Leonard",
+          "tops": 4300
+        },
+        {
+          "field_name": "Dudley",
+          "formations": "Devonian",
+          "tops": 9350,
+          "distance_and_direction_from_nearby_town_": "15 S.E. Sheffield"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 7550
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5000
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3300
+        },
+        {
+          "field_name": "Ingham",
+          "formations": "Devonian",
+          "tops": 7450,
+          "distance_and_direction_from_nearby_town_": "10 S.E. Ingham"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 4000
+        },
+        {
+          "formations": "Leonard",
+          "tops": 1800
+        },
+        {
+          "field_name": "K M",
+          "formations": "Ellen",
+          "tops": 18600,
+          "distance_and_direction_from_nearby_town_": "20 S.W.  Sheffield"
+        },
+        {
+          "formations": "Devonian",
+          "tops": 12500
+        },
+        {
+          "formations": "Strawn",
+          "tops": 11550
+        },
+        {
+          "formations": "Canyon",
+          "tops": 10000
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5800
+        },
+        {
+          "formations": "Leonard",
+          "tops": 4000
+        },
+        {
+          "field_name": "Leatherwood",
+          "formations": "Ellen",
+          "tops": 15400,
+          "distance_and_direction_from_nearby_town_": "20 S.W. Sheffield"
+        },
+        {
+          "formations": "Penn",
+          "tops": 10750
+        },
+        {
+          "formations": "Strawn",
+          "tops": 10200
+        },
+        {
+          "formations": "Canyon",
+          "tops": 8700
+        },
+        {
+          "formations": "Wolf",
+          "tops": 6400
+        },
+        {
+          "formations": "Leonard",
+          "tops": 4300
+        },
+        {
+          "field_name": "Little Canyon",
+          "formations": "Strawn",
+          "tops": 10050,
+          "distance_and_direction_from_nearby_town_": "20 South Sheffield"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 8500
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5800
+        },
+        {
+          "formations": "Leonard",
+          "tops": 4300
+        },
+        {
+          "field_name": "Pakenham",
+          "formations": "Devonian",
+          "tops": 12500,
+          "distance_and_direction_from_nearby_town_": "25 S.W. Sheffield"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 11550
+        },
+        {
+          "formations": "Wolfcamp",
+          "tops": 5800
+        },
+        {
+          "formations": "Leonard",
+          "tops": 4300
+        },
+        {
+          "field_name": "Poulter",
+          "formations": "Wolfcamp",
+          "tops": 4300,
+          "distance_and_direction_from_nearby_town_": "30 North Sanderson"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 9700
+        },
+        {
+          "field_name": "Schuler, S.",
+          "formations": "Leonard",
+          "tops": 4300,
+          "distance_and_direction_from_nearby_town_": "5 West Sheffield"
+        },
+        {
+          "field_name": "Sheffield, S. E. ",
+          "formations": "Connell",
+          "tops": 10050,
+          "distance_and_direction_from_nearby_town_": "5 S.E. Sheffield"
+        },
+        {
+          "formations": "Dev.",
+          "tops": 8600
+        },
+        {
+          "formations": "Strawn",
+          "tops": 8200
+        },
+        {
+          "formations": "Canyon",
+          "tops": 7150
+        },
+        {
+          "formations": "Wolf",
+          "tops": 3000
+        },
+        {
+          "field_name": "Six Shooter",
+          "formations": "Wolf",
+          "tops": 1850,
+          "distance_and_direction_from_nearby_town_": "30 S.W. Sheffield"
+        },
+        {
+          "field_name": "South Park",
+          "formations": "Strawn",
+          "tops": 11600,
+          "distance_and_direction_from_nearby_town_": "20 S.W. Sheffield"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 9300
+        },
+        {
+          "formations": "Wolf",
+          "tops": 6400
+        },
+        {
+          "formations": "Leonard",
+          "tops": 4300
+        },
+        {
+          "field_name": "Wilbourne",
+          "formations": "Detrital",
+          "tops": 10400,
+          "distance_and_direction_from_nearby_town_": "15 S.E. Sheffield"
+        },
+        {
+          "formations": "Devonian",
+          "tops": 9300
+        },
+        {
+          "formations": "Canyon",
+          "tops": 7800
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5100
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3300
+        },
+        {
+          "field_name": "Wolf Spring",
+          "formations": "Strawn",
+          "tops": 11600,
+          "distance_and_direction_from_nearby_town_": "25 South Sheffield"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 10100
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5100
+        },
+        {
+          "formations": "Leonard",
+          "tops": 3300
+        },
+        {
+          "field_name": "Word",
+          "formations": "Wolf",
+          "tops": 3400,
+          "distance_and_direction_from_nearby_town_": "30 S.W. Sheffield"
+        },
+        {
+          "field_name": "Worth",
+          "formations": "Strawn",
+          "tops": 11300,
+          "distance_and_direction_from_nearby_town_": "10 South Sheffield"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 10000
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5800
+        },
+        {
+          "formations": "Leonard",
+          "tops": 4300
+        }
+      ]
+    },
+    "tom_green": {
+      "name": "Tom Green County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the bottom of",
+        "the plug should be roughly 50 FT. above the perfs.  We also need a plug placed",
+        "immediately above each formation listed.  If the field in question is not present, please either",
+        "use known tops in the subject field or the tops in a listed nearby field.  In addition, we need",
+        "a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the shoe.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest",
+        "usable quality water stratum, an additional 100 FT. cement plug must be placed inside"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "AMN",
+          "formations": "Harkey",
+          "tops": 4200,
+          "distance_and_direction_from_nearby_town_": "10 East San Angelo"
+        },
+        {
+          "formations": "Swastika",
+          "tops": 3000
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Atkinson",
+          "formations": "San Angelo",
+          "tops": 800,
+          "distance_and_direction_from_nearby_town_": "20 S.W. San Angelo - Tag"
+        },
+        {
+          "field_name": "Carlsbad",
+          "formations": "Strawn",
+          "tops": 5600,
+          "distance_and_direction_from_nearby_town_": "15 N.W. San Angelo"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 3200
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Christoval",
+          "formations": "Strawn",
+          "tops": 5100,
+          "distance_and_direction_from_nearby_town_": "15 South San Angelo"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 4600
+        },
+        {
+          "formations": "Swastika",
+          "tops": 3200
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Dove Creek",
+          "formations": "Canyon",
+          "tops": 6100,
+          "distance_and_direction_from_nearby_town_": "20 S.W. San Angelo"
+        },
+        {
+          "formations": "Cisco ",
+          "tops": 5800
+        },
+        {
+          "formations": "Wolf",
+          "tops": 4700
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Eliza Baker, North",
+          "formations": "Caddo",
+          "tops": 6200,
+          "distance_and_direction_from_nearby_town_": "15 N. San Angelo"
+        },
+        {
+          "formations": "Palo Pinto",
+          "tops": 5000
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "FWB",
+          "formations": "Canyon",
+          "tops": 4000,
+          "distance_and_direction_from_nearby_town_": "15 S.E. San Angelo"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Giebel Slack",
+          "formations": "Strawn",
+          "tops": 5400,
+          "distance_and_direction_from_nearby_town_": "5 N.W. San Angelo"
+        },
+        {
+          "formations": "Palo Pinto",
+          "tops": 5200
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "H-J",
+          "formations": "Strawn",
+          "tops": 5300,
+          "distance_and_direction_from_nearby_town_": "20 South San Angelo"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5200
+        },
+        {
+          "formations": "Swastika",
+          "tops": 3200
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Hall",
+          "formations": "San Andres",
+          "tops": 800,
+          "distance_and_direction_from_nearby_town_": "5 S.W. Water Valley - Tag"
+        },
+        {
+          "field_name": "Harriett",
+          "formations": "Strawn",
+          "tops": 4600,
+          "distance_and_direction_from_nearby_town_": "5 N.E. San Angelo"
+        },
+        {
+          "formations": "Palo Pinto",
+          "tops": 4200
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Hour",
+          "formations": "Strawn",
+          "tops": 5500,
+          "distance_and_direction_from_nearby_town_": "10 S.W. San Angelo"
+        },
+        {
+          "formations": "Palo Pinto",
+          "tops": 5300
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "K. W. B.",
+          "formations": "Strawn",
+          "tops": 6300,
+          "distance_and_direction_from_nearby_town_": "5 S. Carlsbad"
+        },
+        {
+          "formations": "Canyon",
+          "tops": 5900
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Kenker",
+          "formations": "Palo Pinto",
+          "tops": 5300,
+          "distance_and_direction_from_nearby_town_": "10 S.W. San Angelo"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "San Angleo",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Knickerbocker",
+          "formations": "Strawn",
+          "tops": 5500,
+          "distance_and_direction_from_nearby_town_": "15 S.W. San Angelo"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Lipan Creek",
+          "formations": "Ellen",
+          "tops": 5600,
+          "distance_and_direction_from_nearby_town_": "10 South San Angelo"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 4800
+        },
+        {
+          "formations": "Harkey",
+          "tops": 4500
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Miss Ela",
+          "formations": "Canyon",
+          "tops": 7200,
+          "distance_and_direction_from_nearby_town_": "25 S. Sterling City"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 5700
+        },
+        {
+          "formations": "Sprayberry ",
+          "tops": 4000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 1500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Probandt",
+          "formations": "Canyon",
+          "tops": 7100,
+          "distance_and_direction_from_nearby_town_": "25 N.W. Mertzon"
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 4500
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 2600
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "S. S. R.",
+          "formations": "Canyon",
+          "tops": 4000,
+          "distance_and_direction_from_nearby_town_": "10 N.E. San Angelo"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Saltwater Flow",
+          "formations": "Problem Zone",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "75 SX plug  5 mile radius around Miles"
+        },
+        {
+          "field_name": "Schniers",
+          "formations": "Strawn",
+          "tops": 4600,
+          "distance_and_direction_from_nearby_town_": "5 S.E. San Angelo"
+        },
+        {
+          "formations": "Cisco",
+          "tops": 3400
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Star Light (Hope)",
+          "formations": "Palo Pinto",
+          "tops": 2600
+        },
+        {
+          "formations": "Hope Lime",
+          "tops": 2300
+        },
+        {
+          "formations": "Coleman Junction ",
+          "tops": 1500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "T. D. ",
+          "formations": "Canyon",
+          "tops": 6300,
+          "distance_and_direction_from_nearby_town_": "5 S. Water Valley"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 3100,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Problem Zone",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Saltwater Flow Zone"
+        },
+        {
+          "formations": "San Andres",
+          "tops": 700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Tiny Tim",
+          "formations": "Palo Pinto ",
+          "tops": 5200,
+          "distance_and_direction_from_nearby_town_": "5 N.W. San Angelo"
+        },
+        {
+          "formations": "Swastika",
+          "tops": 3000
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1600,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Toe Nail, North",
+          "formations": "Harkey",
+          "tops": 4700,
+          "distance_and_direction_from_nearby_town_": "30 South San Angelo"
+        },
+        {
+          "formations": "Swastika",
+          "tops": 3600
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1100,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Veribest, East",
+          "formations": "Harkey",
+          "tops": 4200,
+          "distance_and_direction_from_nearby_town_": "10 East San Angelo"
+        },
+        {
+          "formations": "Swastika",
+          "tops": 3000
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1400,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Vietor",
+          "formations": "Wichita-Albany",
+          "tops": 3200,
+          "distance_and_direction_from_nearby_town_": "25 South San Angelo"
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1700,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Water Valley",
+          "formations": "Clear Fork",
+          "tops": 1300,
+          "distance_and_direction_from_nearby_town_": "5 S.W. Water Valley"
+        },
+        {
+          "formations": "San Angelo",
+          "tops": 1150,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "San Andres",
+          "tops": 950,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Wood",
+          "formations": "Gardner",
+          "tops": 3900,
+          "distance_and_direction_from_nearby_town_": "15 S.E. San Angelo"
+        },
+        {
+          "formations": "Morris",
+          "tops": 3400
+        },
+        {
+          "formations": "Coleman Junction",
+          "tops": 1500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        }
+      ]
+    },
+    "upton": {
+      "name": "Upton County",
+      "notes": [
+        "Please see the attached plugging chart for the number of sacks in each plug.",
+        "We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the",
+        "bottom of the plug should be roughly 50 FT. above the perfs.  We also need a plug",
+        "placed immediately above each formation listed.  If the field name is not present,",
+        "please either use known tops in the subject field or the tops in a listed nearby field.",
+        "In addition, we need a plug placed 50 FT. below the shoe of the surface/intermediate",
+        "casing to 50 FT. above the shoe.",
+        "If the surface casing has been set deeper than 200 FT. below the base of the deepest"
+      ],
+      "fieldSpecs": [
+        {
+          "field_name": "AdamC/McElroy",
+          "formations": "Devonian",
+          "tops": 10000,
+          "distance_and_direction_from_nearby_town_": "2 E. Crane"
+        },
+        {
+          "formations": "Bend",
+          "tops": 9100
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 7000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 3300,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "McElroy",
+          "tops": 2600
+        },
+        {
+          "formations": "Yates",
+          "tops": 1900
+        },
+        {
+          "field_name": "Amacker-Tippett",
+          "formations": "Ellen",
+          "tops": 11800,
+          "distance_and_direction_from_nearby_town_": "15 N.E. McCamey"
+        },
+        {
+          "formations": "Fuss",
+          "tops": 11300
+        },
+        {
+          "formations": "Dev",
+          "tops": 10800
+        },
+        {
+          "formations": "Strawn",
+          "tops": 9400
+        },
+        {
+          "formations": "Wolf",
+          "tops": 9000
+        },
+        {
+          "formations": "Leonard",
+          "tops": 6900
+        },
+        {
+          "formations": "San Andres",
+          "tops": 4500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Yates",
+          "tops": 2500
+        },
+        {
+          "field_name": "Benedum",
+          "formations": "Ellen",
+          "tops": 11200,
+          "distance_and_direction_from_nearby_town_": "10 N.E. Rankin"
+        },
+        {
+          "formations": "Fuss",
+          "tops": 11000
+        },
+        {
+          "formations": "Dev",
+          "tops": 10900
+        },
+        {
+          "formations": "Wolf",
+          "tops": 7800
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 7000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 3500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "NGL ",
+          "tops": 1800,
+          "distance_and_direction_from_nearby_town_": "NGL Storage Zone"
+        },
+        {
+          "field_name": "Block 4",
+          "formations": "Dev",
+          "tops": 10200,
+          "distance_and_direction_from_nearby_town_": "7 S.E. Rankin"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 9400
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 6000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 3500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Yates",
+          "tops": 2500
+        },
+        {
+          "field_name": "Blue Danube",
+          "formations": "Strawn",
+          "tops": 9200,
+          "distance_and_direction_from_nearby_town_": "4 N.W. Rankin"
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 6500
+        },
+        {
+          "formations": "San Andres",
+          "tops": 4500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Yates",
+          "tops": 2500
+        },
+        {
+          "field_name": "Corbett",
+          "formations": "Dev",
+          "tops": 9000,
+          "distance_and_direction_from_nearby_town_": "5 South Rankin"
+        },
+        {
+          "formations": "Bend Detrital",
+          "tops": 8400
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 5500
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Gray",
+          "tops": 1800
+        },
+        {
+          "field_name": "Davis",
+          "formations": "Devonian",
+          "tops": 11900,
+          "distance_and_direction_from_nearby_town_": "26 N. McCamey"
+        },
+        {
+          "formations": "Penn",
+          "tops": 10200
+        },
+        {
+          "formations": "Wolf",
+          "tops": 7600
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 7000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 4500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Santa Rosa",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Fradean",
+          "formations": "Dev",
+          "tops": 8300,
+          "distance_and_direction_from_nearby_town_": "7 N.E. McCamey"
+        },
+        {
+          "formations": "Strawn",
+          "tops": 7900
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 5000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Franco",
+          "formations": "Devonian",
+          "tops": 10500,
+          "distance_and_direction_from_nearby_town_": "22 N. McCamey"
+        },
+        {
+          "formations": "Bend",
+          "tops": 9000
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 7000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 3500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Jack Herbert",
+          "formations": "Fuss",
+          "tops": 11600,
+          "distance_and_direction_from_nearby_town_": "17 N.W. Rankin"
+        },
+        {
+          "formations": "Devonian",
+          "tops": 11000
+        },
+        {
+          "formations": "Strawn",
+          "tops": 9800
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 7000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 4500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Yates",
+          "tops": 2500
+        },
+        {
+          "field_name": "Heluma",
+          "formations": "Ellenburger",
+          "tops": 10000,
+          "distance_and_direction_from_nearby_town_": "11 North McCamey"
+        },
+        {
+          "formations": "Devonian",
+          "tops": 8500
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 6000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 3000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Yates",
+          "tops": 1900
+        },
+        {
+          "field_name": "Hurdle",
+          "formations": "Gray",
+          "tops": 2000,
+          "distance_and_direction_from_nearby_town_": "5 East McCamey"
+        },
+        {
+          "field_name": "King Mtn.",
+          "formations": "Ellen",
+          "tops": 11600,
+          "distance_and_direction_from_nearby_town_": "10 N.E. McCamey"
+        },
+        {
+          "formations": "Dev",
+          "tops": 9500
+        },
+        {
+          "formations": "Strawn",
+          "tops": 8300
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 5000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "McCamey",
+          "formations": "Ellen",
+          "tops": 7900,
+          "distance_and_direction_from_nearby_town_": "5 N.E. McCamey"
+        },
+        {
+          "formations": "Silurian",
+          "tops": 7100
+        },
+        {
+          "formations": "Devonian",
+          "tops": 6300
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 4500
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Gray",
+          "tops": 2000
+        },
+        {
+          "formations": "Queen",
+          "tops": 1800
+        },
+        {
+          "field_name": "Pegasus",
+          "formations": "Ellen",
+          "tops": 12400,
+          "distance_and_direction_from_nearby_town_": "30 N. McCamey"
+        },
+        {
+          "formations": "Fuss.",
+          "tops": 12100
+        },
+        {
+          "formations": "Dev.",
+          "tops": 12000
+        },
+        {
+          "formations": "Penn",
+          "tops": 10300
+        },
+        {
+          "formations": "Canyon",
+          "tops": 10000
+        },
+        {
+          "formations": "Wolf",
+          "tops": 9900
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 7000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 4500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Santa Rosa",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Sugarloaf",
+          "formations": "Gray",
+          "tops": 2200,
+          "distance_and_direction_from_nearby_town_": "6 S.E. McCamey"
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 7000,
+          "distance_and_direction_from_nearby_town_": "East Central Upton Co."
+        },
+        {
+          "formations": "San Andres",
+          "tops": 3500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Yates ",
+          "tops": 2500
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 7000,
+          "distance_and_direction_from_nearby_town_": "Northeast Upton Co."
+        },
+        {
+          "formations": "San Andres",
+          "tops": 4000,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Yates",
+          "tops": 2500
+        },
+        {
+          "formations": "Santa Rosa",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag - North 1/4 of Upton County"
+        },
+        {
+          "field_name": "Spraberry Trend",
+          "formations": "Spraberry",
+          "tops": 7000,
+          "distance_and_direction_from_nearby_town_": "Central and Northwest Upton Co."
+        },
+        {
+          "formations": "San Andres",
+          "tops": 4500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Yates",
+          "tops": 2500
+        },
+        {
+          "formations": "Santa Rosa",
+          "tops": 1000,
+          "distance_and_direction_from_nearby_town_": "Tag - North 1/4 of Upton County"
+        },
+        {
+          "field_name": "Sheep Mountain",
+          "formations": "Wolf",
+          "tops": 7200,
+          "distance_and_direction_from_nearby_town_": "10 S.E. Rankin"
+        },
+        {
+          "formations": "Clearfork",
+          "tops": 5700
+        },
+        {
+          "formations": "San Andres",
+          "tops": 3500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "field_name": "Triumph",
+          "formations": "Strawn Detrital",
+          "tops": 9000,
+          "distance_and_direction_from_nearby_town_": "15 East McCamey"
+        },
+        {
+          "formations": "Wolf",
+          "tops": 8100
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 6000
+        },
+        {
+          "formations": "San Andres",
+          "tops": 2500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Gray",
+          "tops": 1600
+        },
+        {
+          "field_name": "Wilshire",
+          "formations": "Strawn",
+          "tops": 9400,
+          "distance_and_direction_from_nearby_town_": "19 N.W. Rankin"
+        },
+        {
+          "formations": "Wolfcamp",
+          "tops": 8500
+        },
+        {
+          "formations": "Spraberry",
+          "tops": 7400
+        },
+        {
+          "formations": "San Andres",
+          "tops": 4500,
+          "distance_and_direction_from_nearby_town_": "Tag"
+        },
+        {
+          "formations": "Yates",
+          "tops": 2700
+        }
+      ]
+    }
+  }
+}

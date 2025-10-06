@@ -20,6 +20,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_filters',
     'corsheaders',
+    'apps.public_core',
+    'apps.tenant_overlay',
+    'apps.policy',
+    'apps.policy_ingest',
+    'apps.agentic_ingest',
 ]
 
 MIDDLEWARE = [

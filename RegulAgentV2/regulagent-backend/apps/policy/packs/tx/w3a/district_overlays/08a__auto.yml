@@ -1,0 +1,913 @@
+district: 08A
+extracted_at: '2025-10-05T07:20:32.082458Z'
+counties:
+  Andrews County:
+    notes:
+    - Waterboard generally requires protection of SR
+    - '* Denotes a non productive formation'
+    - TAG ALL Surface Casing Shoe Plugs in Open Hole
+    requirements:
+      tagging_required_hint:
+        value: true
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      tag:
+        surface_shoe_in_oh: true
+        formations:
+        - SA
+      wbl:
+        min_ft: 250
+      protect_intervals:
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1500
+        tag_required: true
+      - formation: SR
+        top_ft: 1200
+        bottom_ft: 1700
+        tag_required: true
+      - formation: SR
+        top_ft: 1050
+        bottom_ft: 1700
+        tag_required: true
+      - formation: SR
+        top_ft: 950
+        bottom_ft: 1350
+        tag_required: true
+      - formation: SR
+        top_ft: 1100
+        bottom_ft: 1650
+        tag_required: true
+      - formation: SR
+        top_ft: 1250
+        bottom_ft: 1750
+        tag_required: true
+      - formation: SR
+        top_ft: 1250
+        bottom_ft: 1700
+        tag_required: true
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 850
+        bottom_ft: 1350
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1700
+        tag_required: true
+      - formation: SR
+        top_ft: 1200
+        bottom_ft: 1500
+        tag_required: true
+      - formation: SR
+        top_ft: 1150
+        bottom_ft: 1500
+        tag_required: true
+      - formation: SR
+        top_ft: 900
+        bottom_ft: 1600
+        tag_required: true
+      - formation: SR
+        top_ft: 900
+        bottom_ft: 1600
+        tag_required: true
+      - formation: SR
+        top_ft: 1400
+        bottom_ft: 1750
+        tag_required: true
+      - formation: SR
+        top_ft: 1200
+        bottom_ft: 1600
+        tag_required: true
+      - formation: SR
+        top_ft: 600
+        bottom_ft: 1050
+        tag_required: true
+      - formation: SR
+        top_ft: 750
+        bottom_ft: 1200
+        tag_required: true
+      - formation: SR
+        top_ft: 900
+        bottom_ft: 1600
+        tag_required: true
+      - formation: SR
+        top_ft: 1100
+        bottom_ft: 1600
+        tag_required: true
+      - formation: SR
+        top_ft: 1200
+        bottom_ft: 1550
+        tag_required: true
+      - formation: SR
+        top_ft: 1200
+        bottom_ft: 1550
+        tag_required: true
+      - formation: SR
+        top_ft: 1150
+        bottom_ft: 1600
+        tag_required: true
+      - formation: SR
+        top_ft: 1250
+        bottom_ft: 1750
+        tag_required: true
+      - formation: SR
+        top_ft: 900
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 1150
+        bottom_ft: 1500
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1750
+        tag_required: true
+      - formation: SR
+        top_ft: 1200
+        bottom_ft: 1700
+        tag_required: true
+      - formation: SR
+        top_ft: 1200
+        bottom_ft: 1600
+        tag_required: true
+      - formation: SR
+        top_ft: 1100
+        bottom_ft: 1750
+        tag_required: true
+      - formation: SR
+        top_ft: 1300
+        bottom_ft: 1700
+        tag_required: true
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 1175
+        bottom_ft: 1700
+        tag_required: true
+      - formation: SR
+        top_ft: 1300
+        bottom_ft: 1750
+        tag_required: true
+      - formation: SR
+        top_ft: 1250
+        bottom_ft: 1600
+        tag_required: true
+      - formation: SR
+        top_ft: 1150
+        bottom_ft: 1550
+        tag_required: true
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1350
+        tag_required: true
+      - formation: SR
+        top_ft: 1200
+        bottom_ft: 1550
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1850
+        tag_required: true
+      - formation: SR
+        top_ft: 1500
+        bottom_ft: 1850
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1700
+        tag_required: true
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1500
+        tag_required: true
+      - formation: SR
+        top_ft: 1150
+        bottom_ft: 1550
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1650
+        tag_required: true
+      - formation: SR
+        top_ft: 1150
+        bottom_ft: 1500
+        tag_required: true
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1650
+        tag_required: true
+      - formation: SR
+        top_ft: 1150
+        bottom_ft: 1550
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1700
+        tag_required: true
+      combine_formations:
+        allow: true
+        groups:
+        - - Penn
+          - Wolfcamp
+          - Wichita Albany
+          - Leonard
+          - Clearfork
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
+  Borden County:
+    notes:
+    - Waterboard ranges 100-400 over county.  Be aware of extreme
+    - elevation changes at edges of caprock.  Recommend requiring
+    - individual well WBL.  San Andres fm exists over much of County.
+    - Productive in JoMill area.
+    - Verify no San Andres production water flows, disposal  when
+    - approving plugging procedure.
+    - If just South of Lake JB Thomas - see Von Roeder field reqrmts
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        formations:
+        - SA
+        - Sr
+      wbl:
+        min_ft: 300
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
+  Cochran County:
+    notes:
+    - Waterboard ranges 350-450 over county.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 400
+        max_ft: 450
+      tag:
+        formations:
+        - SA
+        - Yates
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
+      squeeze:
+        policy: always
+        formations:
+        - Yates
+  Cottle County:
+    notes:
+    - Waterboard ranges 150-350 over county.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        surface_shoe_in_oh: true
+  Crane County:
+    notes:
+    - Waterboard varies over county.  Waterboard may protect Santa Rosa,
+    - '*Denotes a non productive formation'
+    - TAG ALL Surface Shoes in OH
+    requirements:
+      tagging_required_hint:
+        value: true
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 800
+        max_ft: 800
+      protect_intervals:
+      - formation: SA
+        top_ft: 2100
+        bottom_ft: 3100
+        tag_required: true
+      - formation: SA
+        top_ft: 2200
+        bottom_ft: 3000
+        tag_required: true
+      - formation: SA
+        top_ft: 2100
+        bottom_ft: 3100
+        tag_required: true
+      - formation: SA
+        top_ft: 2100
+        bottom_ft: 3000
+        tag_required: true
+      - formation: SR
+        top_ft: 800
+        bottom_ft: 1250
+        tag_required: true
+      - formation: SR
+        top_ft: 2100
+        bottom_ft: 3000
+        tag_required: true
+      - formation: SR
+        top_ft: 800
+        bottom_ft: 1200
+        tag_required: true
+      - formation: SR
+        top_ft: 700
+        bottom_ft: 1350
+        tag_required: true
+      tag:
+        formations:
+        - SA
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
+  Crosby County:
+    notes:
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 100
+        max_ft: 250
+      tag:
+        formations:
+        - SA
+  Culberson County:
+    notes:
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 300
+  Dawson County:
+    notes:
+    - Waterboard ranges 250-450 over county.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 300
+      tag:
+        formations:
+        - SA
+        surface_shoe_in_oh: true
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
+  Dickens County:
+    notes:
+    - Waterboard ranges 200-350 over county.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 100
+      tag:
+        surface_shoe_in_oh: true
+  Ector County:
+    notes:
+    - Waterboard requires SR protection
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 250
+      protect_intervals:
+      - formation: SR
+        top_ft: 800
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 900
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 1150
+        bottom_ft: 1550
+        tag_required: true
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1450
+        tag_required: true
+      - formation: SR
+        top_ft: 1100
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 1050
+        bottom_ft: 1600
+        tag_required: true
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1500
+        tag_required: true
+      - formation: SR
+        top_ft: 900
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 850
+        bottom_ft: 1200
+        tag_required: true
+      - formation: SR
+        top_ft: 1100
+        bottom_ft: 1500
+        tag_required: true
+      - formation: SR
+        top_ft: 1200
+        bottom_ft: 1500
+        tag_required: true
+      - formation: SR
+        top_ft: 900
+        bottom_ft: 1350
+        tag_required: true
+      - formation: SR
+        top_ft: 700
+        bottom_ft: 1350
+        tag_required: true
+      - formation: SR
+        top_ft: 750
+        bottom_ft: 1100
+        tag_required: true
+      - formation: SR
+        top_ft: 900
+        bottom_ft: 1250
+        tag_required: true
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1400
+        tag_required: true
+      tag:
+        formations:
+        - SA
+  Gaines County:
+    notes:
+    - Waterboard ranges 250-450 plus SR over most of county.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        formations:
+        - SA
+        - Yates
+        surface_shoe_in_oh: true
+      wbl:
+        min_ft: 300
+      protect_intervals:
+      - formation: SR
+        top_ft: 1500
+        bottom_ft: 2000
+        tag_required: true
+      - formation: SR
+        top_ft: 1600
+        bottom_ft: 2100
+        tag_required: true
+      - formation: SR
+        top_ft: 1650
+        bottom_ft: 1950
+        tag_required: true
+      - formation: SR
+        top_ft: 1650
+        bottom_ft: 1950
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1650
+        tag_required: true
+      - formation: SR
+        top_ft: 1600
+        bottom_ft: 2100
+        tag_required: true
+      - formation: SR
+        top_ft: 1150
+        bottom_ft: 1550
+        tag_required: true
+      - formation: SR
+        top_ft: 1300
+        bottom_ft: 1700
+        tag_required: true
+      - formation: SR
+        top_ft: 1750
+        bottom_ft: 2050
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1700
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1650
+        tag_required: true
+      - formation: SR
+        top_ft: 1650
+        bottom_ft: 1950
+        tag_required: true
+      - formation: SR
+        top_ft: 1650
+        bottom_ft: 2000
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1900
+        tag_required: true
+      - formation: SR
+        top_ft: 1500
+        bottom_ft: 2000
+        tag_required: true
+      - formation: SR
+        top_ft: 1600
+        bottom_ft: 1900
+        tag_required: true
+      - formation: SR
+        top_ft: 1200
+        bottom_ft: 1450
+        tag_required: true
+      - formation: SR
+        top_ft: 1350
+        bottom_ft: 1650
+        tag_required: true
+      - formation: SR
+        top_ft: 1650
+        bottom_ft: 1950
+        tag_required: true
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
+  Garza County:
+    notes:
+    - Waterboard ranges 100-300 over county.
+    - Yates fm covers entire county, is very prolific, heavy
+    - salt water and gas flows.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        formations:
+        - SA
+        - Yates
+  Glasscock  County:
+    notes:
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 300
+        max_ft: 400
+      tag:
+        formations:
+        - SA
+  Hale County:
+    notes:
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 450
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
+      tag:
+        formations:
+        - SA
+  Hockley County:
+    notes:
+    - 'Note:  WBL ranges 375-450 over entire county.'
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        formations:
+        - SA
+        - Yates
+      wbl:
+        min_ft: 400
+        max_ft: 450
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
+      squeeze:
+        policy: always
+        formations:
+        - Yates
+  Howard County:
+    notes:
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 200
+      tag:
+        formations:
+        - SA
+        surface_shoe_in_oh: true
+  Kent County:
+    notes:
+    - Waterboard ranges 100-350 over county, depending on the
+    - elevation of well and depth of red beds.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        surface_shoe_in_oh: true
+        formations:
+        - SA
+        - Yates
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
+  King County:
+    notes:
+    - Waterboard ranges 100-350 over county, depending on the
+    - elevation of well and depth of red beds.
+    - '*Denotes a non productive formation'
+    - Consolidated  Strawn & Twin Peaks formations
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        surface_shoe_in_oh: true
+  Lamb County:
+    notes:
+    - Waterboard ranges 250-350 over county.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 300
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
+      tag:
+        formations:
+        - SA
+  Loving County:
+    notes:
+    - Waterboard depth widely variable
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 800
+  Lubbock County:
+    notes:
+    - Waterboard ranges 250-350 over county.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 300
+      tag:
+        formations:
+        - SA
+  Lynn County:
+    notes:
+    - Waterboard ranges 250-350 over county.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 325
+      tag:
+        formations:
+        - SA
+  Martin County:
+    notes:
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 300
+        max_ft: 400
+      tag:
+        formations:
+        - SA
+        surface_shoe_in_oh: true
+      protect_intervals:
+      - formation: SR
+        top_ft: 1100
+        bottom_ft: 1750
+        tag_required: true
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
+  Midland County:
+    notes:
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 250
+      tag:
+        formations:
+        - SA
+      protect_intervals:
+      - formation: SR
+        top_ft: 1000
+        bottom_ft: 1400
+        tag_required: true
+      - formation: SR
+        top_ft: 1100
+        bottom_ft: 1500
+        tag_required: true
+      - formation: SR
+        top_ft: 700
+        bottom_ft: 1350
+        tag_required: true
+  Mitchell County:
+    notes:
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        formations:
+        - SA
+        - Yates
+        surface_shoe_in_oh: true
+      wbl:
+        min_ft: 325
+        max_ft: 200
+  Motley County:
+    notes:
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 200
+      tag:
+        surface_shoe_in_oh: true
+  Reeves County:
+    notes:
+    - Waterboard varies over county.  Waterboard may protect Rustler
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 300
+  Pecos County:
+    notes: []
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 550
+        max_ft: 800
+      protect_intervals:
+      - formation: SA
+        top_ft: 2100
+        bottom_ft: 3100
+        tag_required: true
+      - formation: SA
+        top_ft: 1625
+        bottom_ft: 2300
+        tag_required: true
+      tag:
+        formations:
+        - SA
+  Scurry County:
+    notes:
+    - Waterboard ranges 300-500 for entire county.
+    - Yates formation is prolific salt water/gas bearing zone
+    - throughout Scurry county.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        formations:
+        - SA
+        - Yates
+        surface_shoe_in_oh: true
+  Sterling County:
+    notes:
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        formations:
+        - SA
+        surface_shoe_in_oh: true
+      wbl:
+        min_ft: 550
+  Terry County:
+    notes:
+    - Waterboard ranges from 300-450 for entire county.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        formations:
+        - SA
+      wbl:
+        min_ft: 450
+  Ward County:
+    notes:
+    - 'Waterboard Information:'
+    - Waterboard depths can vary over short distances.  Current waterboard letters
+    requirements: {}
+    preferences: {}
+    overrides:
+      wbl:
+        min_ft: 550
+        max_ft: 1000
+      tag:
+        formations:
+        - SA
+  Winkler County:
+    notes: []
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        formations:
+        - SA
+        - Rustler
+      wbl:
+        min_ft: 900
+        max_ft: 16
+  Yoakum County:
+    notes:
+    - Waterboard ranges 350-450 for entire county.
+    - '*Denotes a non productive formation'
+    requirements: {}
+    preferences: {}
+    overrides:
+      tag:
+        formations:
+        - SA
+        surface_shoe_in_oh: true
+      enhanced_recovery_zone:
+        behavior:
+          require_tag: true
+          require_protect:
+          - SA
