@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Policy Pack Schema (Knobs)",
+  "type": "object",
+  "properties": {
+    "policy_id": {"type": "string"},
+    "policy_version": {"type": "string"},
+    "jurisdiction": {"type": "string"},
+    "form": {"type": "string"},
+    "effective_from": {"type": ["string", "null"]},
+    "base": {
+      "type": "object",
+      "properties": {
+        "citations": {"type": "object"},
+        "requirements": {"type": "object"},
+        "cement_class": {"type": "object"}
+      },
+      "required": ["citations", "requirements", "cement_class"]
+    },
+    "district_overlays": {"type": "object"},
+    "preferences": {"type": "object"}
+  },
+  "required": ["policy_id", "policy_version", "jurisdiction", "form", "base"]
+}
+
+

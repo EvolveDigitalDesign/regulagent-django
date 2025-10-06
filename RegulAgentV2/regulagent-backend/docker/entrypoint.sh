@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 echo "[entrypoint] Waiting for database ${DB_HOST}:${DB_PORT:-5432}..."

@@ -1,0 +1,4337 @@
+district: 7C
+extracted_at: '2025-10-05T08:12:58.458976Z'
+counties:
+  Coke County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+      bottom of
+    - the plug should be roughly 50 FT. above the perfs.  We also need a plug placed
+    - immediately above each formation listed.  If the field in question is not present,
+      please either
+    - use known tops in the subject field or the tops in a listed nearby field.  In
+      addition, we need
+    - a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the
+      shoe.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    - usable quality water stratum, an additional 100 FT. cement plug must be placed
+      inside
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      surface_shoe_symmetry_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      additional_surface_inside_plug_len_ft_if_below_duqw:
+        value: 100
+        applies_if:
+          '>':
+          - var: surface_below_duqw_ft
+          - 200
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Penn
+        top_ft: 5100
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4950
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 2900
+        plug_required: true
+      - formation: Gardner
+        top_ft: 5000
+        plug_required: true
+      - formation: Capps
+        top_ft: 4500
+        plug_required: true
+      - formation: Lime
+        top_ft: 4500
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1800
+        plug_required: true
+      - formation: Caddo
+        top_ft: 6200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4800
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 2000
+        plug_required: true
+      - formation: Odom
+        top_ft: 5500
+        plug_required: true
+      - formation: Lime
+        top_ft: 5500
+        plug_required: true
+      - formation: Gardner
+        top_ft: 5200
+        plug_required: true
+      - formation: Gray
+        top_ft: 5000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1800
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4300
+        plug_required: true
+      - formation: Cisco
+        top_ft: 4100
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5800
+        plug_required: true
+      - formation: Harris
+        top_ft: 5500
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5400
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 2800
+        plug_required: true
+      - formation: Reef
+        top_ft: 6100
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5700
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 3100
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 4200
+        plug_required: true
+      - formation: Palo
+        top_ft: 4200
+        plug_required: true
+      - formation: Pinto
+        top_ft: 4200
+        plug_required: true
+      - formation: Cisco
+        top_ft: 3100
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1800
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5800
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 3400
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 2900
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5700
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 2800
+        plug_required: true
+      - formation: Gardner
+        top_ft: 5300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4100
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1800
+        plug_required: true
+      - formation: Cisco
+        top_ft: 3900
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 2600
+        plug_required: true
+      - formation: Caddo
+        top_ft: 6200
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 4900
+        plug_required: true
+      - formation: Palo
+        top_ft: 4900
+        plug_required: true
+      - formation: Pinto
+        top_ft: 4900
+        plug_required: true
+      - formation: Cisco
+        top_ft: 3400
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1800
+        plug_required: true
+      - formation: Odom
+        top_ft: 6800
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5750
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 3400
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 6350
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5400
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1800
+        plug_required: true
+      - formation: Crosscut
+        top_ft: 5000
+        plug_required: true
+      - formation: Crosscut
+        top_ft: 5000
+        plug_required: true
+      - formation: Cisco
+        top_ft: 3700
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 2000
+        plug_required: true
+  Concho County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+      bottom of
+    - the plug should be roughly 50 FT. above the perfs.  We also need a plug placed
+    - immediately above each formation listed.  If the field in question is not present,
+      please either
+    - use known tops in the subject field or the tops in a listed nearby field.  In
+      addition, we need
+    - a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the
+      shoe.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    - usable qualtiy water stratum, an additional 100 FT. cement plug must be placed
+      inside
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      surface_shoe_symmetry_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: King
+        top_ft: 2050
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 600
+        plug_required: true
+      - formation: Harkey
+        top_ft: 3050
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 500
+        plug_required: true
+      - formation: Canyon
+        top_ft: 3300
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 500
+        plug_required: true
+      - formation: Goen
+        top_ft: 3800
+        plug_required: true
+      - formation: Cisco
+        top_ft: 2500
+        plug_required: true
+      - formation: Coleman
+        top_ft: 700
+        plug_required: true
+      - formation: Juction
+        top_ft: 700
+        plug_required: true
+      - formation: Strawn
+        top_ft: 3700
+        plug_required: true
+      - formation: Cisco
+        top_ft: 2600
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 700
+        plug_required: true
+      - formation: Cisco
+        top_ft: 2550
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 900
+        plug_required: true
+      - formation: Hope
+        top_ft: 1500
+        plug_required: true
+      - formation: Sand
+        top_ft: 1500
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 500
+        plug_required: true
+      - formation: Hickory
+        top_ft: 41404180
+        plug_required: true
+      - formation: Sand
+        top_ft: 41404180
+        plug_required: true
+      - formation: Welch
+        top_ft: 3650
+        plug_required: true
+      - formation: Sand
+        top_ft: 3650
+        plug_required: true
+      - formation: Strawn
+        top_ft: 3160
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 2700
+        plug_required: true
+      - formation: Palo
+        top_ft: 2700
+        plug_required: true
+      - formation: Pinto
+        top_ft: 2700
+        plug_required: true
+      - formation: Hope
+        top_ft: 1680
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 500
+        plug_required: true
+      - formation: Cook
+        top_ft: 3100
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 900
+        plug_required: true
+      - formation: Goen
+        top_ft: 3300
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 500
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4000
+        plug_required: true
+      - formation: Cisco
+        top_ft: 2600
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1000
+        plug_required: true
+      - formation: Crosscut
+        top_ft: 3200
+        plug_required: true
+      - formation: Cross
+        top_ft: 3200
+        plug_required: true
+      - formation: Cut
+        top_ft: 3200
+        plug_required: true
+      - formation: Coleman
+        top_ft: 700
+        plug_required: true
+      - formation: Jucntion
+        top_ft: 700
+        plug_required: true
+      - formation: Harkey
+        top_ft: 2500
+        plug_required: true
+      - formation: Tannehill
+        top_ft: 1000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 400
+        plug_required: true
+      - formation: Ranger
+        top_ft: 2200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 400
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 2700
+        plug_required: true
+      - formation: Palo
+        top_ft: 2700
+        plug_required: true
+      - formation: Pinto
+        top_ft: 2700
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 400
+        plug_required: true
+      - formation: Winchell
+        top_ft: 2250
+        plug_required: true
+      - formation: Cook
+        top_ft: 1300
+        plug_required: true
+      - formation: Coleman
+        top_ft: 400
+        plug_required: true
+      - formation: Juction
+        top_ft: 400
+        plug_required: true
+      - formation: Harkey
+        top_ft: 3450
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1000
+        plug_required: true
+      - formation: Harkey
+        top_ft: 2400
+        plug_required: true
+      - formation: Swastika
+        top_ft: 1650
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 400
+        plug_required: true
+      - formation: Caddo
+        top_ft: 3950
+        plug_required: true
+      - formation: Strawn
+        top_ft: 3500
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 700
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 2100
+        plug_required: true
+      - formation: Palo
+        top_ft: 2100
+        plug_required: true
+      - formation: Pinto
+        top_ft: 2100
+        plug_required: true
+      - formation: Cook
+        top_ft: 1300
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 400
+        plug_required: true
+      - formation: Gardner
+        top_ft: 3750
+        plug_required: true
+      - formation: Goen
+        top_ft: 3550
+        plug_required: true
+      - formation: Canyon
+        top_ft: 3100
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 500
+        plug_required: true
+      - formation: Gardner
+        top_ft: 3650
+        plug_required: true
+      - formation: Strawn
+        top_ft: 3150
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 4050
+        plug_required: true
+      - formation: Cisco
+        top_ft: 2500
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 700
+        plug_required: true
+      - formation: King
+        top_ft: 2000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 1400
+        plug_required: true
+      - formation: King
+        top_ft: 2000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 500
+        plug_required: true
+  Crockett County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+      bottom
+    - of the plug should be roughly 50 FT. above the perfs.  We also need a plug placed
+    - immediately above each formation listed.  If the field in question is not present,
+      please
+    - either use known tops in the subject field or the tops in a listed nearby field.  In
+      addition,
+    - we need a plug placed 50 FT. below the shoe of the surface/intermediate casing
+    - to 50 FT. above the casing.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Canyon
+        top_ft: 4800
+        plug_required: true
+      - formation: Spaberry
+        top_ft: 3100
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 1600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5600
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 3800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2300
+        plug_required: true
+      - formation: Strawn
+        top_ft: 8500
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5700
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3900
+        plug_required: true
+      - formation: Glorieta
+        top_ft: 2400
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 1600
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 7900
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5700
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3900
+        plug_required: true
+      - formation: Glorieta
+        top_ft: 2400
+        plug_required: true
+      - formation: Shallow
+        top_ft: 1700
+        plug_required: true
+      - formation: Wolf
+        top_ft: 4900
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3100
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 13400
+        plug_required: true
+      - formation: Devonian
+        top_ft: 11900
+        plug_required: true
+      - formation: Strawn
+        top_ft: 11600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 8800
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6000
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3000
+        plug_required: true
+      - formation: Glorieta
+        top_ft: 1500
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 7900
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5000
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 1800
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6300
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3500
+        plug_required: true
+      - formation: Gray
+        top_ft: 1300
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 7100
+        plug_required: true
+      - formation: Permo
+        top_ft: 6800
+        plug_required: true
+      - formation: Penn
+        top_ft: 6800
+        plug_required: true
+      - formation: Detrital
+        top_ft: 6800
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4200
+        plug_required: true
+      - formation: San
+        top_ft: 2000
+        plug_required: true
+      - formation: Andres
+        top_ft: 2000
+        plug_required: true
+      - formation: Strawn
+        top_ft: 9500
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5700
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2100
+        plug_required: true
+      - formation: Queen
+        top_ft: 840
+        plug_required: true
+      - formation: Devonian
+        top_ft: 8900
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2200
+        plug_required: true
+      - formation: Queen
+        top_ft: 900
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 7100
+        plug_required: true
+      - formation: Wolf
+        top_ft: 4900
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3000
+        plug_required: true
+      - formation: San
+        top_ft: 1000
+        plug_required: true
+      - formation: Andres
+        top_ft: 1000
+        plug_required: true
+      - formation: Fuss
+        top_ft: 8500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 7600
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4200
+        plug_required: true
+      - formation: San
+        top_ft: 2500
+        plug_required: true
+      - formation: Andres
+        top_ft: 2500
+        plug_required: true
+      - formation: San
+        top_ft: 1900
+        plug_required: true
+      - formation: Andres
+        top_ft: 1900
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 7900
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7650
+        plug_required: true
+      - formation: T
+        top_ft: 3900
+        plug_required: true
+      - formation: Consol
+        top_ft: 3900
+        plug_required: true
+      - formation: Sand
+        top_ft: 3900
+        plug_required: true
+      - formation: San Andres
+        top_ft: 1200
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 1200
+        plug_required: true
+      - formation: San
+        top_ft: 1400
+        plug_required: true
+      - formation: Andres
+        top_ft: 1400
+        plug_required: true
+      - formation: Shallow
+        top_ft: 1200
+        plug_required: true
+      - formation: Queen
+        top_ft: 780
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4000
+        plug_required: true
+      - formation: Wolf
+        top_ft: 3400
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 12800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 11000
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5400
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2100
+        plug_required: true
+      - formation: Wolfcamp
+        top_ft: 6000
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5000
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4400
+        plug_required: true
+      - formation: San
+        top_ft: 1900
+        plug_required: true
+      - formation: Andres
+        top_ft: 1900
+        plug_required: true
+      - formation: Queen
+        top_ft: 1300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5700
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2100
+        plug_required: true
+      - formation: Strawn
+        top_ft: 8900
+        plug_required: true
+      - formation: Penn
+        top_ft: 7750
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5500
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3500
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 2200
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 7300
+        plug_required: true
+      - formation: Strawn
+        top_ft: 7100
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5300
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 4100
+        plug_required: true
+      - formation: San
+        top_ft: 1800
+        plug_required: true
+      - formation: Andres
+        top_ft: 1800
+        plug_required: true
+      - formation: Permian
+        top_ft: 1100
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 11400
+        plug_required: true
+      - formation: Strawn
+        top_ft: 10000
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5000
+        plug_required: true
+      - formation: Glorieta
+        top_ft: 2400
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 1800
+        plug_required: true
+      - formation: Wolf
+        top_ft: 3600
+        plug_required: true
+      - formation: Lower
+        top_ft: 3600
+        plug_required: true
+      - formation: Wolf
+        top_ft: 1700
+        plug_required: true
+      - formation: Wolf
+        top_ft: 4950
+        plug_required: true
+      - formation: Queen
+        top_ft: 1900
+        plug_required: true
+      - formation: Felker
+        top_ft: 1000
+        plug_required: true
+      - formation: San
+        top_ft: 1800
+        plug_required: true
+      - formation: Andres
+        top_ft: 1800
+        plug_required: true
+      - formation: Yates
+        top_ft: 1100
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5100
+        plug_required: true
+      - formation: Wolf
+        top_ft: 4000
+        plug_required: true
+      - formation: Refoil
+        top_ft: 3200
+        plug_required: true
+      - formation: '3200'
+        top_ft: 3200
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7500
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5100
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2000
+        plug_required: true
+      - formation: Strawn
+        top_ft: 9300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5800
+        plug_required: true
+      - formation: Refoil
+        top_ft: 3200
+        plug_required: true
+      - formation: '3200'
+        top_ft: 3200
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 1800
+        plug_required: true
+      - formation: Wolf
+        top_ft: 8300
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 5700
+        plug_required: true
+      - formation: San
+        top_ft: 3700
+        plug_required: true
+      - formation: Andres
+        top_ft: 3700
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 6900
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3100
+        plug_required: true
+      - formation: San
+        top_ft: 1200
+        plug_required: true
+      - formation: Andres
+        top_ft: 1200
+        plug_required: true
+      - formation: San
+        top_ft: 1200
+        plug_required: true
+      - formation: Andres
+        top_ft: 1200
+        plug_required: true
+      - formation: Wolf
+        top_ft: 7200
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 5700
+        plug_required: true
+      - formation: San
+        top_ft: 3700
+        plug_required: true
+      - formation: Andres
+        top_ft: 3700
+        plug_required: true
+      - formation: Strawn
+        top_ft: 8400
+        plug_required: true
+      - formation: Cisco
+        top_ft: 6400
+        plug_required: true
+      - formation: San
+        top_ft: 2400
+        plug_required: true
+      - formation: Andres
+        top_ft: 2400
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 2000
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5500
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3500
+        plug_required: true
+      - formation: San Andres
+        top_ft: 2200
+        plug_required: true
+      - formation: Gray
+        top_ft: 1900
+        plug_required: true
+      - formation: Queen
+        top_ft: 1500
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 6500
+        plug_required: true
+      - formation: McKee
+        top_ft: 5800
+        plug_required: true
+      - formation: Glorieta
+        top_ft: 2250
+        plug_required: true
+      - formation: San
+        top_ft: 1700
+        plug_required: true
+      - formation: Andres
+        top_ft: 1700
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 6900
+        plug_required: true
+      - formation: Strawn
+        top_ft: 6400
+        plug_required: true
+      - formation: Crinoidal
+        top_ft: 5700
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3800
+        plug_required: true
+      - formation: San
+        top_ft: 1800
+        plug_required: true
+      - formation: Andres
+        top_ft: 1800
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 1400
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5600
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2000
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 7500
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5200
+        plug_required: true
+      - formation: San
+        top_ft: 1300
+        plug_required: true
+      - formation: Andres
+        top_ft: 1300
+        plug_required: true
+      - formation: Queen
+        top_ft: 1000
+        plug_required: true
+      - formation: Strawn
+        top_ft: 8100
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6000
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2400
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 2600
+        plug_required: true
+      - formation: San
+        top_ft: 1200
+        plug_required: true
+      - formation: Andres
+        top_ft: 1200
+        plug_required: true
+  Irion County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+      bottom of
+    - the plug should be roughly 50 FT. above the perfs.  We also need a plug placed
+    - immediately above each formation listed.  If the field in question is not present,
+      please either
+    - use known tops in the subject field or the tops in a listed nearby field.  In
+      addition, we need
+    - a plug placed 50 FT. below the shoe of the surface/intermediate casing to 50
+      FT. above
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Canyon
+        top_ft: 6300
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5000
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 4000
+        plug_required: true
+      - formation: San
+        top_ft: 1300
+        plug_required: true
+      - formation: Andres
+        top_ft: 1300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6200
+        plug_required: true
+      - formation: Wolf
+        top_ft: 4200
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 1700
+        plug_required: true
+      - formation: San
+        top_ft: 700
+        plug_required: true
+      - formation: Angelo
+        top_ft: 700
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 8800
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6200
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 4400
+        plug_required: true
+      - formation: San
+        top_ft: 2200
+        plug_required: true
+      - formation: Andres
+        top_ft: 2200
+        plug_required: true
+      - formation: Gray
+        top_ft: 2200
+        plug_required: true
+      - formation: Queen
+        top_ft: 1700
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5700
+        plug_required: true
+      - formation: Permian
+        top_ft: 4500
+        plug_required: true
+      - formation: Lime
+        top_ft: 4500
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2300
+        plug_required: true
+      - formation: San
+        top_ft: 900
+        plug_required: true
+      - formation: Angelo
+        top_ft: 900
+        plug_required: true
+      - formation: Strawn
+        top_ft: 7150
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5200
+        plug_required: true
+      - formation: Wichita
+        top_ft: 4200
+        plug_required: true
+      - formation: Albany
+        top_ft: 4200
+        plug_required: true
+      - formation: Clear
+        top_ft: 2700
+        plug_required: true
+      - formation: Fork
+        top_ft: 2700
+        plug_required: true
+      - formation: San
+        top_ft: 900
+        plug_required: true
+      - formation: Angelo
+        top_ft: 900
+        plug_required: true
+      - formation: Fusselman
+        top_ft: 8900
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6300
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 4700
+        plug_required: true
+      - formation: San
+        top_ft: 2000
+        plug_required: true
+      - formation: Andres
+        top_ft: 2000
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 1500
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6400
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3000
+        plug_required: true
+      - formation: San
+        top_ft: 1100
+        plug_required: true
+      - formation: Andres
+        top_ft: 1100
+        plug_required: true
+      - formation: Gray
+        top_ft: 950
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6300
+        plug_required: true
+      - formation: Cisco
+        top_ft: 5500
+        plug_required: true
+      - formation: Permian
+        top_ft: 4500
+        plug_required: true
+      - formation: Lime
+        top_ft: 4500
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2300
+        plug_required: true
+      - formation: San
+        top_ft: 850
+        plug_required: true
+      - formation: Angelo
+        top_ft: 850
+        plug_required: true
+      - formation: San
+        top_ft: 700
+        plug_required: true
+      - formation: Andres
+        top_ft: 700
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6400
+        plug_required: true
+      - formation: Clear
+        top_ft: 4000
+        plug_required: true
+      - formation: Fork
+        top_ft: 4000
+        plug_required: true
+      - formation: San
+        top_ft: 2000
+        plug_required: true
+      - formation: Andres
+        top_ft: 2000
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 1500
+        plug_required: true
+      - formation: Clear
+        top_ft: 4000
+        plug_required: true
+      - formation: Fork
+        top_ft: 4000
+        plug_required: true
+      - formation: San
+        top_ft: 2000
+        plug_required: true
+      - formation: Andres
+        top_ft: 2000
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 1500
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6300
+        plug_required: true
+      - formation: Cisco
+        top_ft: 5900
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2700
+        plug_required: true
+      - formation: San
+        top_ft: 850
+        plug_required: true
+      - formation: Angelo
+        top_ft: 850
+        plug_required: true
+      - formation: Ellenberger
+        top_ft: 8800
+        plug_required: true
+      - formation: Wolfcamp
+        top_ft: 6200
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 4400
+        plug_required: true
+      - formation: San
+        top_ft: 1900
+        plug_required: true
+      - formation: Andres
+        top_ft: 1900
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 1670
+        plug_required: true
+      - formation: Queen
+        top_ft: 1500
+        plug_required: true
+      - formation: Fusselman
+        top_ft: 9000
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6400
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 4600
+        plug_required: true
+      - formation: San
+        top_ft: 1900
+        plug_required: true
+      - formation: Andres
+        top_ft: 1900
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 1600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7500
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6200
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 4500
+        plug_required: true
+      - formation: San
+        top_ft: 2000
+        plug_required: true
+      - formation: Andres
+        top_ft: 2000
+        plug_required: true
+      - formation: Gray
+        top_ft: 1500
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 3200
+        plug_required: true
+      - formation: San
+        top_ft: 1200
+        plug_required: true
+      - formation: Andres
+        top_ft: 1200
+        plug_required: true
+      - formation: Fusselman
+        top_ft: 8800
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7700
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3200
+        plug_required: true
+      - formation: San
+        top_ft: 2000
+        plug_required: true
+      - formation: Andres
+        top_ft: 2000
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 1500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 6850
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6600
+        plug_required: true
+      - formation: Clear
+        top_ft: 2800
+        plug_required: true
+      - formation: Fork
+        top_ft: 2800
+        plug_required: true
+      - formation: San
+        top_ft: 1100
+        plug_required: true
+      - formation: Andres
+        top_ft: 1100
+        plug_required: true
+      - formation: Clear
+        top_ft: 4400
+        plug_required: true
+      - formation: Fork
+        top_ft: 4400
+        plug_required: true
+      - formation: San
+        top_ft: 1500
+        plug_required: true
+      - formation: Andres
+        top_ft: 1500
+        plug_required: true
+      - formation: Clear
+        top_ft: 4400
+        plug_required: true
+      - formation: Fork
+        top_ft: 4400
+        plug_required: true
+      - formation: San
+        top_ft: 1500
+        plug_required: true
+      - formation: Andres
+        top_ft: 1500
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3200
+        plug_required: true
+      - formation: San
+        top_ft: 2000
+        plug_required: true
+      - formation: Andres
+        top_ft: 2000
+        plug_required: true
+      - formation: Queen
+        top_ft: 1500
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5200
+        plug_required: true
+      - formation: Clear
+        top_ft: 2700
+        plug_required: true
+      - formation: Fork
+        top_ft: 2700
+        plug_required: true
+      - formation: San
+        top_ft: 900
+        plug_required: true
+      - formation: Angelo
+        top_ft: 900
+        plug_required: true
+      - formation: Fusselman
+        top_ft: 8600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7300
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4300
+        plug_required: true
+      - formation: San
+        top_ft: 1600
+        plug_required: true
+      - formation: Andres
+        top_ft: 1600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7200
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6450
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4400
+        plug_required: true
+      - formation: San
+        top_ft: 1600
+        plug_required: true
+      - formation: Andres
+        top_ft: 1600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7600
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4400
+        plug_required: true
+      - formation: San
+        top_ft: 2000
+        plug_required: true
+      - formation: Andres
+        top_ft: 2000
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 1500
+        plug_required: true
+      - formation: San
+        top_ft: 1700
+        plug_required: true
+      - formation: Angelo
+        top_ft: 1700
+        plug_required: true
+      - formation: Gray
+        top_ft: 1200
+        plug_required: true
+  Kimble County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+      bottom of
+    - the plug should be roughly 50 FT. above the perfs.  We also need a plug placed
+    - immediately above each formation listed.  If the field in question is not present,
+      please either
+    - use known tops in the subject field or the tops in a listed nearby field.  In
+      addition, we need
+    - a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the
+      shoe.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    - usable quality water stratum, an additional 100 FT. cement plug must be placed
+      inside
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      surface_shoe_symmetry_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      additional_surface_inside_plug_len_ft_if_below_duqw:
+        value: 100
+        applies_if:
+          '>':
+          - var: surface_below_duqw_ft
+          - 200
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Strawn
+        top_ft: 1100
+        plug_required: true
+      - formation: Adams
+        top_ft: 600
+        plug_required: true
+      - formation: Branch
+        top_ft: 600
+        plug_required: true
+      - formation: Strawn
+        top_ft: 1400
+        plug_required: true
+      - formation: Canyon
+        top_ft: 900
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 3100
+        plug_required: true
+      - formation: Strawn
+        top_ft: 2300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 1800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 1700
+        plug_required: true
+      - formation: Canyon
+        top_ft: 1450
+        plug_required: true
+  McCulloch County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+    - bottom of the plug should be roughly 50 FT. above the perfs.  We also need a
+      plug
+    - placed immediately above each formation listed.  If the field in question is
+      not present,
+    - please either use known tops in the subject field or the tops in a listed nearby
+      field.
+    - In addition, we need a plug placed 50 FT. below the shoe of the surface casing
+      to
+    - 50 FT. above the shoe.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      surface_shoe_symmetry_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Strawn
+        top_ft: 650
+        plug_required: true
+      - formation: Strawn
+        top_ft: 600
+        plug_required: true
+      - formation: Strawn
+        top_ft: 1750
+        plug_required: true
+      - formation: Strawn
+        top_ft: 800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 950
+        plug_required: true
+      - formation: Caddo
+        top_ft: 1500
+        plug_required: true
+      - formation: Mississippian
+        top_ft: 1300
+        plug_required: true
+      - formation: Strawn
+        top_ft: 800
+        plug_required: true
+      - formation: Penn
+        top_ft: 1500
+        plug_required: true
+      - formation: Marble
+        top_ft: 700
+        plug_required: true
+      - formation: Falls
+        top_ft: 700
+        plug_required: true
+      - formation: Caddo
+        top_ft: 700
+        plug_required: true
+      - formation: Caddo
+        top_ft: 700
+        plug_required: true
+      - formation: Strawn
+        top_ft: 800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 700
+        plug_required: true
+      - formation: Canyon
+        top_ft: 1200
+        plug_required: true
+      - formation: Strawn
+        top_ft: 1100
+        plug_required: true
+      - formation: Home
+        top_ft: 550
+        plug_required: true
+      - formation: Ck
+        top_ft: 550
+        plug_required: true
+      - formation: Lime
+        top_ft: 550
+        plug_required: true
+      - formation: Strawn
+        top_ft: 1350
+        plug_required: true
+      - formation: Crosscut
+        top_ft: 1650
+        plug_required: true
+      - formation: Cross
+        top_ft: 1650
+        plug_required: true
+      - formation: cut
+        top_ft: 1650
+        plug_required: true
+      - formation: Canyon
+        top_ft: 1000
+        plug_required: true
+      - formation: Caddo
+        top_ft: 700
+        plug_required: true
+  Menard County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+      bottom of
+    - the plug should be roughly 50 FT. above the perfs.  We also need a plug placed
+    - immediately above each formation listed.  If the field in question is not present,
+      please either
+    - use known tops in the subject field or the tops in a listed nearby field.  In
+      addition, we need
+    - a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the
+      shoe.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    - usable quality water stratum, an additional 100 FT. cement plug must be placed
+      inside
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      surface_shoe_symmetry_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      additional_surface_inside_plug_len_ft_if_below_duqw:
+        value: 100
+        applies_if:
+          '>':
+          - var: surface_below_duqw_ft
+          - 200
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Strawn
+        top_ft: 3600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 3400
+        plug_required: true
+      - formation: Cisco
+        top_ft: 1600
+        plug_required: true
+      - formation: Coleman
+        top_ft: 700
+        plug_required: true
+      - formation: Juncton
+        top_ft: 700
+        plug_required: true
+      - formation: Bunger
+        top_ft: 1600
+        plug_required: true
+      - formation: Ivan,
+        top_ft: 1400
+        plug_required: true
+      - formation: Upper
+        top_ft: 1400
+        plug_required: true
+      - formation: Cook
+        top_ft: 1100
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 700
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 3900
+        plug_required: true
+      - formation: Palo
+        top_ft: 3900
+        plug_required: true
+      - formation: Pinto
+        top_ft: 3900
+        plug_required: true
+      - formation: Canyon
+        top_ft: 2700
+        plug_required: true
+      - formation: Gunsight
+        top_ft: 1600
+        plug_required: true
+      - formation: Cook
+        top_ft: 1100
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 700
+        plug_required: true
+      - formation: Cisco
+        top_ft: 1600
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 700
+        plug_required: true
+      - formation: Cisco
+        top_ft: 2500
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 800
+        plug_required: true
+      - formation: King
+        top_ft: 1600
+        plug_required: true
+      - formation: Hope
+        top_ft: 1500
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 700
+        plug_required: true
+      - formation: Caddo
+        top_ft: 2700
+        plug_required: true
+      - formation: Cisco
+        top_ft: 1500
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 700
+        plug_required: true
+      - formation: Goen
+        top_ft: 3500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 3200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 3000
+        plug_required: true
+      - formation: Hope
+        top_ft: 1700
+        plug_required: true
+      - formation: Lime
+        top_ft: 1700
+        plug_required: true
+      - formation: Coleman
+        top_ft: 800
+        plug_required: true
+      - formation: Junciton
+        top_ft: 800
+        plug_required: true
+  Reagan County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+    - bottom of the plug should be roughly 50 FT. above the perfs.  We also need a
+      plug
+    - placed immediately above each formation listed.  If the field in question is
+      not present,
+    - please either use known tops in the subject field or the tops in a listed nearby
+      field.
+    - In addition, we need a plug placed 50 FT. below the shoe of the surface/intermediate
+    - casing to 50 FT. above the shoe.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      surface_shoe_symmetry_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Fuss
+        top_ft: 8800
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6300
+        plug_required: true
+      - formation: San
+        top_ft: 2600
+        plug_required: true
+      - formation: Andres
+        top_ft: 2600
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 2200
+        plug_required: true
+      - formation: Queen
+        top_ft: 2000
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 8700
+        plug_required: true
+      - formation: Fuss
+        top_ft: 8500
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6300
+        plug_required: true
+      - formation: San
+        top_ft: 2700
+        plug_required: true
+      - formation: Andres
+        top_ft: 2700
+        plug_required: true
+      - formation: Gray
+        top_ft: 2700
+        plug_required: true
+      - formation: Queen
+        top_ft: 2000
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5000
+        plug_required: true
+      - formation: San
+        top_ft: 1900
+        plug_required: true
+      - formation: Andres
+        top_ft: 1900
+        plug_required: true
+      - formation: Gray
+        top_ft: 1900
+        plug_required: true
+      - formation: Queen
+        top_ft: 1000
+        plug_required: true
+      - formation: San
+        top_ft: 1900
+        plug_required: true
+      - formation: Andres
+        top_ft: 1900
+        plug_required: true
+      - formation: Gray
+        top_ft: 1700
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4000
+        plug_required: true
+      - formation: San
+        top_ft: 3000
+        plug_required: true
+      - formation: Andres
+        top_ft: 3000
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 2700
+        plug_required: true
+      - formation: Queen
+        top_ft: 2200
+        plug_required: true
+      - formation: Strawn
+        top_ft: 8700
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4000
+        plug_required: true
+      - formation: San
+        top_ft: 3200
+        plug_required: true
+      - formation: Andres
+        top_ft: 3200
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 3000
+        plug_required: true
+      - formation: Queen
+        top_ft: 2400
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 2500
+        plug_required: true
+      - formation: Queen
+        top_ft: 2000
+        plug_required: true
+      - formation: Pennslyvanian
+        top_ft: 9000
+        plug_required: true
+      - formation: Wolfcamp
+        top_ft: 7000
+        plug_required: true
+      - formation: Fusselman
+        top_ft: 8900
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5200
+        plug_required: true
+      - formation: San
+        top_ft: 1900
+        plug_required: true
+      - formation: Andres
+        top_ft: 1900
+        plug_required: true
+      - formation: Gray
+        top_ft: 1900
+        plug_required: true
+      - formation: Queen
+        top_ft: 1000
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 9900
+        plug_required: true
+      - formation: Fuss
+        top_ft: 9800
+        plug_required: true
+      - formation: Siluro-Dev
+        top_ft: 9600
+        plug_required: true
+      - formation: Sprayberry
+        top_ft: 5400
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3800
+        plug_required: true
+      - formation: San
+        top_ft: 2500
+        plug_required: true
+      - formation: Andres
+        top_ft: 2500
+        plug_required: true
+      - formation: Gray
+        top_ft: 2500
+        plug_required: true
+      - formation: Queen
+        top_ft: 2000
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 10300
+        plug_required: true
+      - formation: Fuss
+        top_ft: 10200
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5600
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4500
+        plug_required: true
+      - formation: San
+        top_ft: 2800
+        plug_required: true
+      - formation: Andres
+        top_ft: 2800
+        plug_required: true
+      - formation: Gray
+        top_ft: 2800
+        plug_required: true
+      - formation: Queen
+        top_ft: 2200
+        plug_required: true
+      - formation: Fusselman
+        top_ft: 11000
+        plug_required: true
+      - formation: Strawn
+        top_ft: 10200
+        plug_required: true
+      - formation: Dean
+        top_ft: 7000
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6200
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4500
+        plug_required: true
+      - formation: San
+        top_ft: 3300
+        plug_required: true
+      - formation: Andres
+        top_ft: 3300
+        plug_required: true
+      - formation: Gray
+        top_ft: 3300
+        plug_required: true
+      - formation: Queen
+        top_ft: 2500
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5300
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3800
+        plug_required: true
+      - formation: San
+        top_ft: 2700
+        plug_required: true
+      - formation: Andres
+        top_ft: 2700
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 2200
+        plug_required: true
+      - formation: Queen
+        top_ft: 2000
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5500
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4000
+        plug_required: true
+      - formation: San
+        top_ft: 2800
+        plug_required: true
+      - formation: Andres
+        top_ft: 2800
+        plug_required: true
+      - formation: Gray
+        top_ft: 2800
+        plug_required: true
+      - formation: Queen
+        top_ft: 1800
+        plug_required: true
+      - formation: Fuss
+        top_ft: 9500
+        plug_required: true
+      - formation: Atoka
+        top_ft: 9100
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5400
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3800
+        plug_required: true
+      - formation: San
+        top_ft: 2000
+        plug_required: true
+      - formation: Andres
+        top_ft: 2000
+        plug_required: true
+      - formation: Gray
+        top_ft: 2000
+        plug_required: true
+      - formation: Queen
+        top_ft: 1500
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4000
+        plug_required: true
+      - formation: San
+        top_ft: 2800
+        plug_required: true
+      - formation: Andres
+        top_ft: 2800
+        plug_required: true
+      - formation: Gray
+        top_ft: 2800
+        plug_required: true
+      - formation: Queen
+        top_ft: 1800
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6000
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4500
+        plug_required: true
+      - formation: San
+        top_ft: 3000
+        plug_required: true
+      - formation: Andres
+        top_ft: 3000
+        plug_required: true
+      - formation: Gray
+        top_ft: 3000
+        plug_required: true
+      - formation: Queen
+        top_ft: 2200
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6000
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4500
+        plug_required: true
+      - formation: San
+        top_ft: 3300
+        plug_required: true
+      - formation: Andres
+        top_ft: 3300
+        plug_required: true
+      - formation: Gray
+        top_ft: 3300
+        plug_required: true
+      - formation: Queen
+        top_ft: 2500
+        plug_required: true
+      - formation: Santa
+        top_ft: 1000
+        plug_required: true
+      - formation: Rosa
+        top_ft: 1000
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3800
+        plug_required: true
+      - formation: San
+        top_ft: 2400
+        plug_required: true
+      - formation: Andres
+        top_ft: 2400
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 2000
+        plug_required: true
+      - formation: Queen
+        top_ft: 1700
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6000
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4000
+        plug_required: true
+      - formation: San
+        top_ft: 2800
+        plug_required: true
+      - formation: Andres
+        top_ft: 2800
+        plug_required: true
+      - formation: Gray
+        top_ft: 2800
+        plug_required: true
+      - formation: Queen
+        top_ft: 2200
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6200
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4500
+        plug_required: true
+      - formation: San
+        top_ft: 3300
+        plug_required: true
+      - formation: Andres
+        top_ft: 3300
+        plug_required: true
+      - formation: Gray
+        top_ft: 3300
+        plug_required: true
+      - formation: Queen
+        top_ft: 2500
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3800
+        plug_required: true
+      - formation: San
+        top_ft: 2600
+        plug_required: true
+      - formation: Andres
+        top_ft: 2600
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 2200
+        plug_required: true
+      - formation: Queen
+        top_ft: 2000
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 3800
+        plug_required: true
+      - formation: San
+        top_ft: 2700
+        plug_required: true
+      - formation: Andres
+        top_ft: 2700
+        plug_required: true
+      - formation: Gray
+        top_ft: 2700
+        plug_required: true
+      - formation: Queen
+        top_ft: 2000
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6000
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 4000
+        plug_required: true
+      - formation: San
+        top_ft: 3200
+        plug_required: true
+      - formation: Andres
+        top_ft: 3200
+        plug_required: true
+      - formation: Gray
+        top_ft: 3200
+        plug_required: true
+      - formation: Queen
+        top_ft: 2500
+        plug_required: true
+      - formation: Grayburg
+        top_ft: 3200
+        plug_required: true
+      - formation: Queen
+        top_ft: 2500
+        plug_required: true
+  Runnels County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+    - bottom of the plug should be roughly 50 FT. above the perfs.  We also need a
+      plug
+    - placed immediately above each formation listed.  If the field in question is
+      not present,
+    - please either use known tops in the subject field or the tops in a listed nearby
+      field.
+    - In addition, we need a plug placed 50 FT. below the shoe of the surface casing
+      to 50 FT.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Dog
+        top_ft: 3400
+        plug_required: true
+      - formation: Bend
+        top_ft: 3400
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1000
+        plug_required: true
+      - formation: Gardner
+        top_ft: 4200
+        plug_required: true
+      - formation: Gray
+        top_ft: 4000
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 3400
+        plug_required: true
+      - formation: Palo
+        top_ft: 3400
+        plug_required: true
+      - formation: Pinto
+        top_ft: 3400
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1000
+        plug_required: true
+      - formation: Goen
+        top_ft: 3300
+        plug_required: true
+      - formation: Dog
+        top_ft: 3000
+        plug_required: true
+      - formation: Bend
+        top_ft: 3000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 600
+        plug_required: true
+      - formation: Gardner
+        top_ft: 3900
+        plug_required: true
+      - formation: Morris
+        top_ft: 3700
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1000
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 3700
+        plug_required: true
+      - formation: Palo
+        top_ft: 3700
+        plug_required: true
+      - formation: Pinto
+        top_ft: 3700
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1400
+        plug_required: true
+      - formation: Gardner
+        top_ft: 4100
+        plug_required: true
+      - formation: Lime
+        top_ft: 4100
+        plug_required: true
+      - formation: Goen
+        top_ft: 4000
+        plug_required: true
+      - formation: Serrattt
+        top_ft: 2500
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1200
+        plug_required: true
+      - formation: Goen
+        top_ft: 4400
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1700
+        plug_required: true
+      - formation: Gray
+        top_ft: 5100
+        plug_required: true
+      - formation: Cook
+        top_ft: 3000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1800
+        plug_required: true
+      - formation: Odom
+        top_ft: 5400
+        plug_required: true
+      - formation: Lime
+        top_ft: 5400
+        plug_required: true
+      - formation: Gardner
+        top_ft: 5100
+        plug_required: true
+      - formation: Gray
+        top_ft: 4900
+        plug_required: true
+      - formation: Cook
+        top_ft: 3000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1800
+        plug_required: true
+      - formation: Goen
+        top_ft: 3300
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 500
+        plug_required: true
+      - formation: Goen
+        top_ft: 3800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 3400
+        plug_required: true
+      - formation: Canyon
+        top_ft: 3000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1100
+        plug_required: true
+      - formation: Gray
+        top_ft: 4000
+        plug_required: true
+      - formation: Fry
+        top_ft: 3800
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1000
+        plug_required: true
+      - formation: Gardner
+        top_ft: 4200
+        plug_required: true
+      - formation: Morris
+        top_ft: 3800
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1300
+        plug_required: true
+      - formation: Winchell
+        top_ft: 2400
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 600
+        plug_required: true
+      - formation: Dog
+        top_ft: 3200
+        plug_required: true
+      - formation: Bend
+        top_ft: 3200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 800
+        plug_required: true
+      - formation: Jennings
+        top_ft: 3900
+        plug_required: true
+      - formation: Capps
+        top_ft: 3600
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1000
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1400
+        plug_required: true
+      - formation: Capps
+        top_ft: 4000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1100
+        plug_required: true
+      - formation: Fry
+        top_ft: 4500
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 4000
+        plug_required: true
+      - formation: Palo
+        top_ft: 4000
+        plug_required: true
+      - formation: Pinto
+        top_ft: 4000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1700
+        plug_required: true
+      - formation: Morris
+        top_ft: 3200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 700
+        plug_required: true
+      - formation: Miles
+        top_ft: 4200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1400
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 3800
+        plug_required: true
+      - formation: Palo
+        top_ft: 3800
+        plug_required: true
+      - formation: Pinto
+        top_ft: 3800
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1600
+        plug_required: true
+      - formation: Gray
+        top_ft: 5100
+        plug_required: true
+      - formation: Gardner
+        top_ft: 5000
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 4200
+        plug_required: true
+      - formation: Palo
+        top_ft: 4200
+        plug_required: true
+      - formation: Pinto
+        top_ft: 4200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1700
+        plug_required: true
+  Schleicher County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+      bottom of
+    - the plug should be roughly 50 FT. above the perfs.  We also need a plug placed
+    - immediately above each formation listed.  If the field in question is not present,
+      please either
+    - use known tops in the subject field or the tops in a listed nearby field.  In
+      addition, we need
+    - a plug placed 50 FT. below the shoe of the surface/intermediate casing to 50
+      FT. above the shoe.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    - usable quality water stratum, an additional 100 FT. cement plug must be placed
+      inside
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      surface_shoe_symmetry_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      additional_surface_inside_plug_len_ft_if_below_duqw:
+        value: 100
+        applies_if:
+          '>':
+          - var: surface_below_duqw_ft
+          - 200
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Ellenburger
+        top_ft: 6700
+        plug_required: true
+      - formation: Strawn
+        top_ft: 6400
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2100
+        plug_required: true
+      - formation: Permian
+        top_ft: 900
+        plug_required: true
+      - formation: Strawn
+        top_ft: 4000
+        plug_required: true
+      - formation: Canyon
+        top_ft: 3600
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1100
+        plug_required: true
+      - formation: Strawn
+        top_ft: 4600
+        plug_required: true
+      - formation: Harkey
+        top_ft: 4100
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1000
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6200
+        plug_required: true
+      - formation: Wolf
+        top_ft: 4700
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6300
+        plug_required: true
+      - formation: Wolf
+        top_ft: 4600
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2100
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6000
+        plug_required: true
+      - formation: Wolf
+        top_ft: 3700
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2300
+        plug_required: true
+      - formation: Strawn
+        top_ft: 6400
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5200
+        plug_required: true
+      - formation: Wolf
+        top_ft: 2700
+        plug_required: true
+      - formation: Clear
+        top_ft: 1300
+        plug_required: true
+      - formation: Fork
+        top_ft: 1300
+        plug_required: true
+      - formation: Crosscut
+        top_ft: 3700
+        plug_required: true
+      - formation: Cross
+        top_ft: 3700
+        plug_required: true
+      - formation: Cut
+        top_ft: 3700
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1000
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6400
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1500
+        plug_required: true
+      - formation: San
+        top_ft: 800
+        plug_required: true
+      - formation: Angelo
+        top_ft: 800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4700
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1400
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2700
+        plug_required: true
+      - formation: Penn
+        top_ft: 5600
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1100
+        plug_required: true
+      - formation: Strawn
+        top_ft: 8200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6500
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2700
+        plug_required: true
+      - formation: Permian
+        top_ft: 900
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5100
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4500
+        plug_required: true
+      - formation: Cisco
+        top_ft: 3000
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6100
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2700
+        plug_required: true
+      - formation: Harkey
+        top_ft: 5200
+        plug_required: true
+      - formation: Cisco
+        top_ft: 3300
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1100
+        plug_required: true
+      - formation: Penn
+        top_ft: 3600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 3200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1100
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5200
+        plug_required: true
+      - formation: Harkey
+        top_ft: 4600
+        plug_required: true
+      - formation: Cisco
+        top_ft: 3300
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1000
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 7900
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6600
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3400
+        plug_required: true
+      - formation: San
+        top_ft: 800
+        plug_required: true
+      - formation: Angelo
+        top_ft: 800
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 7300
+        plug_required: true
+      - formation: Cisco
+        top_ft: 6200
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 7100
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6100
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1500
+        plug_required: true
+      - formation: San
+        top_ft: 700
+        plug_required: true
+      - formation: Angelo
+        top_ft: 700
+        plug_required: true
+  Sutton County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+      bottom of
+    - the plug should be roughly 50 FT. above the perfs.  We also need a plug placed
+    - immediately above each formation listed.  If the field in question is not present,
+      please either
+    - use known tops in the subject field or the tops in a listed nearby field.  In
+      addition, we need
+    - a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the
+      shoe.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    - usable quality water stratum, an additional 100 FT. cement plug must be placed
+      inside
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      surface_shoe_symmetry_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      additional_surface_inside_plug_len_ft_if_below_duqw:
+        value: 100
+        applies_if:
+          '>':
+          - var: surface_below_duqw_ft
+          - 200
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Canyon
+        top_ft: 2200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4900
+        plug_required: true
+      - formation: Wolf
+        top_ft: 2200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 2700
+        plug_required: true
+      - formation: Permian
+        top_ft: 750
+        plug_required: true
+      - formation: Strawn
+        top_ft: 8000
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4500
+        plug_required: true
+      - formation: Wolf
+        top_ft: 2200
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5400
+        plug_required: true
+      - formation: Canyon
+        top_ft: 3700
+        plug_required: true
+      - formation: Wolf
+        top_ft: 2900
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5300
+        plug_required: true
+      - formation: Wolf
+        top_ft: 2600
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 4600
+        plug_required: true
+      - formation: Strawn
+        top_ft: 3900
+        plug_required: true
+      - formation: Canyon
+        top_ft: 2900
+        plug_required: true
+      - formation: Strawn
+        top_ft: 2600
+        plug_required: true
+      - formation: Crosscut
+        top_ft: 2400
+        plug_required: true
+      - formation: Cross
+        top_ft: 2400
+        plug_required: true
+      - formation: Cut
+        top_ft: 2400
+        plug_required: true
+      - formation: Canyon
+        top_ft: 1800
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6500
+        plug_required: true
+      - formation: Wolf
+        top_ft: 3800
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 1800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 4200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 2800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 4500
+        plug_required: true
+      - formation: Canyon
+        top_ft: 3000
+        plug_required: true
+      - formation: Upper
+        top_ft: 5500
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5500
+        plug_required: true
+      - formation: Wolf
+        top_ft: 2800
+        plug_required: true
+      - formation: Leonard
+        top_ft: 2100
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 3800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 3100
+        plug_required: true
+      - formation: Canyon
+        top_ft: 2000
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5200
+        plug_required: true
+      - formation: Wolf
+        top_ft: 2500
+        plug_required: true
+      - formation: Permian
+        top_ft: 750
+        plug_required: true
+      - formation: Strawn
+        top_ft: 8200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6000
+        plug_required: true
+      - formation: Wolf
+        top_ft: 3300
+        plug_required: true
+      - formation: Leonard
+        top_ft: 1800
+        plug_required: true
+  Terrell County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+      bottom
+    - of the plug should be roughly 50 FT. above the perfs.  We also need a plug placed
+    - immediately above each formation listed.  If the field in question is not present,
+      please
+    - either use known tops in the subject field or the tops in a listed nearby field.  In
+      addition,
+    - we need a plug placed 50 FT. below the shoe of the surface/intermediate casing
+    - to 50 FT. above the casing.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Strawn
+        top_ft: 10850
+        plug_required: true
+      - formation: Canyon
+        top_ft: 9300
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6400
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4300
+        plug_required: true
+      - formation: Fusselman
+        top_ft: 11150
+        plug_required: true
+      - formation: Devonian
+        top_ft: 10650
+        plug_required: true
+      - formation: Detrital
+        top_ft: 9200
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5000
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3300
+        plug_required: true
+      - formation: Silurian
+        top_ft: 12750
+        plug_required: true
+      - formation: Strawn
+        top_ft: 11600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 10100
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5300
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3300
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5100
+        plug_required: true
+      - formation: Strawn
+        top_ft: 11300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 9800
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5800
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4300
+        plug_required: true
+      - formation: Penn
+        top_ft: 10750
+        plug_required: true
+      - formation: Strawn
+        top_ft: 10200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 8700
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6400
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4300
+        plug_required: true
+      - formation: Devonian
+        top_ft: 9350
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7550
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5000
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3300
+        plug_required: true
+      - formation: Devonian
+        top_ft: 7450
+        plug_required: true
+      - formation: Wolf
+        top_ft: 4000
+        plug_required: true
+      - formation: Leonard
+        top_ft: 1800
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 18600
+        plug_required: true
+      - formation: Devonian
+        top_ft: 12500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 11550
+        plug_required: true
+      - formation: Canyon
+        top_ft: 10000
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5800
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4000
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 15400
+        plug_required: true
+      - formation: Penn
+        top_ft: 10750
+        plug_required: true
+      - formation: Strawn
+        top_ft: 10200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 8700
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6400
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4300
+        plug_required: true
+      - formation: Strawn
+        top_ft: 10050
+        plug_required: true
+      - formation: Canyon
+        top_ft: 8500
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5800
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4300
+        plug_required: true
+      - formation: Devonian
+        top_ft: 12500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 11550
+        plug_required: true
+      - formation: Wolfcamp
+        top_ft: 5800
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4300
+        plug_required: true
+      - formation: Wolfcamp
+        top_ft: 4300
+        plug_required: true
+      - formation: Strawn
+        top_ft: 9700
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4300
+        plug_required: true
+      - formation: Connell
+        top_ft: 10050
+        plug_required: true
+      - formation: Devonian
+        top_ft: 8600
+        plug_required: true
+      - formation: Strawn
+        top_ft: 8200
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7150
+        plug_required: true
+      - formation: Wolf
+        top_ft: 3000
+        plug_required: true
+      - formation: Wolf
+        top_ft: 1850
+        plug_required: true
+      - formation: Strawn
+        top_ft: 11600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 9300
+        plug_required: true
+      - formation: Wolf
+        top_ft: 6400
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4300
+        plug_required: true
+      - formation: Detrital
+        top_ft: 10400
+        plug_required: true
+      - formation: Devonian
+        top_ft: 9300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7800
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5100
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3300
+        plug_required: true
+      - formation: Strawn
+        top_ft: 11600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 10100
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5100
+        plug_required: true
+      - formation: Leonard
+        top_ft: 3300
+        plug_required: true
+      - formation: Wolf
+        top_ft: 3400
+        plug_required: true
+      - formation: Strawn
+        top_ft: 11300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 10000
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5800
+        plug_required: true
+      - formation: Leonard
+        top_ft: 4300
+        plug_required: true
+  Tom Green County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+      bottom of
+    - the plug should be roughly 50 FT. above the perfs.  We also need a plug placed
+    - immediately above each formation listed.  If the field in question is not present,
+      please either
+    - use known tops in the subject field or the tops in a listed nearby field.  In
+      addition, we need
+    - a plug placed 50 FT. below the shoe of the surface casing to 50 FT. above the
+      shoe.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    - usable quality water stratum, an additional 100 FT. cement plug must be placed
+      inside
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      surface_shoe_symmetry_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      additional_surface_inside_plug_len_ft_if_below_duqw:
+        value: 100
+        applies_if:
+          '>':
+          - var: surface_below_duqw_ft
+          - 200
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Harkey
+        top_ft: 4200
+        plug_required: true
+      - formation: Swastika
+        top_ft: 3000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1400
+        plug_required: true
+      - formation: San
+        top_ft: 800
+        plug_required: true
+      - formation: Angelo
+        top_ft: 800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5600
+        plug_required: true
+      - formation: Cisco
+        top_ft: 3200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 2000
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5100
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4600
+        plug_required: true
+      - formation: Swastika
+        top_ft: 3200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1400
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6100
+        plug_required: true
+      - formation: Cisco
+        top_ft: 5800
+        plug_required: true
+      - formation: Wolf
+        top_ft: 4700
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1700
+        plug_required: true
+      - formation: San
+        top_ft: 800
+        plug_required: true
+      - formation: Angelo
+        top_ft: 800
+        plug_required: true
+      - formation: Caddo
+        top_ft: 6200
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 5000
+        plug_required: true
+      - formation: Palo
+        top_ft: 5000
+        plug_required: true
+      - formation: Pinto
+        top_ft: 5000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1800
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5400
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 5200
+        plug_required: true
+      - formation: Palo
+        top_ft: 5200
+        plug_required: true
+      - formation: Pinto
+        top_ft: 5200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1600
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5200
+        plug_required: true
+      - formation: Swastika
+        top_ft: 3200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1600
+        plug_required: true
+      - formation: San
+        top_ft: 800
+        plug_required: true
+      - formation: Andres
+        top_ft: 800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 4600
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 4200
+        plug_required: true
+      - formation: Palo
+        top_ft: 4200
+        plug_required: true
+      - formation: Pinto
+        top_ft: 4200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5500
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 5300
+        plug_required: true
+      - formation: Palo
+        top_ft: 5300
+        plug_required: true
+      - formation: Pinto
+        top_ft: 5300
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1600
+        plug_required: true
+      - formation: San
+        top_ft: 700
+        plug_required: true
+      - formation: Angelo
+        top_ft: 700
+        plug_required: true
+      - formation: Strawn
+        top_ft: 6300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 5900
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 2000
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 5300
+        plug_required: true
+      - formation: Palo
+        top_ft: 5300
+        plug_required: true
+      - formation: Pinto
+        top_ft: 5300
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1600
+        plug_required: true
+      - formation: San
+        top_ft: 700
+        plug_required: true
+      - formation: Angleo
+        top_ft: 700
+        plug_required: true
+      - formation: Strawn
+        top_ft: 5500
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1600
+        plug_required: true
+      - formation: San
+        top_ft: 800
+        plug_required: true
+      - formation: Angelo
+        top_ft: 800
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 5600
+        plug_required: true
+      - formation: Strawn
+        top_ft: 4800
+        plug_required: true
+      - formation: Harkey
+        top_ft: 4500
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1600
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7200
+        plug_required: true
+      - formation: Wolf
+        top_ft: 5700
+        plug_required: true
+      - formation: Sprayberry
+        top_ft: 4000
+        plug_required: true
+      - formation: San
+        top_ft: 1500
+        plug_required: true
+      - formation: Andres
+        top_ft: 1500
+        plug_required: true
+      - formation: Canyon
+        top_ft: 7100
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 4500
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 2600
+        plug_required: true
+      - formation: San
+        top_ft: 1800
+        plug_required: true
+      - formation: Angelo
+        top_ft: 1800
+        plug_required: true
+      - formation: Canyon
+        top_ft: 4000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1400
+        plug_required: true
+      - formation: Strawn
+        top_ft: 4600
+        plug_required: true
+      - formation: Cisco
+        top_ft: 3400
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1500
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 2600
+        plug_required: true
+      - formation: Palo
+        top_ft: 2600
+        plug_required: true
+      - formation: Pinto
+        top_ft: 2600
+        plug_required: true
+      - formation: Hope
+        top_ft: 2300
+        plug_required: true
+      - formation: Lime
+        top_ft: 2300
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1500
+        plug_required: true
+      - formation: Canyon
+        top_ft: 6300
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 3100
+        plug_required: true
+      - formation: San
+        top_ft: 700
+        plug_required: true
+      - formation: Andres
+        top_ft: 700
+        plug_required: true
+      - formation: Palo Pinto
+        top_ft: 5200
+        plug_required: true
+      - formation: Palo
+        top_ft: 5200
+        plug_required: true
+      - formation: Pinto
+        top_ft: 5200
+        plug_required: true
+      - formation: Swastika
+        top_ft: 3000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1600
+        plug_required: true
+      - formation: Harkey
+        top_ft: 4700
+        plug_required: true
+      - formation: Swastika
+        top_ft: 3600
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1100
+        plug_required: true
+      - formation: Harkey
+        top_ft: 4200
+        plug_required: true
+      - formation: Swastika
+        top_ft: 3000
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1400
+        plug_required: true
+      - formation: Wichita-Albany
+        top_ft: 3200
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1700
+        plug_required: true
+      - formation: Clear
+        top_ft: 1300
+        plug_required: true
+      - formation: Fork
+        top_ft: 1300
+        plug_required: true
+      - formation: San
+        top_ft: 1150
+        plug_required: true
+      - formation: Angelo
+        top_ft: 1150
+        plug_required: true
+      - formation: San
+        top_ft: 950
+        plug_required: true
+      - formation: Andres
+        top_ft: 950
+        plug_required: true
+      - formation: Gardner
+        top_ft: 3900
+        plug_required: true
+      - formation: Morris
+        top_ft: 3400
+        plug_required: true
+      - formation: Coleman Junction
+        top_ft: 1500
+        plug_required: true
+  Upton County:
+    notes:
+    - Please see the attached plugging chart for the number of sacks in each plug.
+    - We need a plug (CIBP plus 20 FT. cement or a cement plug) above the perfs; the
+    - bottom of the plug should be roughly 50 FT. above the perfs.  We also need a
+      plug
+    - placed immediately above each formation listed.  If the field name is not present,
+    - please either use known tops in the subject field or the tops in a listed nearby
+      field.
+    - In addition, we need a plug placed 50 FT. below the shoe of the surface/intermediate
+    - casing to 50 FT. above the shoe.
+    - If the surface casing has been set deeper than 200 FT. below the base of the
+      deepest
+    requirements:
+      cap_above_highest_perf_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      surface_shoe_symmetry_ft:
+        value: 50
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+      cement_above_cibp_min_ft:
+        value: 20
+        citation_keys: []
+        policy_section_ids: []
+        source: district_plugging_book
+    preferences: {}
+    overrides:
+      formation_tops:
+      - formation: Devonian
+        top_ft: 10000
+        plug_required: true
+      - formation: Bend
+        top_ft: 9100
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 7000
+        plug_required: true
+      - formation: San
+        top_ft: 3300
+        plug_required: true
+      - formation: Andres
+        top_ft: 3300
+        plug_required: true
+      - formation: McElroy
+        top_ft: 2600
+        plug_required: true
+      - formation: Yates
+        top_ft: 1900
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 11800
+        plug_required: true
+      - formation: Fuss
+        top_ft: 11300
+        plug_required: true
+      - formation: Devonian
+        top_ft: 10800
+        plug_required: true
+      - formation: Strawn
+        top_ft: 9400
+        plug_required: true
+      - formation: Wolf
+        top_ft: 9000
+        plug_required: true
+      - formation: Leonard
+        top_ft: 6900
+        plug_required: true
+      - formation: San
+        top_ft: 4500
+        plug_required: true
+      - formation: Andres
+        top_ft: 4500
+        plug_required: true
+      - formation: Yates
+        top_ft: 2500
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 11200
+        plug_required: true
+      - formation: Fuss
+        top_ft: 11000
+        plug_required: true
+      - formation: Devonian
+        top_ft: 10900
+        plug_required: true
+      - formation: Wolf
+        top_ft: 7800
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 7000
+        plug_required: true
+      - formation: San
+        top_ft: 3500
+        plug_required: true
+      - formation: Andres
+        top_ft: 3500
+        plug_required: true
+      - formation: NGL
+        top_ft: 1800
+        plug_required: true
+      - formation: Devonian
+        top_ft: 10200
+        plug_required: true
+      - formation: Wolf
+        top_ft: 9400
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6000
+        plug_required: true
+      - formation: San
+        top_ft: 3500
+        plug_required: true
+      - formation: Andres
+        top_ft: 3500
+        plug_required: true
+      - formation: Yates
+        top_ft: 2500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 9200
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6500
+        plug_required: true
+      - formation: San
+        top_ft: 4500
+        plug_required: true
+      - formation: Andres
+        top_ft: 4500
+        plug_required: true
+      - formation: Yates
+        top_ft: 2500
+        plug_required: true
+      - formation: Devonian
+        top_ft: 9000
+        plug_required: true
+      - formation: Bend
+        top_ft: 8400
+        plug_required: true
+      - formation: Detrital
+        top_ft: 8400
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5500
+        plug_required: true
+      - formation: San
+        top_ft: 2500
+        plug_required: true
+      - formation: Andres
+        top_ft: 2500
+        plug_required: true
+      - formation: Gray
+        top_ft: 1800
+        plug_required: true
+      - formation: Devonian
+        top_ft: 11900
+        plug_required: true
+      - formation: Penn
+        top_ft: 10200
+        plug_required: true
+      - formation: Wolf
+        top_ft: 7600
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 7000
+        plug_required: true
+      - formation: San
+        top_ft: 4500
+        plug_required: true
+      - formation: Andres
+        top_ft: 4500
+        plug_required: true
+      - formation: Santa
+        top_ft: 1000
+        plug_required: true
+      - formation: Rosa
+        top_ft: 1000
+        plug_required: true
+      - formation: Devonian
+        top_ft: 8300
+        plug_required: true
+      - formation: Strawn
+        top_ft: 7900
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5000
+        plug_required: true
+      - formation: San
+        top_ft: 2000
+        plug_required: true
+      - formation: Andres
+        top_ft: 2000
+        plug_required: true
+      - formation: Devonian
+        top_ft: 10500
+        plug_required: true
+      - formation: Bend
+        top_ft: 9000
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 7000
+        plug_required: true
+      - formation: San
+        top_ft: 3500
+        plug_required: true
+      - formation: Andres
+        top_ft: 3500
+        plug_required: true
+      - formation: Fuss
+        top_ft: 11600
+        plug_required: true
+      - formation: Devonian
+        top_ft: 11000
+        plug_required: true
+      - formation: Strawn
+        top_ft: 9800
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 7000
+        plug_required: true
+      - formation: San
+        top_ft: 4500
+        plug_required: true
+      - formation: Andres
+        top_ft: 4500
+        plug_required: true
+      - formation: Yates
+        top_ft: 2500
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 10000
+        plug_required: true
+      - formation: Devonian
+        top_ft: 8500
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6000
+        plug_required: true
+      - formation: San
+        top_ft: 3000
+        plug_required: true
+      - formation: Andres
+        top_ft: 3000
+        plug_required: true
+      - formation: Yates
+        top_ft: 1900
+        plug_required: true
+      - formation: Gray
+        top_ft: 2000
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 11600
+        plug_required: true
+      - formation: Devonian
+        top_ft: 9500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 8300
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 5000
+        plug_required: true
+      - formation: San
+        top_ft: 2500
+        plug_required: true
+      - formation: Andres
+        top_ft: 2500
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 7900
+        plug_required: true
+      - formation: Silurian
+        top_ft: 7100
+        plug_required: true
+      - formation: Devonian
+        top_ft: 6300
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 4500
+        plug_required: true
+      - formation: San
+        top_ft: 2500
+        plug_required: true
+      - formation: Andres
+        top_ft: 2500
+        plug_required: true
+      - formation: Gray
+        top_ft: 2000
+        plug_required: true
+      - formation: Queen
+        top_ft: 1800
+        plug_required: true
+      - formation: Ellenburger
+        top_ft: 12400
+        plug_required: true
+      - formation: Fuss
+        top_ft: 12100
+        plug_required: true
+      - formation: Devonian
+        top_ft: 12000
+        plug_required: true
+      - formation: Penn
+        top_ft: 10300
+        plug_required: true
+      - formation: Canyon
+        top_ft: 10000
+        plug_required: true
+      - formation: Wolf
+        top_ft: 9900
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 7000
+        plug_required: true
+      - formation: San
+        top_ft: 4500
+        plug_required: true
+      - formation: Andres
+        top_ft: 4500
+        plug_required: true
+      - formation: Santa
+        top_ft: 1000
+        plug_required: true
+      - formation: Rosa
+        top_ft: 1000
+        plug_required: true
+      - formation: Gray
+        top_ft: 2200
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 7000
+        plug_required: true
+      - formation: San
+        top_ft: 3500
+        plug_required: true
+      - formation: Andres
+        top_ft: 3500
+        plug_required: true
+      - formation: Yates
+        top_ft: 2500
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 7000
+        plug_required: true
+      - formation: San
+        top_ft: 4000
+        plug_required: true
+      - formation: Andres
+        top_ft: 4000
+        plug_required: true
+      - formation: Yates
+        top_ft: 2500
+        plug_required: true
+      - formation: Santa
+        top_ft: 1000
+        plug_required: true
+      - formation: Rosa
+        top_ft: 1000
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 7000
+        plug_required: true
+      - formation: San
+        top_ft: 4500
+        plug_required: true
+      - formation: Andres
+        top_ft: 4500
+        plug_required: true
+      - formation: Yates
+        top_ft: 2500
+        plug_required: true
+      - formation: Santa
+        top_ft: 1000
+        plug_required: true
+      - formation: Rosa
+        top_ft: 1000
+        plug_required: true
+      - formation: Wolf
+        top_ft: 7200
+        plug_required: true
+      - formation: Clearfork
+        top_ft: 5700
+        plug_required: true
+      - formation: San
+        top_ft: 3500
+        plug_required: true
+      - formation: Andres
+        top_ft: 3500
+        plug_required: true
+      - formation: Strawn
+        top_ft: 9000
+        plug_required: true
+      - formation: Detrital
+        top_ft: 9000
+        plug_required: true
+      - formation: Wolf
+        top_ft: 8100
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 6000
+        plug_required: true
+      - formation: San
+        top_ft: 2500
+        plug_required: true
+      - formation: Andres
+        top_ft: 2500
+        plug_required: true
+      - formation: Gray
+        top_ft: 1600
+        plug_required: true
+      - formation: Strawn
+        top_ft: 9400
+        plug_required: true
+      - formation: Wolfcamp
+        top_ft: 8500
+        plug_required: true
+      - formation: Spraberry
+        top_ft: 7400
+        plug_required: true
+      - formation: San
+        top_ft: 4500
+        plug_required: true
+      - formation: Andres
+        top_ft: 4500
+        plug_required: true
+      - formation: Yates
+        top_ft: 2700
+        plug_required: true
+requirements:
+  pump_through_tubing_or_drillpipe_only:
+    value: true
+    source: district_plugging_book
+  perforate_and_pump_under_packer_if_casing_not_recovered:
+    value: true
+    source: district_plugging_book
+  tagging_required_hint:
+    value: true
+    source: district_plugging_book
+  cibp_top_cement_min_ft:
+    value: 20
+    source: district_plugging_book
+  cap_above_highest_perf_ft:
+    value: 50
+    citation_keys: []
+    policy_section_ids: []
+    source: district_plugging_book_majority
+preferences:
+  operational:
+    notice_hours_min: 4
+    mud_min_weight_ppg: 9.5
+    funnel_min_s: 40
+  cement:
+    required_class: C
+    classes:
+      C:
+        slurry_weight_ppg: 14.8
+      H:
+        slurry_weight_ppg: 16.4
+  plugging_chart:
+    open_hole:
+      diameters:
+      - '6.75'
+      - '7.875'
+      - '8.75'
+      - '11'
+      - '12.25'
+      data:
+      - depth: surface
+        values:
+        - 40
+        - 45
+        - 50
+        - 65
+        - 75
+      - depth: '1000'
+        values:
+        - 40
+        - 45
+        - 50
+        - 65
+        - 75
+      - depth: '2000'
+        values:
+        - 40
+        - 45
+        - 50
+        - 65
+        - 85
+      - depth: '3000'
+        values:
+        - 40
+        - 45
+        - 50
+        - 75
+        - 90
+      - depth: '4000'
+        values:
+        - 40
+        - 45
+        - 50
+        - 80
+        - 100
+      - depth: '5000'
+        values:
+        - 40
+        - 45
+        - 55
+        - 85
+        - 105
+      - depth: '6000'
+        values:
+        - 40
+        - 45
+        - 60
+        - 90
+        - null
+      - depth: '7000'
+        values:
+        - 40
+        - 50
+        - 65
+        - null
+        - null
+      - depth: '8000'
+        values:
+        - 40
+        - 55
+        - 65
+        - null
+        - null
+      - depth: '9000'
+        values:
+        - 45
+        - 55
+        - 75
+        - null
+        - null
+      - depth: '10000'
+        values:
+        - 50
+        - 60
+        - 80
+        - null
+        - null
+    casing:
+      diameters:
+      - '2.875'
+      - '4.5'
+      - '5.5'
+      - '7'
+      - '8.625'
+      - '9.625'
+      - '13.375'
+      data:
+      - depth: Surface
+        values:
+        - 2
+        - 20
+        - 20
+        - 25
+        - 35
+        - 40
+        - 75
+      - depth: '1000'
+        values:
+        - 2
+        - 20
+        - 20
+        - 25
+        - 35
+        - 40
+        - 80
+      - depth: '2000'
+        values:
+        - 3
+        - 20
+        - 20
+        - 25
+        - 35
+        - 40
+        - 85
+      - depth: '3000'
+        values:
+        - 3
+        - 20
+        - 20
+        - 25
+        - 40
+        - 45
+        - 90
+      - depth: '4000'
+        values:
+        - 3
+        - 20
+        - 20
+        - 25
+        - 40
+        - 50
+        - 95
+      - depth: '5000'
+        values:
+        - 3
+        - 20
+        - 20
+        - 30
+        - 45
+        - 55
+        - 110
+      - depth: '6000'
+        values:
+        - 3
+        - 20
+        - 20
+        - 30
+        - 45
+        - 60
+        - null
+      - depth: '7000'
+        values:
+        - 3
+        - 20
+        - 20
+        - 30
+        - 50
+        - 60
+        - null
+      - depth: '8000'
+        values:
+        - 4
+        - 20
+        - 20
+        - 30
+        - 50
+        - 65
+        - null
+      - depth: '9000'
+        values:
+        - 4
+        - 20
+        - 25
+        - 35
+        - 55
+        - 70
+        - null
+      - depth: '10000'
+        values:
+        - 4
+        - 20
+        - 25
+        - 35
+        - 60
+        - 70
+        - null
+    casing_open_hole:
+      combinations:
+      - 85/8-77/8
+      - 95/8-81/4
+      - 103/4-83/4
+      - 123/4-11
+      - 133/8-121/2
+      data:
+      - depth: Surface
+        values:
+        - 55
+        - 60
+        - 65
+        - 75
+        - 85
+      - depth: '1000'
+        values:
+        - 55
+        - 65
+        - 75
+        - 85
+        - 95
+      - depth: '2000'
+        values:
+        - 60
+        - 70
+        - 80
+        - 95
+        - 105
+      - depth: '3000'
+        values:
+        - 65
+        - 80
+        - 85
+        - 105
+        - null
+      - depth: '4000'
+        values:
+        - 70
+        - 90
+        - 90
+        - 115
+        - null
+      - depth: '5000'
+        values:
+        - 75
+        - 95
+        - null
+        - null
+        - null

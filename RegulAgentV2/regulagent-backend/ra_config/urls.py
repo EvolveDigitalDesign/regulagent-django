@@ -15,8 +15,31 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+from apps.public_core.views.well_registry import WellRegistryViewSet
+from apps.public_core.views.public_facts import PublicFactsViewSet
+from apps.public_core.views.public_casing_string import PublicCasingStringViewSet
+from apps.public_core.views.public_perforation import PublicPerforationViewSet
+from apps.public_core.views.public_well_depths import PublicWellDepthsViewSet
+from apps.kernel.views.plan_preview import PlanPreviewView
+from apps.tenant_overlay.views.resolved_facts import ResolvedFactsView
+from apps.policy_ingest import urls as policy_urls
+from apps.kernel.views.advisory import AdvisorySanityCheckView
+
+router = DefaultRouter()
+router.register(r'public/wells', WellRegistryViewSet, basename='public-wells')
+router.register(r'public/facts', PublicFactsViewSet, basename='public-facts')
+router.register(r'public/casing', PublicCasingStringViewSet, basename='public-casing')
+router.register(r'public/perforations', PublicPerforationViewSet, basename='public-perforations')
+router.register(r'public/depths', PublicWellDepthsViewSet, basename='public-depths')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/', include(router.urls)),
+    path('api/overlay/engagements/<int:engagement_id>/resolved-facts', ResolvedFactsView.as_view()),
+    path('api/plans/preview', PlanPreviewView.as_view()),
+    path('api/advisory/sanity-check', AdvisorySanityCheckView.as_view()),
+    path('api/policy/', include((policy_urls, 'policy_ingest'), namespace='policy')),
 ]

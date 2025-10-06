@@ -24,6 +24,7 @@ pillow>=10.0
 python-dotenv>=1.0
 gunicorn>=21.2
 uvicorn>=0.30
+PyYAML>=6.0
 
 # Vector similarity (pgvector with Django integration module)
 pgvector>=0.2.5
@@ -45,5 +46,9 @@ google-auth>=2.29
 
 # Web automation (RRC connector)
 playwright>=1.46
+
+# HTML parsing for policy ingestion
+beautifulsoup4>=4.12
+requests>=2.32
 
 
