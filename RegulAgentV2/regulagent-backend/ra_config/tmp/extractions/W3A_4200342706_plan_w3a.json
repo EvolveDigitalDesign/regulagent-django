@@ -1,0 +1,105 @@
+{
+  "section_a": {
+    "api": "42-003-42706",
+    "district": "08A",
+    "county": "ANDREWS",
+    "field": "SPRABERRY (TREND AREA)",
+    "lease": "MABEE 240A",
+    "well_no": "2005",
+    "operator": null
+  },
+  "section_b_plugs": [
+    {
+      "plug_no": 1,
+      "from_ft": 9124.0,
+      "to_ft": 10662.0,
+      "type": "Perf Circulate",
+      "sacks": null,
+      "materials_method": "Class C cement",
+      "remarks": "SWR-14"
+    },
+    {
+      "plug_no": 2,
+      "from_ft": 10712.0,
+      "to_ft": 10612.0,
+      "type": "Productive Horizon Isolation Plug",
+      "sacks": null,
+      "materials_method": "Class C cement",
+      "remarks": "tx.tac.16.3.14(k)"
+    },
+    {
+      "plug_no": 3,
+      "from_ft": 9550.0,
+      "to_ft": 9450.0,
+      "type": "Cement Plug",
+      "sacks": 9,
+      "materials_method": "Class C cement",
+      "remarks": "rrc.district.08a.andrews:formation_top:Dean; rrc.district.08a.andrews:formation_top:Lo"
+    },
+    {
+      "plug_no": 4,
+      "from_ft": 6550.0,
+      "to_ft": 6450.0,
+      "type": "Cement Plug",
+      "sacks": 9,
+      "materials_method": "Class C cement tagged 4 hr wait",
+      "remarks": "rrc.district.08a.andrews:formation_top:Dean; rrc.district.08a.andrews:formation_top:Up"
+    },
+    {
+      "plug_no": 5,
+      "from_ft": 5604.0,
+      "to_ft": 5504.0,
+      "type": "Intermediate Casing Shoe Plug",
+      "sacks": null,
+      "materials_method": "Class C cement",
+      "remarks": "tx.tac.16.3.14(f)(1)"
+    },
+    {
+      "plug_no": 6,
+      "from_ft": 3550.0,
+      "to_ft": 3450.0,
+      "type": "Formation Top Plug (San Andres)",
+      "sacks": 10,
+      "materials_method": "Class C cement tagged 4 hr wait",
+      "remarks": "rrc.district.08a.andrews:formation_top:San Andres"
+    },
+    {
+      "plug_no": 7,
+      "from_ft": 1700.0,
+      "to_ft": 950.0,
+      "type": "Cement Plug",
+      "sacks": 71,
+      "materials_method": "Class C cement tagged",
+      "remarks": "rrc.district.08a.andrews:formation_top:Santa Rosa; rrc.district.08a.andrews:tag.required; tx.gau.protect_interval; tx.tac.16.3.14(g)(1)"
+    },
+    {
+      "plug_no": 8,
+      "from_ft": null,
+      "to_ft": null,
+      "type": "Cut Casing Below Surface",
+      "sacks": null,
+      "materials_method": "Class C cement",
+      "remarks": "tx.tac.16.3.14(d)(8)"
+    },
+    {
+      "plug_no": 9,
+      "from_ft": 425.0,
+      "to_ft": 0.0,
+      "type": "GAU Protect Interval Plug",
+      "sacks": 40,
+      "materials_method": "Class C cement tagged",
+      "remarks": "rrc.district.08a.andrews:tag.surface_shoe_in_oh; tx.gau.protect_interval; tx.tac.16.3.14(d)(8); tx.tac.16.3.14(e)(2)"
+    }
+  ],
+  "section_c": {
+    "materials_summary": {
+      "total_sacks": 139,
+      "total_barrels": 29.4,
+      "cement_classes_used": [
+        "C",
+        "H"
+      ]
+    },
+    "plan_notes": []
+  }
+}

@@ -30,4 +30,3 @@ class PolicySection(models.Model):
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.rule.rule_id}@{self.version_tag}:{self.path}"
 
-

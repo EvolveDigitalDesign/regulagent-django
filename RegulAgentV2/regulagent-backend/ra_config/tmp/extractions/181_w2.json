@@ -1,0 +1,176 @@
+{
+  "header": {
+    "date": "02/22/2013",
+    "form": "W-2",
+    "title": "OIL WELL POTENTIAL TEST, COMPLETION OR RECOMPLETION REPORT",
+    "status": "Approved",
+    "tracking_no": "33488"
+  },
+  "remarks": "COMMINGLE PRODUCTION: SPRABERRY (TREND AREA) 9124-10662; MABEE (STRAWN) 10788-10956; LOWE (ATOKA) 11134-11577.",
+  "well_info": {
+    "api": "42-003-42706",
+    "field": "SPRABERRY (TREND AREA)",
+    "lease": "MABEE 240A",
+    "county": "ANDREWS",
+    "well_no": "2005",
+    "district": "08"
+  },
+  "filing_info": {
+    "other": null,
+    "purpose": "Initial Potential",
+    "permit_no": "711099",
+    "well_type": "Producing",
+    "permit_date": "03/02/2011",
+    "type_of_permit": "Permit to Drill, Plug Back, or",
+    "fluid_injection": null,
+    "type_of_new_well": "New Well",
+    "og_waste_disposal": null,
+    "rule_37_exception": null,
+    "completion_or_recompletion_date": "06/02/2011"
+  },
+  "rrc_remarks": "NEW DRILL/COMPLETION. COMMINGLED ZONES; SPRABERRY/STRAWN/ATOKA. SWR 10 BLANKET ORDER #08-0268741; SWR 10 APPROVAL LETTER ATTACHED WITHIN.",
+  "liner_record": [],
+  "casing_record": [
+    {
+      "string": "surface",
+      "top_ft": 0,
+      "size_in": 13.375,
+      "bottom_ft": 377,
+      "shoe_depth_ft": 377
+    },
+    {
+      "string": "intermediate",
+      "top_ft": 0,
+      "size_in": 8.625,
+      "bottom_ft": 5554,
+      "shoe_depth_ft": 5554
+    },
+    {
+      "string": "production",
+      "top_ft": 0,
+      "size_in": 8.625,
+      "bottom_ft": 5554,
+      "shoe_depth_ft": 1850
+    },
+    {
+      "string": "liner",
+      "top_ft": 0,
+      "size_in": 5.5,
+      "bottom_ft": 11950,
+      "shoe_depth_ft": 11950
+    }
+  ],
+  "operator_info": {
+    "address": "400 W ILLINOIS AVE SUITE 1300 MIDLAND, TX 79701-0000",
+    "operator": "RELIANCE ENERGY, INC.",
+    "operator_no": "700995"
+  },
+  "tubing_record": [
+    {
+      "top_ft": 0,
+      "size_in": 2.875,
+      "bottom_ft": 7998
+    }
+  ],
+  "completion_info": {
+    "elevation": 2924,
+    "spud_date": "04/15/2011",
+    "total_depth_md": null,
+    "total_depth_tvd": 11950,
+    "plug_back_depth_md": null,
+    "plug_back_depth_tvd": null,
+    "total_number_of_acres": 2413.58,
+    "recompletion_or_multiple": "No",
+    "was_directional_survey_made": "No",
+    "electric_log_other_description": null,
+    "type_of_electric_or_other_logs": "Combo of Induction/Neutron/Density",
+    "is_cementing_affidavit_form_w_15": "Yes",
+    "date_of_first_production_after_rig": "06/02/2011",
+    "location_relative_to_nearest_lease": {
+      "lease": "MABEE 240A",
+      "off_lease": "No",
+      "feet_from_west_line": 660,
+      "feet_from_north_line": 4547
+    },
+    "number_of_producing_wells_on_lease": 12,
+    "rotation_time_within_surface_casing": null,
+    "date_plug_back_deepening_drilling_operation": "05/11/2011",
+    "distance_to_nearest_well_in_lease_and_reservoir": 2645
+  },
+  "formation_record": [
+    {
+      "top_ft": 6950,
+      "base_ft": null,
+      "formation": "CLEARFORK"
+    },
+    {
+      "top_ft": 8304,
+      "base_ft": null,
+      "formation": "SPRAYBERRY"
+    },
+    {
+      "top_ft": 9489,
+      "base_ft": null,
+      "formation": "DEAN"
+    },
+    {
+      "top_ft": 9658,
+      "base_ft": null,
+      "formation": "WOLFCAMP"
+    },
+    {
+      "top_ft": 10772,
+      "base_ft": null,
+      "formation": "STRAWN"
+    },
+    {
+      "top_ft": 10976,
+      "base_ft": null,
+      "formation": "ATOKA"
+    }
+  ],
+  "commingling_and_h2s": {
+    "produces_h2s_above_100ppm": "No",
+    "completion_downhole_commingled": "Yes"
+  },
+  "initial_potential_test": {},
+  "operator_certification": {
+    "date": "03/08/2012",
+    "title": "Production/Engineering/Regulatory",
+    "printed": "Sylvia Schkade",
+    "telephone": "(432) 683-4816"
+  },
+  "acid_fracture_operations": {
+    "operations": [
+      {
+        "depth_interval_ft": "9124-11577",
+        "type_of_operation": "PERFED/TREATED",
+        "amount_and_kind_of_material_used": "79,000# CHINA PROP + 330,000# 20/40 SLC + 197,000# 30/50 WHITE + 263,000 # 16/30 TX GOLD + 26,000G 15% HCL ACID + 818,000G XL GELS."
+      }
+    ],
+    "downhole_sleeve": "No",
+    "hydraulic_fracturing_treatment": "No",
+    "hydraulic_fracturing_fluid_disclosure": "No"
+  },
+  "surface_casing_determination": {
+    "surface_shoe_depth_ft": 377,
+    "gau_groundwater_protection_determination_depth": 375
+  },
+  "producing_injection_disposal_interval": [
+    {
+      "to_ft": 10662,
+      "from_ft": 9124,
+      "open_hole": false
+    },
+    {
+      "to_ft": 10956,
+      "from_ft": 10788,
+      "open_hole": false
+    },
+    {
+      "to_ft": 11577,
+      "from_ft": 11134,
+      "open_hole": false
+    }
+  ]
+}

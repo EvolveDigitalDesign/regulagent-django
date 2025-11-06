@@ -1,0 +1,20 @@
+{
+  "header": {
+    "date": "20111018"
+  },
+  "footnotes": "Acreage assigned to the referenced well for allocation of allowable shall not be assigned to any other well or wells projected to or completed in the above-referenced fields; such duplicate assignment of acreage is not acceptable, provided, however, that this limitation shall not prevent the reformation of development or proration units so long as no duplicate assignment of acreage occurs, and further, that such reformation does not violate other conservation regulations. The maximum daily allowable for the combined production will be limited to the top allowable for the SPRABERRY (TREND AREA) field and will become effective upon receipt of Form W-2 showing combined completion data and results of a 24-hour production test taken after the physical work of down hole commingling has been completed. Permit conditions: The completion report for the commingled well must indicate which perforations belong to which field. The Commission may also require a wellbore diagram to be filed with the completion report for the commingled well. If filed, the wellbore diagram must indicate which perforations belong to which field.",
+  "well_info": {
+    "api": "00342706",
+    "field": "SPRABERRY (TREND AREA)",
+    "lease": "MABEE 240A",
+    "county": "ANDREWS",
+    "well_no": "2005",
+    "district": "08"
+  },
+  "operator_info": {},
+  "recommendation": "The Commission has approved your application to down-hole commingle oil production within the above-referenced wellbore from the SPRABERRY (TREND AREA); MABEE (STRAWN); LOWE (ATOKA); and LOWE (MISS.) fields in ANDREWS County, Texas. For allowable and reporting purposes, the well will be assigned to the SPRABERRY (TREND AREA) field. It will be necessary to have or obtain Commission authority to complete this well in each of the subject zones (Form W-1 approval). The effective date of this SWR 10 Exception is October 10, 2011. This exception to SWR 10 will expire if not used within two (2) years from the date of this permit. This expiration date is October 18, 2013.",
+  "purpose_and_location": "APPLICATION FOR EXCEPTION TO SWR 10",
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": null
+  }
+}

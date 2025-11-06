@@ -1,0 +1,20 @@
+{
+  "header": {
+    "date": "20111018"
+  },
+  "footnotes": "Hydrogen sulfide restriction: No. Acreage assigned to the well shall not be assigned to other wells in the referenced fields. Secondary recovery operations may require segregation of zones or amendment/cancellation of surface-commingling authority.",
+  "well_info": {
+    "api": "00342706",
+    "field": "SPRABERRY (TREND AREA)",
+    "lease": "MABEE 240A",
+    "county": "ANDREWS",
+    "well_no": "2005",
+    "district": "08"
+  },
+  "operator_info": {},
+  "recommendation": "The Commission has approved the application to down-hole commingle oil production. The well will be assigned to the SPRABERRY (TREND AREA) field for allowable and reporting purposes. Commission authority (Form W-1 approval) is required to complete the well in each subject zone. The SWR 10 Exception is effective October 10, 2011, and expires October 18, 2013 if not used. Maximum daily allowable production limited to top allowable for SPRABERRY (TREND AREA) field upon receipt of Form W-2 and 24-hour production test results. Completion report must indicate perforations by field and may require a wellbore diagram.",
+  "purpose_and_location": "Application for Exception to SWR 10 for down-hole commingle oil production from SPRABERRY (TREND AREA), MABEE (STRAWN), LOWE (ATOKA), and LOWE (MISS.) fields in ANDREWS County, Texas.",
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": null
+  }
+}

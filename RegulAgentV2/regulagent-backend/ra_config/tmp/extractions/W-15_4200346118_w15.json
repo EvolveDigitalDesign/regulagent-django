@@ -1,0 +1,93 @@
+{
+  "header": {
+    "lease_name": "MABEE 140A",
+    "lease_no": "40718",
+    "field_name": "SPRABERRY (TREND AREA)",
+    "field_no": "85280300"
+  },
+  "operator_info": {
+    "name": "Crest Pumping Technologies",
+    "address": "P.O. Box 117 Jacksboro, TX 76458",
+    "operator_number": null
+  },
+  "well_info": {
+    "api": null,
+    "district": null,
+    "county": null,
+    "field": "SPRABERRY (TREND AREA)",
+    "lease": "MABEE 140A",
+    "well_no": "40718",
+    "location": {
+      "lat": null,
+      "lon": null
+    }
+  },
+  "cementing_data": [
+    {
+      "job": "production",
+      "interval_top_ft": 0,
+      "interval_bottom_ft": 11200,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": 470,
+      "additives": [
+        "35/65 Poz Class C",
+        "See Remarks"
+      ],
+      "volume_cu_ft": 893,
+      "height_ft": 5033
+    },
+    {
+      "job": "production",
+      "interval_top_ft": 0,
+      "interval_bottom_ft": 11200,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": 50,
+      "additives": [
+        "Class C",
+        "Neat"
+      ],
+      "volume_cu_ft": 67,
+      "height_ft": 375
+    }
+  ],
+  "cementing_to_squeeze": [
+    {
+      "top_ft": 2750,
+      "bottom_ft": 3630,
+      "method": "shot squeeze holes in 85/8 casing"
+    },
+    {
+      "top_ft": 2450,
+      "bottom_ft": 3634,
+      "method": "squeeze 830 sxs cement into annulus"
+    }
+  ],
+  "certifications": [
+    {
+      "name": "Roberto Garcia",
+      "title": "Cementer",
+      "company": "Crest Pumping Technologies",
+      "address": "P.O. Box 117 Jacksboro, TX 76458",
+      "phone": "940-567-3392",
+      "date": "5/18/17"
+    },
+    {
+      "name": "Kamrin Almond",
+      "title": "Cementer",
+      "company": "Crest Pumping Technologies",
+      "address": "P.O. Box 117 Jacksboro, TX 76458",
+      "phone": "940-567-3392",
+      "date": null
+    }
+  ],
+  "operator_certification": {
+    "name": "Robert K. Wilson",
+    "title": "Regulatory Lead",
+    "address": "P.O. Box 4294, Houston, TX 77210",
+    "phone": "713-985-6991",
+    "date": "June 13, 2017"
+  },
+  "instructions_section": "NOTICE: The Form W-15 must be submitted as an attachment to a Form G-1 (Gas Well Back Pressure Test, Completion or Recompletion Report, and Log), Form W-2 (Oil Well Potential Test, Completion or Recompletion Report, and Log), Form W-3 (Plugging Record), or Form W-4 (Application for Multiple Completion), any time cement is pumped in a wellbore.\n\nA. What to file: An operator should file an original and one copy of the completed Form W-15 for each cementing company used on a well. The cementing of different casing strings on a well by one cementing company may be reported on one form.\n\nThe Form W-15 should be filed with the form W-3, Plugging Record, unless the Form W-3 is signed by the cementing company representative. When reporting dry holes, operators must complete Form W-15, in addition to Form W-3, to show any casing cemented in the hole.\n\nB. How to file: An oil and gas completion report and Form W-15 may be filed online using the Commission's Online System (https://webapps.rrc.state.tx.us/security/login.do) or a paper copy of the form may be mailed to the Commission in Austin (P.O. Box 12967, Austin, Texas 78711-2967).\n\nC. Surface casing: An operator must set and cement sufficient surface casing to protect all usable-quality water strata, as defined by the Groundwater Advisory Unit in Austin. Sufficient cement shall be used to fill the annular space outside the casing from the shoe to the ground surface or to the bottom of the cellar. Before drilling a well, an operator must obtain a letter from the Groundwater Advisory Unit stating the protection depth. Surface casing should not be set deeper than 200 feet below the specified depth without prior approval from the Commission.\n\nTo plug and abandon a well, operators must use only cementers approved by the Commission's Director of Field Operations in accordance with SWR 14 (http://info.sos.state.tx.us/pls/pub/readtac$ext.TacPage?sl=R&app=9&p_dir=&p_rloc=&p_loc=&p_ploc=&pg=1&ptac=&ti=16&pt=1&ch=38&rl=14). Cementing companies, service companies, or operators can qualify as approved cementers by demonstrating that they are able to mix and pump cement in compliance with Commission rules and regulations.\n\nD. Estimated % wash-out: If the estimated % wash-outs less than 20% (or 30% along the Gulf Coast), provide supporting documentation such as caliper log to show how the estimated % wash-out was obtained.\n\nE. Multi-stage cement: An operator must report the multi-stage cement shoe in II. Casing Cementing Data section by selecting the type of casing and Multi-stage cement shoe. The operator must report the multi-stage cement tool in III. Casing Cementing Data section by selecting the type of casing and Multi-stage cement/DV tool.\n\nF. Multiple parallel strings: An operator should file the Form W-15 as and attachment to the Form W-4, Application for Multiple Completion. An operator may be required to submit multiple Form W15's to show all data for multiple parallel strings.\n\nG. Slurry data: If cement job exceeds three slurries, continue the list of slurries in the Slurry table in the subsequent Casing Cementing Data box."
+}

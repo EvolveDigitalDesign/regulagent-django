@@ -1,0 +1,115 @@
+{
+  "header": null,
+  "well_info": {
+    "api": null,
+    "field": null,
+    "lease": null,
+    "county": null,
+    "well_no": null,
+    "district": null
+  },
+  "operator_info": {
+    "name": "Sylvia Salcedo",
+    "phone": "432-683-4816",
+    "title": "Eng. Supe Supv",
+    "address": "500 W. Illinois, Ste. 1200, Midland, TX 79701",
+    "signature_dates": [
+      "12-15-2011"
+    ]
+  },
+  "cementing_data": [
+    {
+      "job": "surface",
+      "sacks": 375,
+      "additives": [
+        "2% CaCl2",
+        "1/8# sk Celloflake"
+      ],
+      "interval_top_ft": 0,
+      "yield_ft3_per_sk": null,
+      "interval_bottom_ft": 377,
+      "slurry_density_ppg": null
+    },
+    {
+      "job": "production",
+      "sacks": 1200,
+      "additives": [
+        "10% Gel + 5% Salt + 1/8# Sk Celloflake",
+        "1% CaCl2",
+        "4% Gel + 5% Salt + 1/8# Sk Celloflake"
+      ],
+      "interval_top_ft": 554,
+      "yield_ft3_per_sk": null,
+      "interval_bottom_ft": 1850,
+      "slurry_density_ppg": null
+    },
+    {
+      "job": "production",
+      "sacks": 1100,
+      "additives": [
+        "3% Gel + 3% SMS + 3/10% C-20 + 5# Skolseal + 1/4# Sk Celloflake",
+        "7/10% C-18 + 3/10% C-37 + 2# Sk Kolseal + 1/4# Sk Celloflake + 0.05% C-20"
+      ],
+      "interval_top_ft": 0,
+      "yield_ft3_per_sk": null,
+      "interval_bottom_ft": 11950,
+      "slurry_density_ppg": null
+    }
+  ],
+  "certifications": [
+    {
+      "cementers_certificate": {
+        "date": "4/16/2011",
+        "name": "Robert J. Vega",
+        "company": "O-TEX PUMPING SERVICES"
+      },
+      "operators_certificate": {
+        "date": "12-15-2011",
+        "name": "Sylvia Salcedo",
+        "title": "Eng. Supe Supv"
+      }
+    },
+    {
+      "cementers_certificate": {
+        "date": "4/26/2011",
+        "name": "Luis Rios",
+        "company": "O-TEX PUMPING SERVICES"
+      },
+      "operators_certificate": {
+        "date": "12-15-2011",
+        "name": "Sylvia Salcedo",
+        "title": "Eng. Supe Supv"
+      }
+    },
+    {
+      "cementers_certificate": {
+        "date": "5/11/2011",
+        "name": "Michael Fuentes",
+        "company": "O-TEX PUMPING SERVICES"
+      },
+      "operators_certificate": {
+        "date": "12-15-2011",
+        "name": "Sylvia Salcedo",
+        "title": "Eng. Supe Supv"
+      }
+    }
+  ],
+  "cementing_to_squeeze": [
+    {
+      "method": "TOC on shoe calc",
+      "top_ft": 3140,
+      "bottom_ft": null
+    },
+    {
+      "method": "TOC on tool: Surf Circ",
+      "top_ft": null,
+      "bottom_ft": null
+    },
+    {
+      "method": "TOC calc; CBH est TOC",
+      "top_ft": 5601,
+      "bottom_ft": 6550
+    }
+  ],
+  "instructions_section": "Operators and cementing companies must comply with the requirements of the Commission's Statewide rules 8 (Water Protection), 13 (Casing, Cementing, Drilling, and Completion), and 14 (Well Plugging). For offshore operations, see the requirements of Rule 13 (c). An operator should file an original and one copy of the completed Form W-15 for each cementing company used on a well. The cementing of different casing strings on a well by one cementing company may be reported on one form. Form W-15 should be filed with the following: An initial oil or gas completion report, Form W-2 or G-1, as required by Statewide or special field rules; Form W-4, Application for Multiple Completion, if the well is a multiple parallel casing completion; and Form W-3, Plugging Record, unless the W-3 is signed by the cementing company representative. When reporting dry holes, operators must complete W-15, in addition to Form W-3, to show any casing cemented in the hole. The appropriate Commission District Office for the county in which the well is located. Surface casing must be set and cement sufficient surface casing to protect all usable-quality water strata, as defined by the Texas Department of Water Resources, Austin. Before drilling a well in any field or area in which no field rules are in effect or in which surface casing requirements are not specified in the applicable rules, an operator must obtain a letter from the Department of Water Resources stating the protection depth. Surface casing should not be set deeper than 200 feet below the specified depth without prior approval from the Commission. Centralizers must be placed every fourth joint from the cement shoe to the ground surface or to the bottom of the cellar. Exceptions and alternative casing programs. The District Director may grant an exception to the requirements of Statewide Rule 13. In a written application, an operator must state the reason for the requested exception and outline an alternate program for casing and cementing through the protection depth for strata containing usable-quality water. The District Director may approve, modify, or reject a proposed program. An operator must obtain approval of any exception before beginning casing and cementing operations. Intermediate and production casing. For specific technical requirements, operators should consult Statewide Rule 12 (b) (3) and (4). Plugging and abandoning. Cement plugs must be placed in the wellbore as required by Statewide Rule 14. The District Director may require additional cement plugs. For onshore or inland wells, a 10-foot cement plug must be placed in the top of the well, and the casing must be cut off three feet below the ground surface. All cement plugs, except the top plug, must have sufficient slurry volume to fill 100 feet of hole, plus ten percent for each 1000 feet of depth from the ground surface to the bottom of the plug. To plug and abandon a well, operators must use only cementers approved by the Director of Field Operations. Cementing companies, service companies, or operators can qualify as approved cementers by demonstrating that they are able to mix and pump cement in compliance with Commission rules and regulations."
+}

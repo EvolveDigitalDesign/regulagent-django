@@ -1,0 +1,72 @@
+{
+  "header": null,
+  "operator_info": {
+    "name": "RSP Permian, LLC",
+    "address": "700 N Loraine Street, Suite 800, Midland, TX 79701",
+    "operator_number": "732224"
+  },
+  "well_info": {
+    "api": "30135298",
+    "district": "08",
+    "county": "Reeves",
+    "field": "Two Georges (Bone Spring)",
+    "lease": "90120H000",
+    "well_no": "1H",
+    "location": {
+      "lat": null,
+      "lon": null
+    }
+  },
+  "cementing_data": [
+    {
+      "job": "surface",
+      "interval_top_ft": 0,
+      "interval_bottom_ft": 527,
+      "cement_top_ft": 0,
+      "slurry_density_ppg": 13.5,
+      "yield_ft3_per_sk": 1.73,
+      "sacks": 255,
+      "additives": []
+    },
+    {
+      "job": "intermediate",
+      "interval_top_ft": 0,
+      "interval_bottom_ft": 5277,
+      "cement_top_ft": 0,
+      "slurry_density_ppg": 13.2,
+      "yield_ft3_per_sk": 1.34,
+      "sacks": 1027,
+      "additives": []
+    },
+    {
+      "job": "production",
+      "interval_top_ft": 0,
+      "interval_bottom_ft": 14423,
+      "cement_top_ft": null,
+      "slurry_density_ppg": 13.2,
+      "yield_ft3_per_sk": 1.34,
+      "sacks": 1027,
+      "additives": []
+    }
+  ],
+  "cement_tops_per_string": [
+    {
+      "string": "surface",
+      "cement_top_ft": 0,
+      "cement_returns": "full"
+    },
+    {
+      "string": "intermediate",
+      "cement_top_ft": 0,
+      "cement_returns": "full"
+    },
+    {
+      "string": "production",
+      "cement_top_ft": null,
+      "cement_returns": "none"
+    }
+  ],
+  "cementing_to_squeeze": [],
+  "certifications": null,
+  "instructions_section": null
+}

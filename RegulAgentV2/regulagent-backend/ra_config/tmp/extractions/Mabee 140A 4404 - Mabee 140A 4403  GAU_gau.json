@@ -1,0 +1,28 @@
+{
+  "operator_info": {
+    "name": "Scout Energy",
+    "address": "13800 Montfort Dr Ste 212, Dallas, TX 75240",
+    "operator_number": "330325"
+  },
+  "well_info": {
+    "api": "4237506025",
+    "district": "08",
+    "county": "Andrews",
+    "field": "Mabee Unit",
+    "lease": "Mabee Unit",
+    "well_no": "3409",
+    "location": {
+      "lat": 32.194551,
+      "lon": -102.082218
+    }
+  },
+  "header": {
+    "date": "15 July 2024"
+  },
+  "purpose_and_location": "Injection into Producing Zone (H1)",
+  "recommendation": "To protect usable-quality groundwater at this location, the Groundwater Advisory Unit of the Railroad Commission of Texas recommends setting surface casing to a depth of 1800 feet.",
+  "footnotes": "Unless stated otherwise, this recommendation is intended to afford protection to all usable-quality groundwater.",
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 1800
+  }
+}

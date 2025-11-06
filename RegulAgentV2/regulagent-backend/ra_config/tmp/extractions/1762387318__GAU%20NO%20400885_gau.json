@@ -1,0 +1,28 @@
+{
+  "operator_info": {
+    "name": "COG OPERATING LLC",
+    "address": "600 W ILLINOIS AVE, MIDLAND, TX 79701",
+    "operator_number": 166150
+  },
+  "well_info": {
+    "api": 30132998,
+    "district": null,
+    "county": "LOVING",
+    "field": null,
+    "lease": "PISTOL 25-8",
+    "well_no": "2H",
+    "location": {
+      "lat": 31.969854,
+      "lon": -103.421916
+    }
+  },
+  "header": {
+    "date": "01 October 2025"
+  },
+  "purpose_and_location": "Plug and Abandon (P&A); Survey-PSL; Abstract-1043; Block-C25; Section-8",
+  "recommendation": "The interval from the land surface to the base of the Santa Rosa, which is estimated to occur at a depth of 450 feet, must be protected.",
+  "footnotes": "Unless stated otherwise, this recommendation is intended to apply to all wells drilled within 200 feet of the subject well. Unless stated otherwise, this recommendation is for normal drilling, production, and plugging operations only. This determination is based on information provided when the application was submitted on 10/01/2025. If the location information has changed, you must contact the Groundwater Advisory Unit, and submit a new application if necessary.",
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 450
+  }
+}

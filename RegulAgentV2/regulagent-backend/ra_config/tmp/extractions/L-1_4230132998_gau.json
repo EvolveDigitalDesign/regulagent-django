@@ -1,0 +1,28 @@
+{
+  "operator_info": {
+    "name": "RSP PERMIAN, LLC",
+    "address": null,
+    "operator_number": null
+  },
+  "well_info": {
+    "api": "4230132998",
+    "district": "08",
+    "county": "LOVING",
+    "field": "TWO GEORGES (BONE SPRING)",
+    "lease": "PISTOL 25-8",
+    "well_no": "2H",
+    "location": {
+      "lat": null,
+      "lon": null
+    }
+  },
+  "header": {
+    "date": "01/12/2017"
+  },
+  "purpose_and_location": null,
+  "recommendation": null,
+  "footnotes": null,
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": null
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "header": {
+    "date": "5/17/2011"
+  },
+  "footnotes": null,
+  "well_info": {
+    "api": "4200342706",
+    "field": "Spraberry (Trend Area)",
+    "lease": null,
+    "county": "Andrews",
+    "well_no": "Mabee 240A #2005",
+    "district": null
+  },
+  "operator_info": {},
+  "recommendation": null,
+  "purpose_and_location": null,
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": "6520"
+  }
+}

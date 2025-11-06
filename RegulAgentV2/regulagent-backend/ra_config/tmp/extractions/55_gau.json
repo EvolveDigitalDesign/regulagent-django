@@ -1,0 +1,18 @@
+{
+  "header": {},
+  "footnotes": null,
+  "well_info": {
+    "api": "4200342706",
+    "field": "Spraberry (Trend Area)",
+    "lease": null,
+    "county": "Andrews",
+    "well_no": "Mabee 240A #2005",
+    "district": null
+  },
+  "operator_info": {},
+  "recommendation": null,
+  "purpose_and_location": "760 FSL & 660 FWL Sec 20, Blk 40, T-2-N T&P RR CO SURVEY, Abs 729 SEC 20 TWP 2-N RGE",
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 6520
+  }
+}

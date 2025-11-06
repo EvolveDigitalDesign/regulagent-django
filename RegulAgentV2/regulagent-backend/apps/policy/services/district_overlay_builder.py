@@ -240,11 +240,69 @@ def _merge_dict(dst: Dict[str, Any], src: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _derive_overrides_from_fields(field_specs: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Derive overrides from per-field specs.
+
+    Backward-compatible behavior: we still aggregate per-field findings into
+    county-level overrides, but we also emit a nested map under
+    overrides['fields'][field_name] preserving the original field grouping.
+    """
     overrides: Dict[str, Any] = {}
+    fields_map: Dict[str, Any] = {}
+    last_field_name: str | None = None
+
+    def _field_name(fs: Dict[str, Any]) -> str:
+        cand = (
+            fs.get('field_name')
+            or fs.get('field')
+            or fs.get('Field Name')
+            or fs.get('Field')
+            or fs.get('name')
+            or ''
+        )
+        name = str(cand).strip()
+        nonlocal last_field_name
+        # If this looks like a real field name, update carry-forward state
+        if name and not _is_header_like(name):
+            last_field_name = name
+            return name
+        # Otherwise, carry forward prior real field
+        return last_field_name or 'Unknown Field'
+
+    def _is_header_like(name: str) -> bool:
+        nl = (name or '').strip().lower()
+        if not nl:
+            return False
+        keywords = [
+            'possible', 'surface casing', 'separate', 'cases', 'notice', 'waterboard',
+            'through shallow', 'in these cases', 'field name', 'formations', 'fm tops',
+        ]
+        return any(k in nl for k in keywords)
+
     for fs in field_specs or []:
         remarks = str(fs.get('remarks') or '')
         formations = str(fs.get('formations') or '')
         fm_top = fs.get('fm_tops') if fs.get('fm_tops') not in (None, "") else fs.get('tops')
+
+        # If this row has no formations, no fm_tops/tops, and no remarks, treat it
+        # as a contentless header/remark line and attach to the previous valid field.
+        raw_name = str(
+            fs.get('field_name')
+            or fs.get('field')
+            or fs.get('Field Name')
+            or fs.get('Field')
+            or fs.get('name')
+            or ''
+        ).strip()
+        is_contentless = (formations.strip() == '' and (fm_top in (None, "")) and remarks.strip() == '')
+        if is_contentless and raw_name:
+            if last_field_name:
+                remarks_list = fields_map.setdefault(last_field_name, {}).setdefault('field_remarks', [])
+                if raw_name not in remarks_list:
+                    remarks_list.append(raw_name)
+            # Do not process further
+            continue
+
+        per_field: Dict[str, Any] = {}
 
         # WBL in remarks
         m_wbl = re.search(r"\bWBL\s*(\d+)(?:\s*(?:to|[-–])\s*(\d+))?", remarks, flags=re.IGNORECASE)
@@ -252,58 +310,51 @@ def _derive_overrides_from_fields(field_specs: List[Dict[str, Any]]) -> Dict[str
             w = {"min_ft": int(m_wbl.group(1))}
             if m_wbl.group(2):
                 w["max_ft"] = int(m_wbl.group(2))
-            _merge_dict(overrides.setdefault('wbl', {}), w)
+            _merge_dict(per_field.setdefault('wbl', {}), w)
 
-        # WBL + SR(...) pattern
+        # WBL + SR/SA window
         m_wbl_sr = re.search(r"WBL\s*\d+\s*\+\s*(SR|SA)[^\d]*(\d+)\s*(?:to|[-–])\s*(\d+)", remarks, re.IGNORECASE)
         if m_wbl_sr:
             form = 'SA' if m_wbl_sr.group(1).upper() == 'SA' else 'SR'
             top_ft = int(m_wbl_sr.group(2))
             bot_ft = int(m_wbl_sr.group(3))
-            overrides.setdefault('protect_intervals', []).append({
+            per_field.setdefault('protect_intervals', []).append({
                 'formation': form,
                 'top_ft': top_ft,
                 'bottom_ft': bot_ft,
                 'tag_required': True,
             })
 
-        # County notes like "Waterboard ranges 350-450 over county."
-        # handled in notes; this section focuses on fieldSpecs specifics.
-
-        # Tagging: explicit TAG or TAG ALL YATES
+        # Tagging
         if re.search(r"TAG\b", remarks, re.IGNORECASE):
-            # If a specific formation on this line, attach it
             fmatch = re.search(r"\b(SA|SR|Yates|Rustler)\b", formations, re.IGNORECASE)
             if fmatch:
                 form = 'SA' if fmatch.group(1).upper() == 'SA' else fmatch.group(1).title()
-                overrides.setdefault('tag', {}).setdefault('formations', [])
-                if form not in overrides['tag']['formations']:
-                    overrides['tag']['formations'].append(form)
+                per_field.setdefault('tag', {}).setdefault('formations', [])
+                if form not in per_field['tag']['formations']:
+                    per_field['tag']['formations'].append(form)
             else:
-                # generic tagging hint
-                overrides.setdefault('tag', {})['surface_shoe_in_oh'] = True
+                per_field.setdefault('tag', {})['surface_shoe_in_oh'] = True
 
         if re.search(r"TAG\s+ALL\s+YATES", remarks, re.IGNORECASE):
-            overrides.setdefault('tag', {}).setdefault('formations', [])
-            if 'Yates' not in overrides['tag']['formations']:
-                overrides['tag']['formations'].append('Yates')
+            per_field.setdefault('tag', {}).setdefault('formations', [])
+            if 'Yates' not in per_field['tag']['formations']:
+                per_field['tag']['formations'].append('Yates')
 
-        # Perf & squeeze mandates
+        # Perf & squeeze
         if re.search(r"perf\s+and\s+squeeze\s+even\s+if\s+circulated", remarks, re.IGNORECASE):
-            overrides.setdefault('squeeze', {})['policy'] = 'always'
-            # attach formation if present on this spec row
+            per_field.setdefault('squeeze', {})['policy'] = 'always'
             f2 = re.search(r"\b(Yates|Rustler)\b", formations, re.IGNORECASE)
             if f2:
-                overrides['squeeze'].setdefault('formations', [])
-                if f2.group(1).title() not in overrides['squeeze']['formations']:
-                    overrides['squeeze']['formations'].append(f2.group(1).title())
+                per_field['squeeze'].setdefault('formations', [])
+                if f2.group(1).title() not in per_field['squeeze']['formations']:
+                    per_field['squeeze']['formations'].append(f2.group(1).title())
 
         # Combination groups
         m_combo = re.search(r"Combo\s+plugs\s+([A-Za-z/\s,]+)\s+is\s+OK", remarks, re.IGNORECASE)
         if m_combo:
             raw = m_combo.group(1)
             tokens = [t.strip() for t in re.split(r"[,\s]+", raw) if t.strip()]
-            groups: List[str] = []
             buf: List[str] = []
             for tok in tokens:
                 if '/' in tok:
@@ -313,21 +364,20 @@ def _derive_overrides_from_fields(field_specs: List[Dict[str, Any]]) -> Dict[str
                     buf.append(tok)
             groups = [_norm_formation(t) for t in buf]
             if groups:
-                overrides['combine_formations'] = {'allow': True, 'groups': [groups]}
+                per_field['combine_formations'] = {'allow': True, 'groups': [groups]}
 
-        # Enhanced recovery hints
+        # ER hints
         if re.search(r"active\s+CO2\s+flood", remarks, re.IGNORECASE) or re.search(r"active\s+waterflood", remarks, re.IGNORECASE):
-            overrides['enhanced_recovery_zone'] = {'behavior': {'require_tag': True, 'require_protect': ['SA']}}
+            per_field['enhanced_recovery_zone'] = {'behavior': {'require_tag': True, 'require_protect': ['SA']}}
 
         # Migration risk Yates -> SA
         if re.search(r"Yates\s+Gas\s+Pressure\s+migrating\s+to\s+the\s+Santa\s+Rosa", remarks, re.IGNORECASE) or \
            re.search(r"Possible\s+Yates\s+Gas\s+Pressure\s+migrating\s+to\s+the\s+Santa\s+Rosa", remarks, re.IGNORECASE):
-            overrides['migration_risk'] = {'from_to': [{'from': 'Yates', 'to': 'SA'}], 'actions': ['separate_WBL_plugs', 'require_tag']}
+            per_field['migration_risk'] = {'from_to': [{'from': 'Yates', 'to': 'SA'}], 'actions': ['separate_WBL_plugs', 'require_tag']}
 
-        # Formation top directives (plug at top) when a formation and top depth are present
+        # Formation tops
         if fm_top not in (None, "") and formations:
             try:
-                # Some tops are numeric strings possibly with quotes; coerce to int
                 if isinstance(fm_top, str):
                     num = ''.join(ch for ch in fm_top if ch.isdigit())
                     if num == '':
@@ -335,39 +385,71 @@ def _derive_overrides_from_fields(field_specs: List[Dict[str, Any]]) -> Dict[str
                     top_ft = int(num)
                 else:
                     top_ft = int(fm_top)
-                # Special-case multi-word formations before splitting
                 added_multi = False
                 if re.search(r"Coleman\s+Junction", formations, re.IGNORECASE):
-                    overrides.setdefault('formation_tops', []).append({
+                    per_field.setdefault('formation_tops', []).append({
                         'formation': 'Coleman Junction', 'top_ft': top_ft, 'plug_required': True
                     })
                     added_multi = True
                 if re.search(r"Palo\s+Pinto", formations, re.IGNORECASE):
-                    overrides.setdefault('formation_tops', []).append({
+                    per_field.setdefault('formation_tops', []).append({
                         'formation': 'Palo Pinto', 'top_ft': top_ft, 'plug_required': True
                     })
                     added_multi = True
                 if re.search(r"Cross\s*cut", formations, re.IGNORECASE):
-                    overrides.setdefault('formation_tops', []).append({
+                    per_field.setdefault('formation_tops', []).append({
                         'formation': 'Crosscut', 'top_ft': top_ft, 'plug_required': True
                     })
                     added_multi = True
-                # Split formations like "SA/Grbg*" or "Sil/Penn"
                 raw_forms = [t.strip('* ').strip() for t in re.split(r"[\s/]+", formations) if t.strip()]
                 for rf in raw_forms:
                     norm = _norm_formation(rf)
-                    # Skip obviously non-formation tokens
                     if not norm or norm.lower() in {"see", "also", "casings", "gaps", "in", "cement", "have", "proven", "problem", "zone", "sd", "sd."}:
                         continue
                     if added_multi and norm.lower() in {"coleman", "junction"}:
-                        # already accounted as "Coleman Junction"
                         continue
                     item = {"formation": norm, "top_ft": top_ft, "plug_required": True}
                     if re.search(r"TAG", str(remarks), re.IGNORECASE):
                         item["tag_required"] = True
-                    overrides.setdefault('formation_tops', []).append(item)
+                    per_field.setdefault('formation_tops', []).append(item)
             except Exception:
                 pass
+
+        # Deduplicate formation_tops within this field
+        if 'formation_tops' in per_field and isinstance(per_field['formation_tops'], list):
+            seen_ft: set = set()
+            unique_list: List[Dict[str, Any]] = []
+            for it in per_field['formation_tops']:
+                try:
+                    key = (it.get('formation'), int(it.get('top_ft')))
+                except Exception:
+                    key = (it.get('formation'), it.get('top_ft'))
+                if key in seen_ft:
+                    continue
+                seen_ft.add(key)
+                unique_list.append(it)
+            per_field['formation_tops'] = unique_list
+
+        # Merge into per-county fields map only under a valid field key
+        # raw_name already computed above
+        # Header-like rows with no actionable content become remarks on last real field
+        if _is_header_like(raw_name) and not per_field:
+            if last_field_name:
+                remarks_list = fields_map.setdefault(last_field_name, {}).setdefault('field_remarks', [])
+                if raw_name not in remarks_list:
+                    remarks_list.append(raw_name)
+            continue
+        # Determine final field key (carry-forward for empty/headers)
+        fname = _field_name(fs)
+        # If original looked like header but we did extract content, attach to last field
+        if _is_header_like(raw_name) and per_field and last_field_name:
+            fname = last_field_name
+        # Only add when we have content to attach
+        if per_field:
+            fields_map[fname] = _merge_dict(fields_map.get(fname, {}), per_field)
+
+    if fields_map:
+        overrides['fields'] = fields_map
 
     return overrides
 

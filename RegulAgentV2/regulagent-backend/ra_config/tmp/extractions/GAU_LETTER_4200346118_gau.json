@@ -1,0 +1,28 @@
+{
+  "operator_info": {
+    "name": "OXY USA INC",
+    "address": "P O BOX 4294 HOUSTON TX 77210",
+    "operator_number": null
+  },
+  "well_info": {
+    "api": "00300000",
+    "district": null,
+    "county": "ANDREWS",
+    "field": null,
+    "lease": "MABEE 140A #4403&ALL",
+    "well_no": null,
+    "location": {
+      "lat": 32.1875,
+      "lon": -102.225
+    }
+  },
+  "header": {
+    "date": "March 19, 2014"
+  },
+  "purpose_and_location": "RD\nSUR-G&MMB&A,BLK-40,TSHP-1N,SEC-44,--[TD=12500],[RRC 8],",
+  "recommendation": "The interval from the land surface to a depth of 300 feet and the ZONE from 1200 feet to 1600 feet must be protected. This recommendation is applicable to all wells drilled in this SECTION 44 ON THIS LEASE.",
+  "footnotes": null,
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 300
+  }
+}

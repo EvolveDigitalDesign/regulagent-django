@@ -1,0 +1,70 @@
+{
+  "header": null,
+  "operator_info": {
+    "name": "COG OPERATING LLC",
+    "address": "600 W ILLINOIS AVE, MIDLAND, TX 79701",
+    "operator_number": "40718"
+  },
+  "well_info": {
+    "api": "00346118",
+    "district": "08",
+    "county": "ANDREWS",
+    "field": "SPRABERRY [TREND AREA]",
+    "lease": "MABEE 140A",
+    "well_no": "4404",
+    "location": {
+      "lat": null,
+      "lon": null
+    }
+  },
+  "filing_info": null,
+  "completion_info": null,
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": null,
+    "surface_shoe_depth_ft": null
+  },
+  "casing_record": [
+    {
+      "string": "surface",
+      "size_in": 11.75,
+      "top_ft": 0,
+      "bottom_ft": 1717,
+      "shoe_depth_ft": null,
+      "cement_top_ft": 0
+    },
+    {
+      "string": "intermediate",
+      "size_in": 8.625,
+      "top_ft": 0,
+      "bottom_ft": 5532,
+      "shoe_depth_ft": null,
+      "cement_top_ft": 2790
+    },
+    {
+      "string": "production",
+      "size_in": 5.5,
+      "top_ft": 0,
+      "bottom_ft": 11200,
+      "shoe_depth_ft": null,
+      "cement_top_ft": 310
+    },
+    {
+      "string": "liner",
+      "size_in": 5.5,
+      "top_ft": 0,
+      "bottom_ft": 11200,
+      "shoe_depth_ft": null,
+      "cement_top_ft": 720
+    }
+  ],
+  "liner_record": [],
+  "tubing_record": [],
+  "producing_injection_disposal_interval": null,
+  "acid_fracture_operations": null,
+  "formation_record": [],
+  "commingling_and_h2s": null,
+  "remarks": null,
+  "rrc_remarks": null,
+  "operator_certification": null,
+  "initial_potential_test": {}
+}

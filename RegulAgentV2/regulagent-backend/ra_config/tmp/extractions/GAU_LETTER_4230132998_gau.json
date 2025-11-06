@@ -1,0 +1,28 @@
+{
+  "operator_info": {
+    "name": "SILVER HILL ENERGY",
+    "address": "5949 SHERRY LANE SUITE, DALLAS, TX 75225",
+    "operator_number": 781871
+  },
+  "well_info": {
+    "api": null,
+    "district": null,
+    "county": "LOVING",
+    "field": null,
+    "lease": "Pistol 25-8",
+    "well_no": "2H",
+    "location": {
+      "lat": 31.969981,
+      "lon": -103.422376
+    }
+  },
+  "header": {
+    "date": "29 August 2016"
+  },
+  "purpose_and_location": "New Drill, Survey-PSL; Abstract-1043; Block-C25; Section-8",
+  "recommendation": "The interval from the land surface to the base of the Santa Rosa, which is estimated to occur at a depth of 450 feet, must be protected.",
+  "footnotes": "This recommendation is applicable to all wells within a radius of 200 feet of this location. Note: Unless stated otherwise, this recommendation is intended to apply only to the subject well and not for area-wide use. This recommendation is for normal drilling, production, and plugging operations only. It does not apply to saltwater disposal operation into a nonproductive zone (RRC Form W-14). This determination is based on information provided when the application was submitted on 08/26/2016. If the location information has changed, you must contact the Groundwater Advisory Unit, and submit a new application if necessary.",
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 450
+  }
+}

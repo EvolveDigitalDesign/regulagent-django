@@ -1,0 +1,20 @@
+{
+  "well_info": {
+    "api": null,
+    "district": "9A",
+    "county": "Scurry",
+    "field": null,
+    "lease": "Diamond M Unit",
+    "well_no": "BII\"Bi"
+  },
+  "header": {
+    "date": "2008-10-17"
+  },
+  "purpose_and_location": "New Drill",
+  "recommendation": "The interval from the land surface to a depth of 400 feet must be protected. This recommendation is applicable for all wells drilled in this SECTION 198.",
+  "footnotes": null,
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 400
+  },
+  "operator_info": {}
+}

@@ -1,0 +1,146 @@
+{
+  "header": {
+    "status": "Approved",
+    "date": "05/06/2014",
+    "tracking_no": "71002"
+  },
+  "operator_info": {
+    "operator": "DIAMONDBACK E&P LLC",
+    "operator_no": "217012",
+    "address": "500 W TEXAS AVE STE 100 MIDLAND, TX 79701-0000"
+  },
+  "well_info": {
+    "api": "42-329-38004",
+    "district": "08",
+    "county": "MIDLAND",
+    "field": "SPRABERRY (TREND AREA)",
+    "lease": "ST",
+    "well_no": "4516",
+    "rrc_lease": "39560",
+    "field_no": "85280300"
+  },
+  "filing_info": {
+    "purpose": "Initial Potential",
+    "type_of_new_well": "New Well",
+    "well_type": "Producing",
+    "completion_or_recompletion_date": "02/10/2013",
+    "type_of_permit": "Permit to Drill, Plug Back, or",
+    "permit_date": "05/29/2012",
+    "permit_no": "736941",
+    "rule_37_exception": "0275962",
+    "fluid_injection": null,
+    "og_waste_disposal": null,
+    "other": null
+  },
+  "completion_info": {
+    "spud_date": "12/28/2012",
+    "date_first_production_after_rig": "02/10/2013",
+    "date_plug_back_deepening_drilling_operation": "01/18/2013",
+    "number_producing_wells_on_lease": 24,
+    "distance_to_nearest_well_in_lease_and_reservoir": 1326,
+    "total_acres": 2945.87,
+    "elevation": 2876,
+    "total_depth_tvd": 10930,
+    "total_depth_md": null,
+    "plug_back_depth_tvd": 10870,
+    "plug_back_depth_md": null,
+    "directional_survey_made": "Yes",
+    "rotation_time_within_surface_casing": null,
+    "is_cementing_affidavit": "Yes",
+    "recompletion": "No",
+    "multiple": "No",
+    "type_of_logs": "Neutron/Density logs (combo of tools)",
+    "electric_log_other_description": null,
+    "location_relative_to_nearest_lease": {
+      "off_lease": "No",
+      "feet_from_south_line": 300,
+      "feet_from_east_line": 467,
+      "lease": "ST"
+    }
+  },
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": null,
+    "surface_shoe_depth_ft": 353
+  },
+  "casing_record": [
+    {
+      "string": "surface",
+      "size_in": 11.75,
+      "top_ft": null,
+      "bottom_ft": 353,
+      "shoe_depth_ft": 353
+    },
+    {
+      "string": "intermediate",
+      "size_in": 8.625,
+      "top_ft": null,
+      "bottom_ft": 5326,
+      "shoe_depth_ft": 4687
+    },
+    {
+      "string": "production",
+      "size_in": 5.5,
+      "top_ft": null,
+      "bottom_ft": 10919,
+      "shoe_depth_ft": 3231
+    }
+  ],
+  "liner_record": [],
+  "tubing_record": [
+    {
+      "size_in": 2.375,
+      "top_ft": null,
+      "bottom_ft": 7503
+    }
+  ],
+  "producing_injection_disposal_interval": {
+    "from_ft": 7598,
+    "to_ft": 10824,
+    "open_hole": false
+  },
+  "acid_fracture_operations": {
+    "hydraulic_fracturing_treatment": true,
+    "downhole_sleeve": false,
+    "actuation_pressure": null,
+    "production_casing_test_pressure_psig": null,
+    "actual_maximum_pressure_psig": null,
+    "hydraulic_fracturing_fluid_disclosure": true,
+    "operations": [
+      {
+        "type_of_operation": null,
+        "amount_and_kind_of_material_used": "892967 #SAND, 25347 BBLD FLUID, 7.5 & 15% HCL",
+        "depth_interval_ft": "7598-10824"
+      }
+    ]
+  },
+  "formation_record": [
+    {
+      "formation": "CLEARFORK",
+      "top_ft": 7230,
+      "base_ft": null
+    },
+    {
+      "formation": "SPRABERRY",
+      "top_ft": 8117,
+      "base_ft": null
+    },
+    {
+      "formation": "STRAWN",
+      "top_ft": 10590,
+      "base_ft": null
+    }
+  ],
+  "commingling_and_h2s": {
+    "produces_h2s_above_100ppm": false,
+    "completion_downhole_commingled": true
+  },
+  "remarks": "WELL IS PRODUCING FROM SPRABERRY (TREND AREA):7598-10590 AND THE LOWE, WEST (STRAWN):10652-10824. RULE 10 APPLICATION WILL BE SUBMITTED ON 5/6/13. SPUD WELL ON 12/28/12, SET SURFACE CASING AND MOVED OFF LOCATION. RESUMED DRILLING ON 1/5/13. RAN GYRO TO DETERMINE TRUE DIRECTION OF THE WELL.",
+  "rrc_remarks": null,
+  "operator_certification": {
+    "printed": "Tommie Gomez",
+    "title": null,
+    "telephone": "(432) 221-7462",
+    "date": "05/03/2013"
+  },
+  "initial_potential_test": {}
+}

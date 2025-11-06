@@ -1,0 +1,38 @@
+{
+  "header": null,
+  "operator_info": {
+    "name": "Reliance Energy, Inc.",
+    "representative_name": "Sylvia Sachkade",
+    "representative_title": "Eng. Svcs Supv",
+    "telephone": "4326834816"
+  },
+  "well_info": {
+    "api": null,
+    "district": null,
+    "county": "Andrews",
+    "field": null,
+    "lease": "T&P RR CO/Ford, J B",
+    "well_no": "A-729"
+  },
+  "filing_info": null,
+  "completion_info": null,
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": null,
+    "surface_shoe_depth_ft": null
+  },
+  "casing_record": [],
+  "liner_record": [],
+  "tubing_record": [],
+  "producing_injection_disposal_interval": null,
+  "acid_fracture_operations": null,
+  "formation_record": [],
+  "commingling_and_h2s": null,
+  "remarks": null,
+  "rrc_remarks": null,
+  "operator_certification": {
+    "representative_name": "Jimmy Pyron",
+    "representative_title": "Drilling Supt",
+    "telephone": "4326834816"
+  },
+  "initial_potential_test": {}
+}

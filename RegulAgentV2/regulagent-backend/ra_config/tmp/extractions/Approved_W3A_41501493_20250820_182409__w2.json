@@ -1,0 +1,61 @@
+{
+  "header": null,
+  "operator_info": {
+    "name": "KINDER MORGAN PRODUCTION CO LLC",
+    "address": "6 DESTA DRIVE STE 6000, MIDLAND, TX 79705",
+    "operator_number": "01035"
+  },
+  "well_info": {
+    "api": "41501493",
+    "district": "8A",
+    "county": "SCURRY",
+    "field": "DIAMOND -M- [CANYON LIME AREA]",
+    "lease": "LION DIAMOND \"M\" UNIT",
+    "well_no": "I 1WI",
+    "location": {
+      "lat": null,
+      "lon": null
+    }
+  },
+  "filing_info": null,
+  "completion_info": null,
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": null,
+    "surface_shoe_depth_ft": null
+  },
+  "casing_record": [
+    {
+      "string": "surface",
+      "size_in": 9.625,
+      "top_ft": 0,
+      "bottom_ft": 1778,
+      "shoe_depth_ft": 1778,
+      "cement_top_ft": 0
+    },
+    {
+      "string": "production",
+      "size_in": 5.5,
+      "top_ft": 250,
+      "bottom_ft": 6815,
+      "shoe_depth_ft": 5900,
+      "cement_top_ft": 5298
+    }
+  ],
+  "liner_record": [
+    {
+      "size_in": 4,
+      "top_ft": 6648,
+      "bottom_ft": 6954,
+      "cement_top_ft": null
+    }
+  ],
+  "tubing_record": null,
+  "producing_injection_disposal_interval": null,
+  "acid_fracture_operations": null,
+  "formation_record": null,
+  "commingling_and_h2s": null,
+  "remarks": null,
+  "rrc_remarks": null,
+  "operator_certification": null,
+  "initial_potential_test": {}
+}

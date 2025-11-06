@@ -1,0 +1,207 @@
+{
+  "header": {
+    "form": "W-2",
+    "title": "OIL WELL POTENTIAL TEST, COMPLETION OR RECOMPLETION REPORT",
+    "status": "Approved",
+    "date": "08/22/2017",
+    "tracking_no": "175020"
+  },
+  "operator_info": {
+    "operator": "OXY USA INC.",
+    "operator_no": "630591",
+    "address": "ATTN REGULATORY DEPARTMENT 5 GREENWAY PLAZA STE 110 HOUSTON, TX 77046-0000"
+  },
+  "well_info": {
+    "api": "42-003-46118",
+    "district": "08",
+    "county": "ANDREWS",
+    "field": "SPRABERRY (TREND AREA)",
+    "lease": "MABEE 140A",
+    "well_no": "4404",
+    "rrc_lease": "40718",
+    "field_no": "85280300",
+    "location": "Section: 44, Block: 40 T1N, Survey: G&MMB&A, Abstract: 295"
+  },
+  "filing_info": {
+    "purpose": "Well Record Only",
+    "type": "Other/Recompletion",
+    "well_type": "Producing Completion or Recompletion",
+    "completion_or_recompletion_date": "06/05/2017",
+    "type_of_permit": "Permit to Drill, Plug Back, or",
+    "permit_date": "05/15/2014",
+    "permit_no": "781518",
+    "rule_37_exception": null,
+    "fluid_injection": null,
+    "og_waste_disposal": null,
+    "other": null
+  },
+  "completion_info": {
+    "spud_date": "07/01/2014",
+    "date_of_first_production_after_rig": "06/05/2017",
+    "date_plug_back_deepening_drilling_operation_1": "05/11/2017",
+    "date_plug_back_deepening_drilling_operation_2": "06/03/2017",
+    "number_of_producing_wells_on_lease": 25,
+    "distance_to_nearest_well_in_lease_and_reservoir": 725,
+    "total_number_of_acres": 1350,
+    "elevation": 2872,
+    "total_depth_tvd": 11200,
+    "total_depth_md": null,
+    "plug_back_depth_tvd": 11137,
+    "plug_back_depth_md": null,
+    "was_directional_survey_made": true,
+    "rotation_time_within_surface_casing": null,
+    "is_cementing_affidavit_form_w_15": true,
+    "recompletion_or_multiple": {
+      "recompletion": true,
+      "multiple": false
+    },
+    "types_of_electric_or_other_logs": "None",
+    "electric_log_other_description": null,
+    "location_relative_to_nearest_lease": {
+      "off_lease": false,
+      "feet_from_north_line": 1200,
+      "feet_from_east_line": 2159,
+      "lease_name": "MABEE 140A"
+    }
+  },
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 1600,
+    "surface_shoe_depth_ft": null
+  },
+  "casing_record": [
+    {
+      "string": "surface",
+      "size_in": 11.75,
+      "top_ft": 14.75,
+      "bottom_ft": 1717,
+      "shoe_depth_ft": 0
+    },
+    {
+      "string": "intermediate",
+      "size_in": 8.625,
+      "top_ft": 10.625,
+      "bottom_ft": 5532,
+      "shoe_depth_ft": 2790
+    },
+    {
+      "string": "production",
+      "size_in": 5.5,
+      "top_ft": 7.875,
+      "bottom_ft": 11200,
+      "shoe_depth_ft": 5532
+    },
+    {
+      "string": "production",
+      "size_in": 5.5,
+      "top_ft": 7.875,
+      "bottom_ft": 11200,
+      "shoe_depth_ft": 6997
+    },
+    {
+      "string": "production",
+      "size_in": 5.5,
+      "top_ft": 7.875,
+      "bottom_ft": 11200,
+      "shoe_depth_ft": 0
+    }
+  ],
+  "liner_record": [],
+  "tubing_record": [
+    {
+      "size_in": 2.875,
+      "top_ft": null,
+      "bottom_ft": 10765
+    }
+  ],
+  "producing_injection_disposal_interval": {
+    "from_ft": 8110,
+    "to_ft": 10914,
+    "open_hole": false
+  },
+  "acid_fracture_operations": {
+    "was_hydraulic_fracturing_treatment": false,
+    "is_well_equipped_with_downhole_sleeve": false,
+    "actuation_pressure": null,
+    "production_casing_test_pressure_psig": null,
+    "actual_maximum_pressure_psig_during_hydraulic_fracturing": null,
+    "has_hydraulic_fracturing_fluid_disclosure_been": false,
+    "operations": [
+      {
+        "type_of_operation": "Cement Squeeze",
+        "amount_and_kind_of_material_used": "830 SXS CLASS C&H CEMENT",
+        "depth_interval_from_ft": 2750,
+        "depth_interval_to_ft": 2751
+      }
+    ]
+  },
+  "formation_record": [
+    {
+      "formation": "YATES",
+      "top_ft": 1000,
+      "base_ft": null
+    },
+    {
+      "formation": "SEVEN RIVERS",
+      "top_ft": 2000,
+      "base_ft": null
+    },
+    {
+      "formation": "QUEEN",
+      "top_ft": 4250,
+      "base_ft": null
+    },
+    {
+      "formation": "GRAYBURG",
+      "top_ft": 4800,
+      "base_ft": null
+    },
+    {
+      "formation": "SAN ANDRES - CO2 FLOOD, HIGH FLOWS, H2S, CORROSIVE",
+      "top_ft": 5020,
+      "base_ft": null
+    },
+    {
+      "formation": "CLEARFORK",
+      "top_ft": 6907,
+      "base_ft": null
+    },
+    {
+      "formation": "SPRABERRY",
+      "top_ft": 8196,
+      "base_ft": null
+    },
+    {
+      "formation": "DEAN",
+      "top_ft": 9407,
+      "base_ft": null
+    },
+    {
+      "formation": "WOLFCAMP",
+      "top_ft": 9550,
+      "base_ft": null
+    },
+    {
+      "formation": "STRAWN",
+      "top_ft": 10731,
+      "base_ft": null
+    },
+    {
+      "formation": "ATOKA",
+      "top_ft": 11025,
+      "base_ft": null
+    }
+  ],
+  "commingling_and_h2s": {
+    "producing_interval_produces_h2s_above_100ppm": false,
+    "completion_being_downhole_commingled": false
+  },
+  "remarks": "REMOVED 5-1/2 CSG AT 3634, SQUEEZED 8-5/8 CSG AT 2750 WITH 830 SXS CMT, RE-SET 5-1/2 AT 3634 WITH DV-STAGE TOOL AT 3588 AND CEMENTED TO SURFACE. TESTED CASING AND SET TUBING AT 10765 AND RETURNED TO PRODUCTION.",
+  "rrc_remarks": "INSTALLED 5 1/2 DV-STAGE TOOL AT 3588 AND CEMENTED TO SURFACE. PUMPED TWO-STAGE SQUEEZE WITH 550 SXS CLASS C LEAD AND 280 SXS CLASS H TAIL.",
+  "operator_certification": {
+    "printed_name": "Robert Wilson",
+    "title": "Lead Regulatory",
+    "telephone": "(713) 985-6991",
+    "date": "08/14/2017"
+  },
+  "initial_potential_test": {}
+}

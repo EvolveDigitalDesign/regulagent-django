@@ -1,0 +1,20 @@
+{
+  "well_info": {
+    "api": "42-329-38004",
+    "district": null,
+    "county": "Midland",
+    "field": "Spanish Trail",
+    "lease": null,
+    "well_no": "Spanish Trail 45-16"
+  },
+  "header": {
+    "date": "23-June-2013"
+  },
+  "purpose_and_location": "Primary Log on Well. Well logged with 16' KB. Main Pass and Repeat Pass logged using zero pressure on surface.",
+  "recommendation": null,
+  "footnotes": "Thank You for using Allied Wireline (432) 897-1528",
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": null
+  },
+  "operator_info": {}
+}

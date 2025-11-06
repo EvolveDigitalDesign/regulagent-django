@@ -1,0 +1,161 @@
+{
+  "header": {
+    "form": "W-2",
+    "status": "Approved",
+    "date": "12/10/2015",
+    "tracking_no": "144264"
+  },
+  "operator_info": {
+    "operator": "PARALLEL PETROLEUM LLC",
+    "operator_no": "639028",
+    "address": "P O BOX 10587 MIDLAND, TX 79702-0000"
+  },
+  "well_info": {
+    "api": "42-415-01493",
+    "district": "8A",
+    "county": "SCURRY",
+    "field": "DIAMOND -M- (CANYON LIME AREA)",
+    "lease": "LION DIAMOND \"M\" UNIT",
+    "well_no": "I 1WI"
+  },
+  "filing_info": {
+    "purpose_of": "Well Record Only",
+    "type_of": "Other/Recompletion",
+    "well_type": "Active UIC",
+    "completion_or_recompletion_date": "10/08/2015",
+    "type_of_permit": "Permit to Drill, Plug Back, or",
+    "permit_date": "08/25/2006",
+    "permit_no": "624919",
+    "rule_37_exception_date": "10/03/2013",
+    "rule_37_exception_no": "F-01744",
+    "fluid_injection": true,
+    "o_g_waste_disposal": false,
+    "other": null
+  },
+  "completion_info": {
+    "spud_date": "04/04/1950",
+    "date_of_first_production_after_rig": "10/08/2015",
+    "date_plug_back_deepening_drilling_operation": "08/19/2015",
+    "date_plug_back_deepening_recompletion_drilling_operation": "10/08/2015",
+    "number_of_producing_wells_on_lease": 69,
+    "distance_to_nearest_well_in_lease_and_reservoir": 1218,
+    "total_number_of_acres": 5400,
+    "elevation": 2356,
+    "total_depth_tvd": 6954,
+    "total_depth_md": null,
+    "plug_back_depth_tvd": 6890,
+    "plug_back_depth_md": null,
+    "was_directional_survey_made_other_inclination": false,
+    "rotation_time_within_surface_casing": null,
+    "is_cementing_affidavit_form_w_15": true,
+    "recompletion_or_multiple": {
+      "recompletion": true,
+      "multiple": false
+    },
+    "type_of_electric_or_other_logs": "None",
+    "electric_log_other_description": null,
+    "location_relative_to_nearest_lease": {
+      "off_lease": false,
+      "feet_from_south_line": 5948,
+      "feet_from_west_line": 5950,
+      "lease_name": "LION DIAMOND \"M\" UNIT"
+    }
+  },
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 350,
+    "surface_shoe_depth_ft": 1778
+  },
+  "casing_record": [
+    {
+      "string": "surface",
+      "size_in": 9.625,
+      "top_ft": 12.25,
+      "bottom_ft": 1778,
+      "shoe_depth_ft": 0
+    },
+    {
+      "string": "production",
+      "size_in": 5.5,
+      "top_ft": 7.875,
+      "bottom_ft": 6815,
+      "shoe_depth_ft": 5298
+    }
+  ],
+  "liner_record": [
+    {
+      "size_in": 4,
+      "top_ft": 6648,
+      "bottom_ft": 6954
+    }
+  ],
+  "tubing_record": [
+    {
+      "size_in": 2.375,
+      "top_ft": 6659,
+      "bottom_ft": 6627
+    }
+  ],
+  "producing_injection_disposal_interval": {
+    "open_hole": false,
+    "from_ft": 6748,
+    "to_ft": 6865
+  },
+  "acid_fracture_operations": {
+    "was_hydraulic_fracturing_treatment": false,
+    "is_well_equipped_with_downhole_sleeve": false,
+    "actuation_pressure": null,
+    "production_casing_test_pressure_psig": null,
+    "actual_maximum_pressure_psig_during_fracturing": null,
+    "has_hydraulic_fracturing_fluid_disclosure_been": false,
+    "operations": [
+      {
+        "type_of_operation": "Cement Squeeze",
+        "amount_and_kind_of_material_used": "50 SX CL \"C\"CMT",
+        "depth_interval_from_ft": 6404,
+        "depth_interval_to_ft": 6663
+      }
+    ]
+  },
+  "formation_record": [
+    {
+      "formation": "GLORIETA",
+      "top_ft": 2530,
+      "base_ft": null
+    },
+    {
+      "formation": "WOLFCAMP",
+      "top_ft": 5121,
+      "base_ft": null
+    },
+    {
+      "formation": "WOLFCAMP SHALE",
+      "top_ft": 5524,
+      "base_ft": null
+    },
+    {
+      "formation": "CANYON REEF",
+      "top_ft": 6722,
+      "base_ft": null
+    }
+  ],
+  "commingling_and_h2s": {
+    "producing_interval_produces_h2s_above_100ppm": false,
+    "completion_being_downhole_commingled": false
+  },
+  "remarks": "CONVERT TO INJECTION.",
+  "rrc_remarks": {
+    "public_comments": null,
+    "casing_record": null,
+    "tubing_record": null,
+    "producing_injection_disposal_interval": null,
+    "acid_fracture_cement_squeeze_cast_iron_bridge_plug_retainer_etc": null,
+    "potential_test_data": null
+  },
+  "operator_certification": {
+    "printed_name": "Mary Ann Martinez",
+    "title": "Sr Regulatory & Prod Analyst",
+    "telephone": "(432) 685-6563",
+    "date": "11/03/2015"
+  },
+  "initial_potential_test": {}
+}

@@ -1,0 +1,20 @@
+{
+  "well_info": {
+    "api": "32938004",
+    "district": null,
+    "county": "MIDLAND",
+    "field": null,
+    "lease": "ST #4516",
+    "well_no": null
+  },
+  "header": {
+    "date": "May 2, 2012"
+  },
+  "purpose_and_location": "SUR-T&F,BLK-40,TSHP-1S,SEC-45,--[TD=11600],[RRC 8]",
+  "recommendation": "The interval from the land surface to a depth of 250 feet must be protected.",
+  "footnotes": "This recommendation is intended for normal drilling, production, and plugging operations only. It does not apply to saltwater disposal operation into a nonproductive zone (RRC Form W-14).",
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 250
+  },
+  "operator_info": {}
+}

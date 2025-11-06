@@ -1,0 +1,20 @@
+{
+  "well_info": {
+    "api": null,
+    "district": "08",
+    "county": null,
+    "field": "Spraberry (Trend Area)",
+    "lease": "42-003-421706",
+    "well_no": "240A #2005"
+  },
+  "header": {
+    "date": "December 14, 2011"
+  },
+  "purpose_and_location": "The Mabee 240A #2005, initial potential completion has been filed via TRCC On-line portal.",
+  "recommendation": "This letter is formally requesting exception to '10 Day Rule' for production on this well. Thank you for your consideration and services.",
+  "footnotes": null,
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": null
+  },
+  "operator_info": {}
+}

@@ -67,6 +67,12 @@ district_overlays:
   '08A':
     notes:
       - TAG surface casing shoe plugs in open hole
+    proposal:
+      segment_length_ft: 100
+      spacing_ft: 200
+      plug_count: 4
+      cased_annular_excess: 0.4
+      citations: ["tx.tac.16.3.14(b)"]
   '7C':
     requirements:
       cap_above_highest_perf_ft:
@@ -79,3 +85,11 @@ district_overlays:
 preferences:
   allow_merge_caps_within_ft:
   prefer_bridge_plug_cap:
+  rounding_policy: nearest
+  default_recipe:
+    id: class_h_neat_15_8
+    class: H
+    density_ppg: 15.8
+    yield_ft3_per_sk: 1.18
+    water_gal_per_sk: 5.2
+    additives: []

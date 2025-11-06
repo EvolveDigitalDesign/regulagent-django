@@ -1,0 +1,20 @@
+{
+  "well_info": {
+    "api": null,
+    "district": "9A",
+    "county": "Scurry",
+    "field": null,
+    "lease": "Diamond M Unit",
+    "well_no": "BII\"Bi"
+  },
+  "header": {
+    "date": "2008-10-17"
+  },
+  "purpose_and_location": "New Drill, 10 miles west of Snyder, Texas",
+  "recommendation": "The interval from the land surface to a depth of 400 feet must be protected. This recommendation is applicable for all wells drilled in this section 198.",
+  "footnotes": "Unless stated otherwise, this recommendation is intended to apply only to the subject well and not for area-wide use. Approval of the well completion method for protection of this ground water falls under the jurisdiction of the Railroad Commission of Texas. This recommendation is intended for the normal drilling, production and plugging operations only. It does not apply to saltwater disposal operations into a nonproductive zone (RRC W-14).",
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 400
+  },
+  "operator_info": {}
+}

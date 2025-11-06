@@ -1,0 +1,137 @@
+{
+  "header": {
+    "status": "Approved",
+    "date": "12/10/2015",
+    "tracking_no": "144264"
+  },
+  "operator_info": {
+    "name": "PARALLEL PETROLEUM LLC",
+    "address": "P O BOX 10587 MIDLAND, TX 79702-0000",
+    "operator_number": "639028"
+  },
+  "well_info": {
+    "api": "42-415-01493",
+    "district": "8A",
+    "county": "SCURRY",
+    "field": "DIAMOND -M- (CANYON LIME AREA)",
+    "lease": "LION DIAMOND \"M\" UNIT",
+    "well_no": "I 1WI",
+    "location": {
+      "lat": null,
+      "lon": null
+    }
+  },
+  "filing_info": {
+    "purpose": "Well Record Only",
+    "type": "Other/Recompletion",
+    "permit_date": "08/25/2006",
+    "permit_no": "624919",
+    "fluid_injection": "10/03/2013",
+    "fluid_injection_permit_no": "F-01744"
+  },
+  "completion_info": {
+    "spud_date": "04/04/1950",
+    "first_production_date": "10/08/2015",
+    "plug_back_date": "08/19/2015",
+    "drilling_operation_date": "10/08/2015",
+    "producing_wells": 69,
+    "acres": 5400.0,
+    "elevation": 2356,
+    "total_depth_tvd": 6954,
+    "total_depth_md": null,
+    "plug_back_depth_tvd": 6890,
+    "plug_back_depth_md": null,
+    "directional_survey": "No",
+    "cementing_affidavit": "Yes"
+  },
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 350.0,
+    "surface_shoe_depth_ft": 1900.0
+  },
+  "casing_record": [
+    {
+      "string": "surface",
+      "size_in": 9.625,
+      "weight_per_ft": null,
+      "hole_size_in": 12.25,
+      "top_ft": null,
+      "bottom_ft": 1778,
+      "shoe_depth_ft": null,
+      "cement_top_ft": 0
+    },
+    {
+      "string": "production",
+      "size_in": 5.5,
+      "weight_per_ft": null,
+      "hole_size_in": 7.875,
+      "top_ft": null,
+      "bottom_ft": 6815,
+      "shoe_depth_ft": null,
+      "cement_top_ft": 5298
+    }
+  ],
+  "liner_record": [
+    {
+      "size_in": 4,
+      "top_ft": 6648,
+      "bottom_ft": 6954,
+      "cement_top_ft": 6648
+    }
+  ],
+  "tubing_record": [
+    {
+      "size_in": 2.375,
+      "top_ft": null,
+      "bottom_ft": 6659
+    }
+  ],
+  "producing_injection_disposal_interval": {
+    "open_hole": "No",
+    "from_ft": 6748,
+    "to_ft": 6865
+  },
+  "acid_fracture_operations": {
+    "type_of_operation": "Cement Squeeze",
+    "amount_and_kind_of_material_used": "50 SX CL \"C\"CMT",
+    "depth_interval_ft": "6404-6663"
+  },
+  "formation_record": [
+    {
+      "formation": "GLORIETA",
+      "top_ft": 2530.0,
+      "base_ft": null
+    },
+    {
+      "formation": "WOLFCAMP",
+      "top_ft": 5121.0,
+      "base_ft": null
+    },
+    {
+      "formation": "WOLFCAMP SHALE",
+      "top_ft": 5524.0,
+      "base_ft": null
+    },
+    {
+      "formation": "CANYON REEF",
+      "top_ft": 6722.0,
+      "base_ft": null
+    }
+  ],
+  "kop": {
+    "kop_md_ft": null,
+    "kop_tvd_ft": null
+  },
+  "commingling_and_h2s": {
+    "h2s_concentration_exceeds_100ppm": "No",
+    "downhole_commingled": "No"
+  },
+  "remarks": "CONVERT TO INJECTION.",
+  "rrc_remarks": null,
+  "operator_certification": {
+    "printed_name": "Mary Ann Martinez",
+    "title": "Sr Regulatory & Prod Analyst",
+    "telephone": "(432) 685-6563",
+    "date": "11/03/2015"
+  },
+  "initial_potential_test": {}
+}

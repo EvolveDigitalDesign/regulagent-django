@@ -1,0 +1,78 @@
+{
+  "header": null,
+  "operator_info": {
+    "name": "Parallel Petroleum LLC",
+    "address": "P.O. Box 4337, Midland, TX 79704",
+    "operator_number": "432-684-1994"
+  },
+  "well_info": {
+    "api": "42-329-36473",
+    "district": "8A",
+    "county": "Reeves",
+    "field": "Big Canyon",
+    "lease": "Davis",
+    "well_no": "1-1",
+    "location": {
+      "lat": 31.845833,
+      "lon": -103.593056
+    }
+  },
+  "cementing_data": [
+    {
+      "job": "surface",
+      "interval_top_ft": 0,
+      "interval_bottom_ft": 1500,
+      "cement_top_ft": 0,
+      "slurry_density_ppg": 15.6,
+      "yield_ft3_per_sk": 1.18,
+      "sacks": 500,
+      "additives": []
+    },
+    {
+      "job": "intermediate",
+      "interval_top_ft": 1500,
+      "interval_bottom_ft": 5000,
+      "cement_top_ft": 0,
+      "slurry_density_ppg": 14.8,
+      "yield_ft3_per_sk": 1.33,
+      "sacks": 1000,
+      "additives": []
+    },
+    {
+      "job": "production",
+      "interval_top_ft": 5000,
+      "interval_bottom_ft": 10000,
+      "cement_top_ft": 9500,
+      "slurry_density_ppg": 16.4,
+      "yield_ft3_per_sk": 1.15,
+      "sacks": 1500,
+      "additives": []
+    }
+  ],
+  "cement_tops_per_string": [
+    {
+      "string": "surface",
+      "cement_top_ft": 0,
+      "cement_returns": "full"
+    },
+    {
+      "string": "intermediate",
+      "cement_top_ft": 0,
+      "cement_returns": "full"
+    },
+    {
+      "string": "production",
+      "cement_top_ft": 9500,
+      "cement_returns": "partial"
+    }
+  ],
+  "cementing_to_squeeze": [
+    {
+      "top_ft": 9500,
+      "bottom_ft": 10000,
+      "method": "squeeze"
+    }
+  ],
+  "certifications": null,
+  "instructions_section": null
+}

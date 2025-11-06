@@ -1,0 +1,104 @@
+{
+  "header": {
+    "form": "W-15",
+    "title": "Cementing Report",
+    "revision_date": "4/1/83"
+  },
+  "operator_info": {
+    "operator_name": "Diamondback E&P LLC",
+    "rrc_operator_no": "217012",
+    "rrc_district_no": "08",
+    "county_of_well_site": "MIDLAND"
+  },
+  "well_info": {
+    "api": "42-329-38004",
+    "district": "08",
+    "county": "MIDLAND",
+    "field": "Spraberry (Trend Area)",
+    "lease": "ST",
+    "well_no": "4516"
+  },
+  "cementing_data": [
+    {
+      "job": "surface",
+      "interval_top_ft": 353,
+      "interval_bottom_ft": 1246,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": 320,
+      "additives": [
+        "4%GEL",
+        "2%CACL"
+      ]
+    },
+    {
+      "job": "intermediate",
+      "interval_top_ft": 5326,
+      "interval_bottom_ft": 7466,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": 670,
+      "additives": [
+        "REMARK 1"
+      ]
+    },
+    {
+      "job": "intermediate",
+      "interval_top_ft": 5326,
+      "interval_bottom_ft": 7466,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": 200,
+      "additives": [
+        "REMARK 2"
+      ]
+    },
+    {
+      "job": "production",
+      "interval_top_ft": 10919,
+      "interval_bottom_ft": 9729,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": 250,
+      "additives": [
+        "REMARK 1"
+      ]
+    },
+    {
+      "job": "production",
+      "interval_top_ft": 10919,
+      "interval_bottom_ft": 9729,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": 910,
+      "additives": [
+        "REMARK 2"
+      ]
+    }
+  ],
+  "cementing_to_squeeze": [],
+  "certifications": [
+    {
+      "cementer_name": "WILL BAUTISTA",
+      "cementing_company": "TRANS-TEX CEMENTING SERVICES, LLC",
+      "address": "5019 BASIN ST Midland, Texas 79703",
+      "phone": "432-594-4900",
+      "date": "11/19/2012"
+    },
+    {
+      "cementer_name": "Randal Scarlett",
+      "cementing_company": "O-Tex Pumping LLC",
+      "address": "2611 East I-20 Midland Texas 79706",
+      "phone": "(432)686-8559",
+      "date": "1/8/2013"
+    },
+    {
+      "cementer_name": "EDGAR MONTES SERVICE SUPERVISOR",
+      "cementing_company": "O-TEX PUMPING SERVICES",
+      "address": "2611 East I-20 Midland, Texas 79706",
+      "phone": "432-686-8559",
+      "date": "1/17/2013"
+    }
+  ],
+  "instructions_section": "Operators and cementing companies must comply with the requirements of the Commission's Statewide Rules 8 (Water Protection), 13 (Casing, Cementing, Drilling, and Completion), and 14 (Well Plugging). For offshore operations, see the requirements of Rule 13 (c). An operator should file an original and one copy of the completed Form W-15 for each cementing company used on a well. The cementing of different casing strings on a well by one cementing company may be reported on one form. Form W-15 should be filed with the following: An initial oil or gas completion report, Form W-2 or G-1, as required by Statewide or special field rules; Form W-4, Application for Multiple Completion, if the well is a multiple parallel casing completion; and Form W-3, Plugging Record, unless the W-3 is signed by the cementing company representative. When reporting dry holes, operators must complete W-15, in addition to Form W-3, to show any casing cemented in the hole. The appropriate Commission District Office for the county in which the well is located. Surface casing must be set deeper than 200 feet below the specified depth without prior approval from the Commission. Centralizers must be placed every fourth joint from the cement shoe to the ground surface or to the bottom of the cellar. All centralizers must meet API specifications. Exceptions and alternative casing programs require written applications and approval. Intermediate and production casing require consultation with Statewide Rule 12 (b)(3) and (4). Cement plugs must be placed in the wellbore as required by Statewide Rule 14. The District Director may require additional cement plugs. For onshore or inland wells, a 10-foot cement plug must be placed in the top of the well, and the casing must be cut off three feet below the ground surface. All cement plugs, except the top plug, must have sufficient slurry volume to fill 100 feet of hole, plus ten percent for each 1,000 feet of depth from the ground surface to the bottom of the plug. To plug and abandon a well, operators must use only cementers approved by the Director of Field Operations. Cementing companies, service companies, or operators can qualify as approved cementers by demonstrating that they are able to mix and pump cement in compliance with Commission rules and regulations."
+}

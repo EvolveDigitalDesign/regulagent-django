@@ -1,0 +1,368 @@
+{
+  "api": "4200342706",
+  "jurisdiction": "TX",
+  "district": "08A",
+  "county": "ANDREWS",
+  "field": "SPRABERRY (TREND AREA)",
+  "field_resolution": {
+    "requested_field": "SPRABERRY (TREND AREA)",
+    "matched_field": "SPRABERRY (TREND AREA)",
+    "matched_in_county": "Martin County",
+    "method": "nearest_county",
+    "nearest_distance_km": 64.53227840687936
+  },
+  "formation_tops_detected": [
+    "atoka",
+    "clearfork",
+    "dean",
+    "sprayberry",
+    "strawn",
+    "wolfcamp"
+  ],
+  "formations_targeted": [
+    "Dean",
+    "Lo",
+    "San Andres",
+    "Santa Rosa",
+    "Up"
+  ],
+  "rounding": "nearest",
+  "steps": [
+    {
+      "type": "cut_casing_below_surface",
+      "top_ft": null,
+      "bottom_ft": null,
+      "sacks": null,
+      "regulatory_basis": [
+        "tx.tac.16.3.14(d)(8)"
+      ],
+      "special_instructions": null,
+      "details": {}
+    },
+    {
+      "type": "intermediate_casing_shoe_plug",
+      "top_ft": 5604.0,
+      "bottom_ft": 5504.0,
+      "sacks": null,
+      "regulatory_basis": [
+        "tx.tac.16.3.14(f)(1)"
+      ],
+      "special_instructions": null,
+      "details": {}
+    },
+    {
+      "type": "productive_horizon_isolation_plug",
+      "top_ft": 10712.0,
+      "bottom_ft": 10612.0,
+      "sacks": null,
+      "regulatory_basis": [
+        "tx.tac.16.3.14(k)"
+      ],
+      "special_instructions": null,
+      "details": {}
+    },
+    {
+      "type": "perf_circulate",
+      "top_ft": 9124.0,
+      "bottom_ft": 10662.0,
+      "sacks": null,
+      "regulatory_basis": [
+        "SWR-14"
+      ],
+      "special_instructions": null,
+      "details": {}
+    },
+    {
+      "type": "cement_plug",
+      "top_ft": 425.0,
+      "bottom_ft": 0.0,
+      "sacks": 40,
+      "regulatory_basis": [
+        "rrc.district.08a.andrews:tag.surface_shoe_in_oh",
+        "tx.gau.protect_interval",
+        "tx.tac.16.3.14(d)(8)",
+        "tx.tac.16.3.14(e)(2)"
+      ],
+      "special_instructions": null,
+      "details": {
+        "cement_class": "C",
+        "depth_mid_ft": 150.0,
+        "merged": true,
+        "merged_steps": [
+          {
+            "formation": null,
+            "top_ft": 300.0,
+            "bottom_ft": 0.0
+          },
+          {
+            "formation": null,
+            "top_ft": 10.0,
+            "bottom_ft": 0.0
+          },
+          {
+            "formation": null,
+            "top_ft": 425.0,
+            "bottom_ft": 325.0
+          }
+        ],
+        "materials_explain": {
+          "yield_ft3_per_sk": 1.18,
+          "water_gal_per_sk": 5.2,
+          "rounding_mode": "nearest"
+        }
+      },
+      "cement_class": null,
+      "depth_mid_ft": null
+    },
+    {
+      "type": "cement_plug",
+      "top_ft": 1700.0,
+      "bottom_ft": 950.0,
+      "sacks": 71,
+      "regulatory_basis": [
+        "rrc.district.08a.andrews:formation_top:Santa Rosa",
+        "rrc.district.08a.andrews:tag.required",
+        "tx.gau.protect_interval",
+        "tx.tac.16.3.14(g)(1)"
+      ],
+      "special_instructions": null,
+      "details": {
+        "center_ft": 1000.0,
+        "geometry_used": {
+          "annulus": "production_casing_id_vs_stinger_od",
+          "casing_id_in": 4.778,
+          "stinger_od_in": 2.875
+        },
+        "merged": true,
+        "merged_steps": [
+          {
+            "formation": "Santa Rosa",
+            "top_ft": 1050.0,
+            "bottom_ft": 950.0
+          },
+          {
+            "formation": null,
+            "top_ft": 1650.0,
+            "bottom_ft": 1200.0
+          },
+          {
+            "formation": null,
+            "top_ft": 1700.0,
+            "bottom_ft": 1600.0
+          }
+        ],
+        "materials_explain": {
+          "yield_ft3_per_sk": 1.18,
+          "water_gal_per_sk": 5.2,
+          "rounding_mode": "nearest"
+        }
+      },
+      "cement_class": null,
+      "depth_mid_ft": null
+    },
+    {
+      "type": "formation_top_plug",
+      "top_ft": 3550.0,
+      "bottom_ft": 3450.0,
+      "sacks": 10,
+      "regulatory_basis": [
+        "rrc.district.08a.andrews:formation_top:San Andres"
+      ],
+      "special_instructions": null,
+      "details": {
+        "center_ft": 3500.0,
+        "geometry_used": {
+          "annulus": "production_casing_id_vs_stinger_od",
+          "casing_id_in": 4.778,
+          "stinger_od_in": 2.875
+        },
+        "verification": {
+          "action": "TAG",
+          "required_wait_hr": 4
+        },
+        "materials_explain": {
+          "yield_ft3_per_sk": 1.18,
+          "water_gal_per_sk": 5.2,
+          "rounding_mode": "nearest"
+        }
+      }
+    },
+    {
+      "type": "cement_plug",
+      "top_ft": 6550.0,
+      "bottom_ft": 6450.0,
+      "sacks": 9,
+      "regulatory_basis": [
+        "rrc.district.08a.andrews:formation_top:Dean",
+        "rrc.district.08a.andrews:formation_top:Up"
+      ],
+      "special_instructions": null,
+      "details": {
+        "center_ft": 6500.0,
+        "geometry_used": {
+          "annulus": "production_casing_id_vs_stinger_od",
+          "casing_id_in": 4.778,
+          "stinger_od_in": 2.875
+        },
+        "verification": {
+          "action": "TAG",
+          "required_wait_hr": 4
+        },
+        "merged": true,
+        "merged_steps": [
+          {
+            "formation": "Up",
+            "top_ft": 6550.0,
+            "bottom_ft": 6450.0
+          },
+          {
+            "formation": "Dean",
+            "top_ft": 6550.0,
+            "bottom_ft": 6450.0
+          }
+        ],
+        "materials_explain": {
+          "yield_ft3_per_sk": 1.18,
+          "water_gal_per_sk": 5.2,
+          "rounding_mode": "nearest"
+        }
+      },
+      "cement_class": null,
+      "depth_mid_ft": null
+    },
+    {
+      "type": "cement_plug",
+      "top_ft": 9550.0,
+      "bottom_ft": 9450.0,
+      "sacks": 9,
+      "regulatory_basis": [
+        "rrc.district.08a.andrews:formation_top:Dean",
+        "rrc.district.08a.andrews:formation_top:Lo"
+      ],
+      "special_instructions": null,
+      "details": {
+        "center_ft": 9500.0,
+        "geometry_used": {
+          "annulus": "production_casing_id_vs_stinger_od",
+          "casing_id_in": 4.778,
+          "stinger_od_in": 2.875
+        },
+        "merged": true,
+        "merged_steps": [
+          {
+            "formation": "Lo",
+            "top_ft": 9550.0,
+            "bottom_ft": 9450.0
+          },
+          {
+            "formation": "Dean",
+            "top_ft": 9550.0,
+            "bottom_ft": 9450.0
+          }
+        ],
+        "materials_explain": {
+          "yield_ft3_per_sk": 1.18,
+          "water_gal_per_sk": 5.2,
+          "rounding_mode": "nearest"
+        }
+      },
+      "cement_class": null,
+      "depth_mid_ft": null
+    }
+  ],
+  "plan_notes": null,
+  "materials_totals": {
+    "total_sacks": 139,
+    "total_bbl": 29.4
+  },
+  "debug_overrides": {
+    "squeeze_via_perf": null
+  },
+  "rrc_export": [
+    {
+      "plug_no": 1,
+      "type": "perf_circulate",
+      "from_ft": 10662.0,
+      "to_ft": 9124.0,
+      "sacks": null,
+      "remarks": "SWR-14"
+    },
+    {
+      "plug_no": 2,
+      "type": "productive_horizon_isolation_plug",
+      "from_ft": 10612.0,
+      "to_ft": 10712.0,
+      "sacks": null,
+      "remarks": "tx.tac.16.3.14(k)"
+    },
+    {
+      "plug_no": 3,
+      "type": "cement_plug",
+      "from_ft": 9450.0,
+      "to_ft": 9550.0,
+      "sacks": 9,
+      "remarks": "rrc.district.08a.andrews:formation_top:Dean; rrc.district.08a.andrews:formation_top:Lo, Formation transition: Lo (\u00b150 ft)"
+    },
+    {
+      "plug_no": 4,
+      "type": "cement_plug",
+      "from_ft": 6450.0,
+      "to_ft": 6550.0,
+      "sacks": 9,
+      "remarks": "rrc.district.08a.andrews:formation_top:Dean; rrc.district.08a.andrews:formation_top:Up, Formation transition: Up (\u00b150 ft)"
+    },
+    {
+      "plug_no": 5,
+      "type": "intermediate_casing_shoe_plug",
+      "from_ft": 5504.0,
+      "to_ft": 5604.0,
+      "sacks": null,
+      "remarks": "tx.tac.16.3.14(f)(1)"
+    },
+    {
+      "plug_no": 6,
+      "type": "formation_top_plug",
+      "from_ft": 3450.0,
+      "to_ft": 3550.0,
+      "sacks": 10,
+      "remarks": "rrc.district.08a.andrews:formation_top:San Andres, Formation transition: San Andres (\u00b150 ft)"
+    },
+    {
+      "plug_no": 7,
+      "type": "cement_plug",
+      "from_ft": 950.0,
+      "to_ft": 1700.0,
+      "sacks": 71,
+      "remarks": "rrc.district.08a.andrews:formation_top:Santa Rosa; rrc.district.08a.andrews:tag.required; tx.gau.protect_interval; tx.tac.16.3.14(g)(1), Formation transition: Santa Rosa (\u00b150 ft)"
+    },
+    {
+      "plug_no": 8,
+      "type": "cut_casing_below_surface",
+      "from_ft": null,
+      "to_ft": null,
+      "sacks": null,
+      "remarks": "tx.tac.16.3.14(d)(8)"
+    },
+    {
+      "plug_no": 9,
+      "type": "cement_plug",
+      "from_ft": 0.0,
+      "to_ft": 425.0,
+      "sacks": 40,
+      "remarks": "rrc.district.08a.andrews:tag.surface_shoe_in_oh; tx.gau.protect_interval; tx.tac.16.3.14(d)(8); tx.tac.16.3.14(e)(2), GAU protect interval"
+    }
+  ],
+  "violations": [],
+  "gau_protect_intervals": [
+    {
+      "top_ft": 300.0,
+      "bottom_ft": 0.0,
+      "source": "gau"
+    },
+    {
+      "top_ft": 1650.0,
+      "bottom_ft": 1200.0,
+      "source": "gau"
+    }
+  ]
+}

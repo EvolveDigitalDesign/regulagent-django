@@ -1,0 +1,178 @@
+"""
+Plan detail endpoint - retrieve full plan payload for viewing and chat interaction.
+
+This is the primary endpoint users interact with to:
+- View the complete baseline plan
+- Initiate chat-based modifications
+- See current workflow status
+"""
+
+import logging
+from typing import Optional
+
+from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from apps.public_core.models import PlanSnapshot, ExtractedDocument
+
+logger = logging.getLogger(__name__)
+
+
+def _build_well_geometry(api14: str) -> dict:
+    """
+    Extract well geometry from ExtractedDocuments for a given API.
+    Returns casing strings, formation tops, and perforations.
+    """
+    geometry = {
+        "casing_strings": [],
+        "formation_tops": [],
+        "perforations": [],
+        "tubing": [],
+        "liner": [],
+    }
+    
+    # Get W-2 document for casing and formation data
+    w2 = ExtractedDocument.objects.filter(
+        api_number=api14,
+        document_type='w2'
+    ).first()
+    
+    if w2:
+        # Extract casing strings
+        casing_record = w2.json_data.get('casing_record', [])
+        if casing_record:
+            geometry['casing_strings'] = casing_record
+        
+        # Extract formation tops
+        formation_record = w2.json_data.get('formation_record', [])
+        if formation_record:
+            geometry['formation_tops'] = formation_record
+        
+        # Extract tubing if available
+        tubing_record = w2.json_data.get('tubing_record', [])
+        if tubing_record:
+            geometry['tubing'] = tubing_record
+        
+        # Extract liner if available
+        liner_record = w2.json_data.get('liner_record', [])
+        if liner_record:
+            geometry['liner'] = liner_record
+    
+    # Get W-15 document for additional formation tops or perforations
+    w15 = ExtractedDocument.objects.filter(
+        api_number=api14,
+        document_type='w15'
+    ).first()
+    
+    if w15:
+        # Check for perforations
+        perforations = w15.json_data.get('perforations', [])
+        if perforations:
+            geometry['perforations'] = perforations
+        
+        # Check for formation tops (if not already in W-2)
+        formation_tops = w15.json_data.get('formation_tops', [])
+        if formation_tops and not geometry['formation_tops']:
+            geometry['formation_tops'] = formation_tops
+    
+    return geometry
+
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def get_plan_detail(request, plan_id):
+    """
+    Retrieve complete plan with full payload.
+    
+    GET /api/plans/{plan_id}/
+    
+    Returns:
+        - Full plan JSON (steps, violations, materials, etc.)
+        - Workflow status
+        - Well information
+        - Metadata (kernel version, policy, extraction info)
+    
+    This is the primary plan view that users interact with before
+    making modifications via chat or manual edits.
+    
+    If multiple snapshots exist with the same plan_id, returns the latest one
+    for the authenticated tenant.
+    """
+    user_tenant = request.user.tenants.first()
+    if not user_tenant:
+        return Response(
+            {"error": "User not associated with any tenant"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Get the latest snapshot for this plan_id and tenant
+    # Filter by tenant_id to ensure tenant isolation
+    try:
+        snapshot = (
+            PlanSnapshot.objects
+            .select_related('well')
+            .filter(plan_id=plan_id, tenant_id=user_tenant.id)
+            .order_by('-created_at')
+            .first()
+        )
+        
+        if not snapshot:
+            raise PlanSnapshot.DoesNotExist
+            
+    except PlanSnapshot.DoesNotExist:
+        return Response(
+            {"error": f"Plan {plan_id} not found for your tenant"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Fetch well geometry from extracted documents
+    well_geometry = _build_well_geometry(snapshot.well.api14)
+    
+    # Build response with full plan data
+    response_data = {
+        # Plan metadata
+        "id": snapshot.id,
+        "plan_id": snapshot.plan_id,
+        "kind": snapshot.kind,
+        "status": snapshot.status,
+        "visibility": snapshot.visibility,
+        "tenant_id": str(snapshot.tenant_id) if snapshot.tenant_id else None,
+        
+        # Well information
+        "well": {
+            "api14": snapshot.well.api14,
+            "state": snapshot.well.state,
+            "county": snapshot.well.county,
+            "operator_name": snapshot.well.operator_name,
+            "field_name": snapshot.well.field_name,
+            "lease_name": snapshot.well.lease_name,
+            "well_number": snapshot.well.well_number,
+            "lat": float(snapshot.well.lat) if snapshot.well.lat else None,
+            "lon": float(snapshot.well.lon) if snapshot.well.lon else None,
+        },
+        
+        # Well geometry (casing, formations, perforations) - critical for chat context
+        "well_geometry": well_geometry,
+        
+        # Provenance
+        "kernel_version": snapshot.kernel_version,
+        "policy_id": snapshot.policy_id,
+        "overlay_id": snapshot.overlay_id,
+        "extraction_meta": snapshot.extraction_meta,
+        
+        # Timestamps
+        "created_at": snapshot.created_at,
+        
+        # THE ACTUAL PLAN - This is what the user sees and modifies
+        "payload": snapshot.payload,
+    }
+    
+    logger.info(f"Retrieved plan {plan_id} (status: {snapshot.status}) for user {request.user.email}")
+    
+    return Response(response_data, status=status.HTTP_200_OK)
+

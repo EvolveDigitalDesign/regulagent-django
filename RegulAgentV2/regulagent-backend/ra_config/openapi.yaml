@@ -1,0 +1,550 @@
+openapi: 3.0.3
+info:
+  title: RegulAgent API
+  version: "0.1.0"
+  description: |
+    Core endpoints for plan generation, artifacts, agentic modifications, and similar wells.
+servers:
+  - url: http://127.0.0.1:8001
+    description: Host machine (dev proxy)
+  - url: http://localhost:8000
+    description: Inside Docker web container
+
+tags:
+  - name: Plans
+  - name: Artifacts
+  - name: Modify
+  - name: SimilarWells
+  - name: Public
+  - name: Extraction
+  - name: Advisory
+  - name: Policy
+
+paths:
+  /api/plans/w3a/from-api:
+    post:
+      tags: [Plans]
+      summary: Generate W-3A plan and persist baseline snapshot
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                api10:
+                  type: string
+                  description: 10-digit API number
+                input_mode:
+                  type: string
+                  enum: [extractions, user_files, hybrid]
+                  default: extractions
+                plugs_mode:
+                  type: string
+                  enum: [combined, isolated, both]
+                  default: combined
+                merge_threshold_ft:
+                  type: number
+                  default: 500
+                gau_file:
+                  type: string
+                  format: binary
+                w2_file:
+                  type: string
+                  format: binary
+                w15_file:
+                  type: string
+                  format: binary
+                schematic_file:
+                  type: string
+                  format: binary
+                formation_tops_file:
+                  type: string
+                  format: binary
+                confirm_fact_updates:
+                  type: boolean
+                  default: false
+                allow_precision_upgrades_only:
+                  type: boolean
+                  default: true
+              required: [api10]
+      responses:
+        "200":
+          description: Plan payload (baseline saved)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanPayload'
+
+  /api/plans/{api}/history:
+    get:
+      tags: [Plans]
+      summary: List plan snapshots for a well
+      parameters:
+        - in: path
+          name: api
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Snapshot list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api: { type: string }
+                  count: { type: integer }
+                  history:
+                    type: array
+                    items: { $ref: '#/components/schemas/PlanSnapshotSummary' }
+        "404":
+          description: Well not found
+
+  /api/plans/{api}/artifacts:
+    get:
+      tags: [Artifacts]
+      summary: List uploaded artifacts for a well
+      parameters:
+        - in: path
+          name: api
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Artifact list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api: { type: string }
+                  plan_id: { type: string, nullable: true }
+                  count: { type: integer }
+                  artifacts:
+                    type: array
+                    items: { $ref: '#/components/schemas/TenantArtifact' }
+
+  /api/artifacts/{artifact_id}/download:
+    get:
+      tags: [Artifacts]
+      summary: Download artifact (secure)
+      parameters:
+        - in: path
+          name: artifact_id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: File stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid path
+        "404":
+          description: Not found
+
+  /api/plans/{api}/filing/export:
+    get:
+      tags: [Plans]
+      summary: Export latest plan’s filing data (RRC-ready)
+      parameters:
+        - in: path
+          name: api
+          required: true
+          schema: { type: string }
+        - in: query
+          name: format
+          schema: { type: string, enum: [json, pdf], default: json }
+      responses:
+        "200":
+          description: Filing export data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilingExportResponse'
+        "404":
+          description: No plan or well found
+        "501":
+          description: PDF export not implemented
+
+  /api/plans/{api}/modify:
+    post:
+      tags: [Modify]
+      summary: Deterministic plan modification (apply ops and persist post_edit snapshot)
+      parameters:
+        - in: path
+          name: api
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                operation:
+                  type: string
+                  enum: [combine_plugs, replace_cibp_with_long_plug]
+                params:
+                  type: object
+                  additionalProperties: true
+              required: [operation]
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                operation: { type: string }
+                params: { type: string, description: JSON string for params }
+      responses:
+        "200":
+          description: Modification applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModifyResponse'
+        "400":
+          description: Validation error
+
+  /api/plans/{api}/modify/ai:
+    post:
+      tags: [Modify]
+      summary: Agentic plan modification (propose ops; optional apply)
+      parameters:
+        - in: path
+          name: api
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                message: { type: string }
+                strict: { type: boolean, default: true }
+                apply: { type: boolean, default: false }
+              required: [message]
+          application/json:
+            schema:
+              type: object
+              properties:
+                message: { type: string }
+                strict: { type: boolean, default: true }
+                apply: { type: boolean, default: false }
+              required: [message]
+      responses:
+        "200":
+          description: Applied (new post_edit snapshot)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIModifyApplyResponse'
+        "202":
+          description: Preview only (no persistence)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIModifyPreviewResponse'
+        "400":
+          description: Validation error
+
+  /api/similar-wells:
+    get:
+      tags: [SimilarWells]
+      summary: Find similar wells (geo + structured similarity; optional vector rerank)
+      parameters:
+        - in: query
+          name: api
+          required: true
+          schema: { type: string }
+        - in: query
+          name: radius_mi
+          schema: { type: number, default: 50 }
+        - in: query
+          name: k
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: months
+          schema: { type: integer, default: 24 }
+        - in: query
+          name: operator_boost
+          schema: { type: number, default: 1.2 }
+        - in: query
+          name: field_boost
+          schema: { type: number, default: 1.1 }
+        - in: query
+          name: w_architecture
+          schema: { type: number, default: 0.4 }
+        - in: query
+          name: w_pattern
+          schema: { type: number, default: 0.45 }
+        - in: query
+          name: w_context
+          schema: { type: number, default: 0.1 }
+        - in: query
+          name: w_quality
+          schema: { type: number, default: 0.05 }
+        - in: query
+          name: alpha_geo
+          schema: { type: number, default: 0.5 }
+        - in: query
+          name: use_vector
+          schema: { type: boolean, default: false }
+        - in: query
+          name: vector_weight
+          schema: { type: number, default: 0.4 }
+        - in: query
+          name: require_county
+          schema: { type: string, enum: [true, false, auto], default: auto }
+        - in: query
+          name: require_field
+          schema: { type: string, enum: [true, false, auto], default: auto }
+        - in: query
+          name: county
+          schema: { type: string }
+        - in: query
+          name: field
+          schema: { type: string }
+        - in: query
+          name: operator
+          schema: { type: string }
+      responses:
+        "200":
+          description: Similar wells
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarWellsResponse'
+        "404":
+          description: Source well missing or no lat/lon
+
+  /api/public/wells:
+    get:
+      tags: [Public]
+      summary: List wells
+      responses:
+        "200":
+          description: List
+    
+  /api/public/wells/{id}:
+    get:
+      tags: [Public]
+      summary: Well detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Detail
+
+  /api/rrc/extractions/completions:
+    post:
+      tags: [Extraction]
+      summary: Trigger completions extraction (usually called internally)
+      responses:
+        "200":
+          description: Extraction started or result returned
+
+  /api/plans/preview:
+    get:
+      tags: [Plans]
+      summary: Preview plan (kernel preview)
+      responses:
+        "200":
+          description: Preview OK
+
+  /api/advisory/sanity-check:
+    get:
+      tags: [Advisory]
+      summary: Advisory sanity check
+      responses:
+        "200":
+          description: OK
+
+  /api/overlay/engagements/{engagement_id}/resolved-facts:
+    get:
+      tags: [Plans]
+      summary: Resolved facts for engagement
+      parameters:
+        - in: path
+          name: engagement_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+
+  /api/policy/:
+    get:
+      tags: [Policy]
+      summary: Policy ingestion endpoints (namespace root)
+      responses:
+        "200":
+          description: OK
+
+components:
+  schemas:
+    PlanPayload:
+      type: object
+      description: End-to-end plan response (fields vary by plan and overlays)
+      properties:
+        api: { type: string }
+        jurisdiction: { type: string, nullable: true }
+        district: { type: string, nullable: true }
+        county: { type: string, nullable: true }
+        field: { type: string, nullable: true }
+        steps:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        rrc_export:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      additionalProperties: true
+
+    PlanSnapshotSummary:
+      type: object
+      properties:
+        created_at: { type: string, format: date-time }
+        plan_id: { type: string }
+        kind: { type: string, enum: [baseline, post_edit, submitted, approved] }
+        has_extraction: { type: boolean }
+
+    TenantArtifact:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        artifact_type: { type: string, enum: [w2, w15, gau, schematic, formation_tops, other] }
+        file_path: { type: string }
+        content_type: { type: string, nullable: true }
+        size_bytes: { type: integer, nullable: true }
+        sha256: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    FilingExportResponse:
+      type: object
+      properties:
+        api: { type: string }
+        plan_id: { type: string }
+        filing:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        kernel_version: { type: string, nullable: true }
+        jurisdiction: { type: string, nullable: true }
+        district: { type: string, nullable: true }
+        county: { type: string, nullable: true }
+        field: { type: string, nullable: true }
+
+    ModifyResponse:
+      type: object
+      properties:
+        api: { type: string }
+        plan_id: { type: string }
+        snapshot_id: { type: string }
+        diff:
+          type: object
+          properties:
+            removed_steps: { type: array, items: { type: object, additionalProperties: true } }
+            added_steps: { type: array, items: { type: object, additionalProperties: true } }
+            updated_steps: { type: array, items: { type: object, additionalProperties: true } }
+        steps:
+          type: array
+          items: { type: object, additionalProperties: true }
+
+    AIModifyPreviewResponse:
+      type: object
+      properties:
+        operations:
+          type: array
+          items:
+            type: object
+            properties:
+              op: { type: string }
+              params: { type: object, additionalProperties: true }
+        ai_rationale: { type: string }
+        risk_score: { type: number }
+        preview:
+          type: object
+          properties:
+            diff:
+              type: object
+              properties:
+                removed_steps: { type: array, items: { type: object, additionalProperties: true } }
+                added_steps: { type: array, items: { type: object, additionalProperties: true } }
+                updated_steps: { type: array, items: { type: object, additionalProperties: true } }
+            steps:
+              type: array
+              items: { type: object, additionalProperties: true }
+
+    AIModifyApplyResponse:
+      type: object
+      properties:
+        applied: { type: boolean }
+        snapshot_id: { type: string }
+        plan_id: { type: string }
+        operations:
+          type: array
+          items:
+            type: object
+            properties:
+              op: { type: string }
+              params: { type: object, additionalProperties: true }
+        ai_rationale: { type: string }
+        diff:
+          type: object
+          properties:
+            removed_steps: { type: array, items: { type: object, additionalProperties: true } }
+            added_steps: { type: array, items: { type: object, additionalProperties: true } }
+            updated_steps: { type: array, items: { type: object, additionalProperties: true } }
+        modification_saved:
+          type: boolean
+          description: True when PlanModification audit record persisted
+
+    SimilarWellsResponse:
+      type: object
+      properties:
+        api: { type: string }
+        lat: { type: number }
+        lon: { type: number }
+        radius_mi: { type: number }
+        months: { type: integer }
+        operator_boost: { type: number }
+        field_boost: { type: number }
+        rerank: { type: string, nullable: true }
+        vector_weight: { type: number, nullable: true }
+        count: { type: integer }
+        neighbors:
+          type: array
+          items:
+            type: object
+            properties:
+              api14: { type: string }
+              state: { type: string }
+              county: { type: string, nullable: true }
+              distance_mi: { type: number }
+              operator_name: { type: string, nullable: true }
+              field_name: { type: string, nullable: true }
+              score: { type: number }
+              components:
+                type: object
+                properties:
+                  base_geo: { type: number }
+                  arch: { type: number }
+                  pattern: { type: number }
+                  context: { type: number }
+              vector_sim: { type: number, nullable: true }
+              blended_score: { type: number, nullable: true }
+

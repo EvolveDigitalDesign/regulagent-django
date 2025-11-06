@@ -1,0 +1,24 @@
+{
+  "well_info": {
+    "api": "00341363",
+    "district": null,
+    "county": "ANDREWS",
+    "field": null,
+    "lease": "MABEE 240D #2001&ALL",
+    "well_no": "P-5# 700995",
+    "location": {
+      "lat": 32.0,
+      "lon": -102.0
+    }
+  },
+  "header": {
+    "date": "January 11, 2010"
+  },
+  "purpose_and_location": "ND; SUR-T&P, BLK-40, TSHP-2N, SEC-20, -- [TD=12000], [RRC 8]",
+  "recommendation": "The interval from the land surface to a depth of 300 feet and the ZONE from 1250 feet to 1650 feet must be protected. This recommendation is applicable to all wells drilled in this SECTION 20.",
+  "footnotes": "Note: Unless stated otherwise, this recommendation is intended to apply only to the subject well and not for area-wide use. Approval of the well completion methods for protection of this groundwater falls under the jurisdiction of the Railroad Commission of Texas. This recommendation is intended for normal drilling, production, and plugging operations only. It does not apply to saltwater disposal operation into a nonproductive zone (RRC Form W-14).",
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 300
+  },
+  "operator_info": {}
+}

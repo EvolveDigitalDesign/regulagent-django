@@ -1,0 +1,28 @@
+{
+  "operator_info": {
+    "name": "Parallel Petroleum Corp.",
+    "address": "P.O. Box 10587, Midland, Texas 79702",
+    "operator_number": null
+  },
+  "well_info": {
+    "api": null,
+    "district": null,
+    "county": "Scurry",
+    "field": null,
+    "lease": "Diamond M Unit",
+    "well_no": "BII\"Bi",
+    "location": {
+      "lat": null,
+      "lon": null
+    }
+  },
+  "header": {
+    "date": "October 17, 2008"
+  },
+  "purpose_and_location": "New OrlU",
+  "recommendation": "The interval from the land surface to a depth of 400 feet must be protected.",
+  "footnotes": null,
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": "400"
+  }
+}

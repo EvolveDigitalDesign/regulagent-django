@@ -1,0 +1,41 @@
+{
+  "header": "GROUNDWATER PROTECTION DETERMINATION",
+  "operator_info": {
+    "operator_no": "166150",
+    "attention": "COG OPERATING LLC",
+    "address": "600 W ILLINOIS AVE MIDLAND, TX 79701"
+  },
+  "well_info": {
+    "api": "00342706",
+    "district": null,
+    "county": "ANDREWS",
+    "field": null,
+    "lease": "MABEE 240A",
+    "well_no": "2005"
+  },
+  "filing_info": {
+    "date_issued": "31 March 2025",
+    "purpose": "Plug and Abandon (P&A)",
+    "location": "Survey-T&P RR CO; Abstract-729; Block-40; Township-2N; Section-20",
+    "latitude": "32.242052",
+    "longitude": "-102.282218",
+    "datum": "NAD27",
+    "total_vertical": "11950"
+  },
+  "completion_info": null,
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": "1650",
+    "surface_shoe_depth_ft": "300"
+  },
+  "casing_record": [],
+  "liner_record": [],
+  "tubing_record": [],
+  "producing_injection_disposal_interval": null,
+  "acid_fracture_operations": null,
+  "formation_record": [],
+  "commingling_and_h2s": null,
+  "remarks": "The base of usable-quality water that must be protected is estimated to occur at a depth of 1650 feet below the land surface. The interval from the land surface to a depth of 300 feet and the fresh water contained in the zone from a depth of 1200 feet to 1650 feet must be isolated from water in overlying and underlying beds. This recommendation is applicable for all wells drilled in this T&P RR CO; Abstract-729; Block-40; Township-2N, Section-20. This recommendation is intended to apply to all wells drilled within 200 feet of the subject well. This recommendation is for normal drilling, production, and plugging operations only.",
+  "rrc_remarks": "This determination is based on information provided when the application was submitted on 03/25/2025. If the location information has changed, you must contact the Groundwater Advisory Unit, and submit a new application if necessary.",
+  "operator_certification": null,
+  "initial_potential_test": {}
+}

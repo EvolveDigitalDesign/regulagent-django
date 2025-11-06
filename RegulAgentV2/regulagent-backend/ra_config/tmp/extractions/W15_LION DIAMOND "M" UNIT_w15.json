@@ -1,0 +1,96 @@
+{
+  "header": {
+    "form": "W-15",
+    "revision_date": "08/2014",
+    "commission": "RAILROAD COMMISSION OF TEXAS",
+    "address": "1701 N. Congress, P.O. Box 12967, Austin, Texas 78701-2967"
+  },
+  "operator_info": {
+    "operator_name": "Parallel Petroleum LLC",
+    "operator_p5_no": "639028",
+    "cementer_name": "Basic Energy Services",
+    "cementer_p5_no": "054313"
+  },
+  "well_info": {
+    "api": "415-04193",
+    "district": "8A",
+    "county": "Scurry",
+    "field": "Diamond M (Canyon Lime Area)",
+    "lease": "Lion Diamond - M Unit",
+    "well_no": "I-1"
+  },
+  "cementing_data": [
+    {
+      "job": "surface",
+      "interval_top_ft": null,
+      "interval_bottom_ft": null,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": null,
+      "additives": []
+    },
+    {
+      "job": "intermediate",
+      "interval_top_ft": null,
+      "interval_bottom_ft": null,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": null,
+      "additives": []
+    },
+    {
+      "job": "production",
+      "interval_top_ft": null,
+      "interval_bottom_ft": null,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": null,
+      "additives": []
+    },
+    {
+      "job": "plug",
+      "interval_top_ft": null,
+      "interval_bottom_ft": null,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": null,
+      "additives": []
+    },
+    {
+      "job": "squeeze",
+      "interval_top_ft": null,
+      "interval_bottom_ft": null,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": null,
+      "additives": []
+    }
+  ],
+  "cementing_to_squeeze": [
+    {
+      "top_ft": 6040,
+      "bottom_ft": 6252,
+      "method": "plug"
+    }
+  ],
+  "certifications": {
+    "cementer": {
+      "name": "Nicholas Neinst",
+      "title": "Technical Engineer",
+      "company": "Basic Energy Services",
+      "address": "P.O. Box 10451, Midland, TX 79702",
+      "phone_area_code": "432",
+      "phone_number": "687-1994",
+      "date": "9-14-15"
+    },
+    "operator": {
+      "name": "Mary Ann Martinez",
+      "title": "Sr Reg Head Analyst",
+      "address": "P.O. Box 4324, Midland, TX 79702",
+      "phone_area_code": "432",
+      "phone_number": "683-6503",
+      "date": "10-15-15"
+    }
+  },
+  "instructions_section": "The Form W-15 must be submitted as an attachment to a Form G-1, Form W-2, Form W-3, or Form W-4 any time cement is pumped in a wellbore. Operators must file an original and one copy for each cementing company used. Surface casing must protect all usable-quality water strata. Estimated % wash-out less than 20% (or 30% Gulf Coast) requires supporting documentation. Multi-stage cement and multiple parallel strings must be reported accordingly. Slurry data exceeding three slurries should continue in subsequent boxes."
+}

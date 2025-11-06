@@ -1,0 +1,128 @@
+{
+  "header": null,
+  "operator_info": {
+    "name": "RSP PERMIAN, LLC",
+    "address": "600 W ILLINOIS AVE MIDLAND, TX 79701-0000",
+    "operator_number": "732224"
+  },
+  "well_info": {
+    "api": "42-301-32998",
+    "district": "08",
+    "county": "LOVING",
+    "field": "TWO GEORGES (BONE SPRING)",
+    "lease": "PISTOL 25-8",
+    "well_no": "2H",
+    "location": {
+      "lat": null,
+      "lon": null
+    }
+  },
+  "filing_info": null,
+  "completion_info": null,
+  "surface_casing_determination": {
+    "gau_groundwater_protection_determination_depth": 450.0,
+    "surface_shoe_depth_ft": 527
+  },
+  "casing_record": [
+    {
+      "string": "surface",
+      "size_in": 13.375,
+      "weight_per_ft": null,
+      "hole_size_in": 17.5,
+      "top_ft": null,
+      "bottom_ft": 527,
+      "shoe_depth_ft": null,
+      "cement_top_ft": 0
+    },
+    {
+      "string": "intermediate",
+      "size_in": 9.625,
+      "weight_per_ft": null,
+      "hole_size_in": 12.5,
+      "top_ft": null,
+      "bottom_ft": 5377,
+      "shoe_depth_ft": null,
+      "cement_top_ft": 0
+    },
+    {
+      "string": "production",
+      "size_in": 5.5,
+      "weight_per_ft": null,
+      "hole_size_in": 8.75,
+      "top_ft": null,
+      "bottom_ft": 14233,
+      "shoe_depth_ft": null,
+      "cement_top_ft": 5377
+    }
+  ],
+  "liner_record": [],
+  "tubing_record": [
+    {
+      "size_in": 2.875,
+      "top_ft": null,
+      "bottom_ft": 9466
+    }
+  ],
+  "producing_injection_disposal_interval": {
+    "open_hole": false,
+    "from_ft": 9922,
+    "to_ft": 14118
+  },
+  "acid_fracture_operations": {
+    "type_of_operation": "Fracture",
+    "amount_and_kind_of_material_used": "HCL - 53,230 GAL; 100 MESH WHITE - 5,744,980 LBS; 40/70 WHITE: 4,172,960 LBS; TOTAL PROPPANT - 9,917,940 LBS; TLTR - 203,692 BBL",
+    "depth_interval_ft": {
+      "from": 9922,
+      "to": 14118
+    }
+  },
+  "formation_record": [
+    {
+      "formation": "RED BLUFF",
+      "top_ft": 3900,
+      "base_ft": 3900
+    },
+    {
+      "formation": "BELL CANYON",
+      "top_ft": 5424,
+      "base_ft": 5424
+    },
+    {
+      "formation": "BRUSHY CANYON",
+      "top_ft": 7826,
+      "base_ft": 7826
+    },
+    {
+      "formation": "DELAWARE",
+      "top_ft": 5424,
+      "base_ft": 5424
+    },
+    {
+      "formation": "CHERRY CANYON",
+      "top_ft": 6601,
+      "base_ft": 6601
+    },
+    {
+      "formation": "BONE SPRINGS",
+      "top_ft": 9320,
+      "base_ft": 9320
+    }
+  ],
+  "kop": {
+    "kop_md_ft": 8776,
+    "kop_tvd_ft": 8758
+  },
+  "commingling_and_h2s": {
+    "h2s_concentration_exceeds_100ppm": true,
+    "downhole_commingled": false
+  },
+  "remarks": "THIS WELL WAS COMPLETED UNDER SILVER HILL ENERGY SUPERVISION IN NOVEMBER 2016. SILVER HILL ENERGY DID NOT RUN LOGS ON THIS WELL. RSP PERMIAN LLC ACQUIRED THE PROPERTY IN MARCH 2017.",
+  "rrc_remarks": "[RRC Staff 2018-02-01 10:30:40.028] EDL=4196 feet, max acres=640, TWO GEORGES (BONE SPRING) oil well",
+  "operator_certification": {
+    "printed_name": "Adela Molina",
+    "title": "Regulatory Analyst",
+    "telephone": "(432) 818-1367",
+    "date": "02/27/2018"
+  },
+  "initial_potential_test": {}
+}
