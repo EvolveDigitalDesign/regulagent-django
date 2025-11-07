@@ -7,7 +7,7 @@ https://testdriven.io/blog/django-multi-tenant/#django-tenant-users
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 
-from apps.tenants.models import User, Tenant, Domain
+from apps.tenants.models import User, Tenant, Domain, TenantPlan, PlanFeature
 from apps.tenants.forms import UserAdminForm
 
 
@@ -18,9 +18,9 @@ class UserAdmin(admin.ModelAdmin):
     """
     form = UserAdminForm
     
-    list_display = ['email', 'is_active', 'is_verified', 'phone', 'organization']
+    list_display = ['email', 'first_name', 'last_name', 'title', 'is_active', 'is_verified']
     list_filter = ['is_active', 'is_verified']
-    search_fields = ['email', 'phone', 'organization']
+    search_fields = ['email', 'first_name', 'last_name', 'phone', 'organization']
     readonly_fields = ['last_login']
     
     fieldsets = (
@@ -28,7 +28,7 @@ class UserAdmin(admin.ModelAdmin):
             'fields': ('email', 'password')
         }),
         ('Personal Info', {
-            'fields': ('phone', 'organization')
+            'fields': ('first_name', 'last_name', 'title', 'phone', 'organization')
         }),
         ('Status', {
             'fields': ('is_active', 'is_verified')
@@ -99,4 +99,43 @@ class DomainAdmin(admin.ModelAdmin):
     list_display = ['domain', 'tenant', 'is_primary']
     list_filter = ['is_primary']
     search_fields = ['domain', 'tenant__name']
+
+
+@admin.register(TenantPlan)
+class TenantPlanAdmin(admin.ModelAdmin):
+    list_display = ['tenant', 'plan', 'start_date', 'end_date', 'user_limit', 'discount', 'sales_rep']
+    search_fields = ['tenant__name', 'plan__name', 'sales_rep']
+    list_filter = ['plan', 'start_date', 'end_date', 'sales_rep']
+    ordering = ['tenant']
+    fieldsets = (
+        ('Plan Info', {
+            'fields': ('tenant', 'plan', 'start_date', 'end_date')
+        }),
+        ('Details', {
+            'fields': ('user_limit', 'discount', 'sales_rep', 'notes')
+        }),
+    )
+
+
+@admin.register(PlanFeature)
+class PlanFeatureAdmin(admin.ModelAdmin):
+    list_display = ['plan', 'plan_name', 'feature_count']
+    search_fields = ['plan__name']
+    fieldsets = (
+        ('Plan', {
+            'fields': ('plan',)
+        }),
+        ('Features (JSON)', {
+            'fields': ('features',)
+        }),
+    )
+
+    def plan_name(self, obj):
+        return getattr(obj.plan, 'name', '-')
+
+    def feature_count(self, obj):
+        try:
+            return len(obj.features or {})
+        except Exception:
+            return 0
 

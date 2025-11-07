@@ -11,11 +11,21 @@ from django.core.management.base import BaseCommand
 from django.db import connection
 
 from apps.tenants.models import User, Tenant, Domain
+from plans.signals import activate_user_plan
 from apps.tenants.utils import create_public_tenant, provision_tenant
 
 
 class Command(BaseCommand):
     help = 'Set up public tenant and sample tenant with users'
+
+    def add_arguments(self, parser):
+        # Optional single custom tenant to provision in addition to samples
+        parser.add_argument('--tenant-name', type=str, help='Name of the custom tenant to create')
+        parser.add_argument('--tenant-subdomain', type=str, help='Subdomain/slug for the custom tenant')
+        parser.add_argument('--schema-name', type=str, default=None, help='Schema name for the custom tenant (defaults to subdomain)')
+        parser.add_argument('--owner-email', type=str, help='Email of the custom tenant owner')
+        parser.add_argument('--owner-password', type=str, help='Password for the custom tenant owner')
+        parser.add_argument('--skip-sample', action='store_true', help='Skip creating sample tenants')
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.WARNING('Setting up tenants...'))
@@ -46,6 +56,11 @@ class Command(BaseCommand):
             if created:
                 root_user.set_password('admin123')
                 root_user.save()
+                # Inform django-plans that the account is fully activated
+                try:
+                    activate_user_plan(root_user)
+                except Exception:
+                    pass
             
             # Ensure root user is in public tenant
             if root_user not in public_tenant.user_set.all():
@@ -72,27 +87,29 @@ class Command(BaseCommand):
             )
         )
         
-        # Create sample tenants
-        sample_tenants = [
-            {
-                'name': 'Demo Company',
-                'subdomain': 'demo',
-                'schema_name': 'demo',
-                'owner': {
-                    'email': 'demo@example.com',
-                    'password': 'demo123',
+        # Create sample tenants (unless skipped)
+        sample_tenants = []
+        if not options.get('skip_sample'):
+            sample_tenants = [
+                {
+                    'name': 'Demo Company',
+                    'subdomain': 'demo',
+                    'schema_name': 'demo',
+                    'owner': {
+                        'email': 'demo@example.com',
+                        'password': 'demo123',
+                    },
                 },
-            },
-            {
-                'name': 'Test Organization',
-                'subdomain': 'test',
-                'schema_name': 'test',
-                'owner': {
-                    'email': 'test@example.com',
-                    'password': 'test123',
+                {
+                    'name': 'Test Organization',
+                    'subdomain': 'test',
+                    'schema_name': 'test',
+                    'owner': {
+                        'email': 'test@example.com',
+                        'password': 'test123',
+                    },
                 },
-            },
-        ]
+            ]
         
         for tenant_data in sample_tenants:
             self.stdout.write(f'\nCreating tenant: {tenant_data["name"]}')
@@ -106,6 +123,11 @@ class Command(BaseCommand):
                 tenant_owner.set_password(tenant_data['owner']['password'])
                 tenant_owner.is_verified = True
                 tenant_owner.save()
+                # Inform django-plans that the account is fully activated
+                try:
+                    activate_user_plan(tenant_owner)
+                except Exception:
+                    pass
             
             # Get or create the tenant
             tenant = Tenant.objects.filter(schema_name=tenant_data['schema_name']).first()
@@ -143,13 +165,76 @@ class Command(BaseCommand):
                 f'  Owner: {tenant_owner.email} (password: {tenant_data["owner"]["password"]})'
             )
         
+        # Optionally create a single custom tenant from CLI args
+        if any(options.get(k) for k in ('tenant_name', 'tenant_subdomain', 'owner_email', 'owner_password')):
+            missing = [k for k in ('tenant_name', 'tenant_subdomain', 'owner_email', 'owner_password') if not options.get(k)]
+            if missing:
+                self.stdout.write(self.style.ERROR(
+                    'Missing required arguments for custom tenant: ' + ', '.join(missing)
+                ))
+            else:
+                self.stdout.write(f'\nCreating custom tenant: {options["tenant_name"]}')
+                schema_name = options.get('schema_name') or options['tenant_subdomain']
+                
+                # Get or create the tenant owner
+                tenant_owner, created = User.objects.get_or_create(
+                    email=options['owner_email'],
+                    defaults={'is_active': True}
+                )
+                if created:
+                    tenant_owner.set_password(options['owner_password'])
+                    tenant_owner.is_verified = True
+                    tenant_owner.save()
+                    try:
+                        activate_user_plan(tenant_owner)
+                    except Exception:
+                        pass
+                
+                # Get or create the tenant
+                tenant = Tenant.objects.filter(schema_name=schema_name).first()
+                if not tenant:
+                    tenant, domain = provision_tenant(
+                        tenant_name=options['tenant_name'],
+                        tenant_slug=options['tenant_subdomain'],
+                        schema_name=schema_name,
+                        owner=tenant_owner,
+                        is_superuser=True,
+                        is_staff=True,
+                    )
+                else:
+                    domain = Domain.objects.filter(tenant=tenant).first()
+                
+                # Add the root user to the tenant as well (if not already added)
+                if root_user not in tenant.user_set.all():
+                    try:
+                        tenant.add_user(
+                            root_user,
+                            is_superuser=True,
+                            is_staff=True,
+                        )
+                    except Exception:
+                        pass
+                
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f'✓ Tenant "{tenant.name}" created: '
+                        f'{tenant.schema_name} at {domain.domain if domain else "N/A"}'
+                    )
+                )
+                self.stdout.write(
+                    f'  Owner: {tenant_owner.email} (password: {options["owner_password"]})'
+                )
+        
         self.stdout.write('\n' + '='*60)
         self.stdout.write(self.style.SUCCESS('✓ Setup complete!'))
         self.stdout.write('='*60)
         self.stdout.write('\nCredentials:')
         self.stdout.write('  Root admin: admin@localhost / admin123')
-        self.stdout.write('  Demo tenant: demo@example.com / demo123')
-        self.stdout.write('  Test tenant: test@example.com / test123')
+        if not options.get('skip_sample'):
+            self.stdout.write('  Demo tenant: demo@example.com / demo123')
+            self.stdout.write('  Test tenant: test@example.com / test123')
+        if options.get('tenant_name') and options.get('owner_email') and options.get('owner_password'):
+            self.stdout.write(f'  {options["tenant_name"]}: {options["owner_email"]} / {options["owner_password"]}')
         self.stdout.write('\nGet JWT tokens:')
         self.stdout.write('  POST /api/auth/token/ with {"email": "demo@example.com", "password": "demo123"}')
 

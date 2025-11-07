@@ -33,6 +33,8 @@ SHARED_APPS = [
     'apps.assistant',  # AI chat and plan modification
     'apps.policy',
     'apps.policy_ingest',
+    'plans',
+    'ordered_model',
 ]
 
 TENANT_APPS = [
@@ -67,6 +69,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'plans.context_processors.account_status',
             ],
         },
     },
@@ -158,6 +161,9 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
 }
+
+# django-plans basic configuration (see docs): https://django-plans.readthedocs.io/en/latest/integration.html
+PLANS_CURRENCY = 'USD'
 
 
 # ==============================================================================
