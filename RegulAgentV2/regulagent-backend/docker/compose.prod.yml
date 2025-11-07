@@ -68,7 +68,7 @@ services:
       celery -A ra_config worker
       -l INFO
       --concurrency=${CELERY_CONCURRENCY:-2}
-      -Q celery, default,parsing,planning
+      -Q celery,default,parsing,planning
     env_file:
       - ../.env.production
     environment:
