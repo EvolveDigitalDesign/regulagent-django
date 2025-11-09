@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from django.db import transaction
 from django.utils import timezone
+from django.db.utils import ProgrammingError
 
 from apps.tenants.models import Tenant, TenantPlan, PlanFeature, User
 
@@ -13,7 +14,9 @@ def get_tenant_plan(tenant: Tenant) -> Optional[TenantPlan]:
     Return the TenantPlan for a tenant, if present.
     """
     try:
-        return TenantPlan.objects.select_related("plan").get(tenant=tenant)
+        # Defer 'feature_overrides' so SELECT does not include the column
+        # in environments where the migration hasn't been applied yet.
+        return TenantPlan.objects.select_related("plan").defer("feature_overrides").get(tenant=tenant)
     except TenantPlan.DoesNotExist:
         return None
 
@@ -40,7 +43,11 @@ def get_effective_features(tenant: Tenant) -> Dict[str, Any]:
         return {}
 
     plan_defaults = get_plan_features_for_plan_id(tenant_plan.plan_id)
-    overrides = tenant_plan.feature_overrides or {}
+    # Accessing a deferred/missing DB column can raise ProgrammingError
+    try:
+        overrides = tenant_plan.feature_overrides or {}
+    except ProgrammingError:
+        overrides = {}
     return {**plan_defaults, **overrides}
 
 

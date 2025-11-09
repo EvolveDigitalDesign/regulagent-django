@@ -144,10 +144,16 @@ REST_FRAMEWORK = {
 }
 
 # CORS (relaxed in dev; tightened in prod)
+# Default dev frontends (Next.js/Vite)
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
 ]
+
+# Allow credentials for local development (needed if frontend uses cookies or fetch credentials: 'include')
+CORS_ALLOW_CREDENTIALS = True
 
 # JWT Configuration
 from datetime import timedelta

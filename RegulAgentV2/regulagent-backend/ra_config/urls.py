@@ -49,6 +49,7 @@ from apps.public_core.views.plan_status import (
     file_plan,
     get_plan_status,
 )
+from apps.tenants.views import TenantInfoView
 from apps.tenant_overlay.views.tenant_wells import (
     get_well_by_api,
     bulk_get_wells,
@@ -100,6 +101,9 @@ urlpatterns = [
     path('api/plans/<str:plan_id>/status/modify/', modify_plan, name='plan_status_modify'),
     path('api/plans/<str:plan_id>/status/approve/', approve_plan, name='plan_status_approve'),
     path('api/plans/<str:plan_id>/status/file/', file_plan, name='plan_status_file'),
+    
+    # Tenant info endpoint
+    path('api/tenant/', TenantInfoView.as_view(), name='tenant_info'),
     
     # Tenant wells endpoints (specific routes first, then generic)
     path('api/tenant/wells/history/', get_tenant_well_history, name='tenant_well_history'),
