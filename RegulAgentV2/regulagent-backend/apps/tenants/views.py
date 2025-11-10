@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from apps.tenants.services.plan_service import get_tenant_plan, get_effective_features
+from apps.tenants.services.plan_service import get_tenant_plan, get_effective_features, get_active_user_count
 
 
 class TenantInfoView(APIView):
@@ -41,6 +41,7 @@ class TenantInfoView(APIView):
                 "start_date": tenant_plan.start_date,
                 "end_date": tenant_plan.end_date,
                 "user_limit": tenant_plan.user_limit,
+                "users_filled": get_active_user_count(user_tenant),
                 "discount": float(tenant_plan.discount) if tenant_plan.discount is not None else None,
                 "sales_rep": tenant_plan.sales_rep,
                 "notes": tenant_plan.notes,

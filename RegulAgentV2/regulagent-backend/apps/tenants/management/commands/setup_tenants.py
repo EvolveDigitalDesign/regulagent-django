@@ -9,10 +9,12 @@ Usage:
 """
 from django.core.management.base import BaseCommand
 from django.db import connection
+from django_tenants.utils import schema_context
 
 from apps.tenants.models import User, Tenant, Domain
 from plans.signals import activate_user_plan
 from apps.tenants.utils import create_public_tenant, provision_tenant
+from tenant_users.permissions.models import UserTenantPermissions
 
 
 class Command(BaseCommand):
@@ -47,39 +49,76 @@ class Command(BaseCommand):
                 is_superuser=True,
                 is_staff=True,
             )
+            # Also map 127.0.0.1 to public for local dev
+            Domain.objects.get_or_create(
+                tenant=public_tenant,
+                domain='127.0.0.1',
+                defaults={'is_primary': False}
+            )
+            # Ensure per-tenant admin flags within public schema
+            with schema_context(public_tenant.schema_name):
+                perm, _ = UserTenantPermissions.objects.get_or_create(profile=root_user)
+                perm.is_staff = True
+                perm.is_superuser = True
+                perm.save()
         else:
             # Get or create root user
             root_user, created = User.objects.get_or_create(
                 email='admin@localhost',
                 defaults={'is_active': True}
             )
+            # Ensure admin user is eligible for Django admin (active + verified + global staff/superuser)
+            root_user.is_active = True
+            # Global flags required for Django admin site access (not just tenant-level flags)
+            try:
+                root_user.is_staff = True
+                root_user.is_superuser = True
+            except Exception:
+                pass
+            try:
+                # Some auth backends rely on verified flag
+                root_user.is_verified = True
+            except Exception:
+                pass
             if created:
                 root_user.set_password('admin123')
-                root_user.save()
-                # Inform django-plans that the account is fully activated
-                try:
-                    activate_user_plan(root_user)
-                except Exception:
-                    pass
+            root_user.save()
+            # Inform django-plans that the account is fully activated
+            try:
+                activate_user_plan(root_user)
+            except Exception:
+                pass
             
-            # Ensure root user is in public tenant
-            if root_user not in public_tenant.user_set.all():
-                try:
-                    public_tenant.add_user(root_user, is_superuser=True, is_staff=True)
-                except Exception:
-                    # User already has permissions, skip
-                    pass
+            # Ensure root user is in public tenant WITH staff/superuser privileges.
+            # add_user(...) updates privileges if membership already exists.
+            try:
+                public_tenant.add_user(root_user, is_superuser=True, is_staff=True)
+            except Exception:
+                # If tenant_users raises due to existing membership, ignore.
+                pass
             
             # Update owner if needed
             if not public_tenant.owner:
                 public_tenant.owner = root_user
                 public_tenant.save()
             
-            # Get or create domain
+            # Ensure domains for public tenant
             public_domain, _ = Domain.objects.get_or_create(
                 tenant=public_tenant,
-                defaults={'domain': 'localhost', 'is_primary': True}
+                domain='localhost',
+                defaults={'is_primary': True}
             )
+            Domain.objects.get_or_create(
+                tenant=public_tenant,
+                domain='127.0.0.1',
+                defaults={'is_primary': False}
+            )
+            # Ensure per-tenant admin flags within public schema
+            with schema_context(public_tenant.schema_name):
+                perm, _ = UserTenantPermissions.objects.get_or_create(profile=root_user)
+                perm.is_staff = True
+                perm.is_superuser = True
+                perm.save()
         
         self.stdout.write(
             self.style.SUCCESS(

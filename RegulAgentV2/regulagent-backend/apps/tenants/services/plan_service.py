@@ -70,7 +70,14 @@ def can_add_user(tenant: Tenant) -> bool:
     tenant_plan = get_tenant_plan(tenant)
     if not tenant_plan or tenant_plan.user_limit is None:
         return True
-    return tenant.user_set.count() < tenant_plan.user_limit
+    return get_active_user_count(tenant) < tenant_plan.user_limit
+
+
+def get_active_user_count(tenant: Tenant) -> int:
+    """
+    Number of active users assigned to this tenant.
+    """
+    return tenant.user_set.filter(is_active=True).count()
 
 
 @transaction.atomic

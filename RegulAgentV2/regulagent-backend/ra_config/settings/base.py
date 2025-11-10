@@ -33,8 +33,8 @@ SHARED_APPS = [
     'apps.assistant',  # AI chat and plan modification
     'apps.policy',
     'apps.policy_ingest',
-    'plans',
     'ordered_model',
+    'plans',
 ]
 
 TENANT_APPS = [
@@ -58,6 +58,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'ra_config.urls'
 
+AUTHENTICATION_BACKENDS = (
+    # Use tenant-users authentication backend
+    'tenant_users.permissions.backend.UserBackend',
+    # Fallback to default model backend
+    'django.contrib.auth.backends.ModelBackend',
+)
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -69,7 +76,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'plans.context_processors.account_status',
             ],
         },
     },
@@ -168,8 +174,9 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
-# django-plans basic configuration (see docs): https://django-plans.readthedocs.io/en/latest/integration.html
+# django-plans configuration
 PLANS_CURRENCY = 'USD'
+PLANS_PLAN_MODEL = 'plans.Plan'
 
 
 # ==============================================================================

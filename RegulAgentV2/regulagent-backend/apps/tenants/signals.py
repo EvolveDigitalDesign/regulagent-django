@@ -11,8 +11,10 @@ from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django_tenants.utils import schema_context
 from tenant_users.permissions.models import UserTenantPermissions
+from django.core.exceptions import ValidationError
 
 from apps.tenants.models import User
+from apps.tenants.services.plan_service import can_add_user
 
 
 @receiver(m2m_changed, sender=User.tenants.through)
@@ -30,6 +32,15 @@ def on_tenant_user_tenants_changed(
         model: The Tenant model
         pk_set: Set of primary keys of the tenants being added/removed
     """
+    # Enforce seat limits before adding a user to a tenant
+    if action == 'pre_add':
+        # If the user being added is inactive, do not count against seats
+        if getattr(instance, 'is_active', True):
+            for tenant_id in pk_set:
+                tenant = model.objects.get(pk=tenant_id)
+                if not can_add_user(tenant):
+                    raise ValidationError("User limit reached for this tenant.")
+    
     # Automatically create 'UserTenantPermissions' when user is added to a tenant
     if action == 'post_add':
         for tenant_id in pk_set:
