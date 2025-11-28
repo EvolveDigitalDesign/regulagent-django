@@ -1,0 +1,284 @@
+{
+  "header": {
+    "api_number": "00346118",
+    "well_name": "MABEE 140A",
+    "operator": "COG OPERATING LLC",
+    "county": "ANDREWS",
+    "rrc_district": "08",
+    "field": "SPRABERRY [TREND AREA]",
+    "total_depth_ft": 11200
+  },
+  "casing_record": [
+    {
+      "string_type": "surface",
+      "size_in": 11.75,
+      "weight_ppf": null,
+      "hole_size_in": 14.75,
+      "top_ft": 0,
+      "bottom_ft": 1717,
+      "shoe_depth_ft": 1717,
+      "cement_top_ft": 930,
+      "removed_to_depth_ft": null
+    },
+    {
+      "string_type": "intermediate",
+      "size_in": 8.625,
+      "weight_ppf": null,
+      "hole_size_in": 10.625,
+      "top_ft": 0,
+      "bottom_ft": 5532,
+      "shoe_depth_ft": 5532,
+      "cement_top_ft": 1230,
+      "removed_to_depth_ft": null
+    },
+    {
+      "string_type": "production",
+      "size_in": 5.5,
+      "weight_ppf": null,
+      "hole_size_in": 7.875,
+      "top_ft": 0,
+      "bottom_ft": 11200,
+      "shoe_depth_ft": 11200,
+      "cement_top_ft": 310,
+      "removed_to_depth_ft": null
+    },
+    {
+      "string_type": "liner",
+      "size_in": 5.5,
+      "weight_ppf": null,
+      "hole_size_in": 7.875,
+      "top_ft": 6997,
+      "bottom_ft": 11200,
+      "shoe_depth_ft": 11200,
+      "cement_top_ft": 720,
+      "removed_to_depth_ft": null
+    }
+  ],
+  "perforations": [
+    {
+      "interval_top_ft": 8110,
+      "interval_bottom_ft": 10914,
+      "formation": null,
+      "status": "plugged",
+      "perforation_date": null
+    }
+  ],
+  "plugging_proposal": [
+    {
+      "plug_number": 1,
+      "depth_top_ft": 7990,
+      "depth_bottom_ft": 7890,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 40,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 2,
+      "depth_top_ft": 7047,
+      "depth_bottom_ft": 6947,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 20,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 3,
+      "depth_top_ft": 5582,
+      "depth_bottom_ft": 4970,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 110,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 4,
+      "depth_top_ft": 4500,
+      "depth_bottom_ft": 4300,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 63,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 5,
+      "depth_top_ft": 3638,
+      "depth_bottom_ft": 3538,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 20,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 6,
+      "depth_top_ft": 1850,
+      "depth_bottom_ft": 1550,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 90,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 7,
+      "depth_top_ft": 1250,
+      "depth_bottom_ft": 950,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 87,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 8,
+      "depth_top_ft": 350,
+      "depth_bottom_ft": 3,
+      "type": "cement_surface_plug",
+      "cement_class": null,
+      "sacks": 100,
+      "volume_bbl": null,
+      "remarks": null
+    }
+  ],
+  "operational_steps": [
+    {
+      "step_order": 1,
+      "step_type": "tag_toc",
+      "plug_number": null,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Tag top of plug"
+    },
+    {
+      "step_order": 2,
+      "step_type": "plug",
+      "plug_number": 1,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Cement Plug Set at 7990 to 7890"
+    },
+    {
+      "step_order": 3,
+      "step_type": "plug",
+      "plug_number": 2,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Cement Plug Set at 7047 to 6947"
+    },
+    {
+      "step_order": 4,
+      "step_type": "plug",
+      "plug_number": 3,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Cement Plug Set at 5582 to 4970"
+    },
+    {
+      "step_order": 5,
+      "step_type": "tag_toc",
+      "plug_number": 3,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Tag top of plug"
+    },
+    {
+      "step_order": 6,
+      "step_type": "plug",
+      "plug_number": 4,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Cement Plug Set at 4500 to 4300"
+    },
+    {
+      "step_order": 7,
+      "step_type": "perforate_and_squeeze",
+      "plug_number": 4,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Perforate and Squeeze"
+    },
+    {
+      "step_order": 8,
+      "step_type": "tag_toc",
+      "plug_number": 4,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Tag top of plug"
+    },
+    {
+      "step_order": 9,
+      "step_type": "plug",
+      "plug_number": 5,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Cement Plug Set at 3638 to 3538"
+    },
+    {
+      "step_order": 10,
+      "step_type": "plug",
+      "plug_number": 6,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Cement Plug Set at 1850 to 1550"
+    },
+    {
+      "step_order": 11,
+      "step_type": "perforate_and_squeeze",
+      "plug_number": 6,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Perforate and Squeeze"
+    },
+    {
+      "step_order": 12,
+      "step_type": "wait_on_cement",
+      "plug_number": 6,
+      "depth_ft": null,
+      "wait_hours": 4,
+      "description": "Wait 4 hours and tag top of plug"
+    },
+    {
+      "step_order": 13,
+      "step_type": "plug",
+      "plug_number": 7,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Cement Plug Set at 1250 to 950"
+    },
+    {
+      "step_order": 14,
+      "step_type": "perforate_and_squeeze",
+      "plug_number": 7,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Perforate and Squeeze"
+    },
+    {
+      "step_order": 15,
+      "step_type": "plug",
+      "plug_number": 8,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Cement Surface Plug Set at 350 to 3"
+    },
+    {
+      "step_order": 16,
+      "step_type": "perforate_and_circulate",
+      "plug_number": 8,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Perforate and Circulate"
+    }
+  ],
+  "duqw": {
+    "depth_ft": null,
+    "formation": null,
+    "determination_method": null
+  },
+  "remarks": null
+}

@@ -1,0 +1,429 @@
+"""
+W-3 Event Mapper Service
+
+Converts raw pnaexchange event data into standardized W3Event dataclass instances.
+Handles parsing of input values, event types, and transformation rules.
+
+Pnaexchange sends events with:
+- event_id: Reference to FormContext event template
+- display_text: "Set Intermediate Plug", "Tagged TOC", "Cut Casing", etc.
+- form_template_text: Template with *_1_*, *_2_*, etc. placeholders
+- input_values: Dict keyed by placeholder position {"1": "5.5", "2": "6997", ...}
+- transformation_rules: Rules like {"jump_plugs_to_next_casing": true}
+- date, start_time, end_time: Event timing
+- work_assignment_id: DWR work assignment reference
+- dwr_id: DWR record ID
+"""
+
+from __future__ import annotations
+from datetime import date, time
+from typing import Any, Dict, List, Optional
+import logging
+import re
+
+from apps.public_core.models.w3_event import W3Event
+
+logger = logging.getLogger(__name__)
+
+
+# Mapping from pnaexchange event_id to normalized event_type
+PNA_EVENT_ID_MAP = {
+    4: "set_cement_plug",      # Set Intermediate Plug
+    3: "set_surface_plug",     # Set Surface Plug
+    7: "squeeze",              # Set Surface Plug - Squeeze
+    2: "broke_circulation",    # Broke Circulation
+    9: "pressure_up",          # Pressure Up
+    6: "set_bridge_plug",      # Set CIBP
+    12: "cut_casing",          # Cut Casing
+    8: "tag_toc",              # Tag TOC
+    5: "tag_toc",              # Tagged TOC
+    1: "perforate",            # Perforation
+    11: "tag_bridge_plug",     # Tag CIBP
+    10: "rrc_approval",        # RRC Approval
+}
+
+# Expected input count for each event type
+EVENT_INPUT_REQUIREMENTS = {
+    4: 6,   # Set Intermediate Plug: plug, spot, class, from, to, displaced_with
+    3: 4,   # Set Surface Plug: plug, sacks, class, from
+    7: 5,   # Squeeze: plug, sacks, class, from, to
+    2: 0,   # Broke Circulation: no inputs
+    9: 0,   # Pressure Up: no inputs
+    6: 2,   # Set CIBP: cibp_size, depth
+    12: 1,  # Cut Casing: cut_depth
+    8: 1,   # Tag TOC: depth
+    5: 1,   # Tagged TOC: depth
+    1: 1,   # Perforation: depth
+    11: 1,  # Tag CIBP: depth
+    10: 2,  # RRC Approval: approval_type, approval_ref
+}
+
+
+def parse_numeric(value: Any) -> Optional[float]:
+    """
+    Safely parse a numeric value from various input formats.
+    
+    Handles:
+    - Strings with commas: "1,200" -> 1200.0
+    - Strings with units: "5.5 in" -> 5.5
+    - Already numeric: 123 -> 123.0
+    """
+    if value is None:
+        return None
+    
+    try:
+        # Convert to string and clean
+        s = str(value).strip()
+        if not s:
+            return None
+        
+        # Remove commas for thousands separator
+        s = s.replace(",", "")
+        
+        # Extract first numeric part (ignore units)
+        match = re.match(r'^([-+]?\d+\.?\d*)', s)
+        if match:
+            return float(match.group(1))
+        
+        return None
+    except (ValueError, TypeError, AttributeError):
+        logger.debug(f"Could not parse numeric value: {value}")
+        return None
+
+
+def parse_time(time_str: Optional[str]) -> Optional[time]:
+    """Parse time string (HH:MM:SS or HH:MM) into datetime.time object."""
+    if not time_str:
+        return None
+    
+    try:
+        time_str = str(time_str).strip()
+        if not time_str:
+            return None
+        
+        parts = [int(p) for p in time_str.split(':')]
+        
+        if len(parts) == 2:  # HH:MM
+            return time(parts[0], parts[1])
+        elif len(parts) == 3:  # HH:MM:SS
+            return time(parts[0], parts[1], parts[2])
+        else:
+            logger.warning(f"Unrecognized time format: {time_str}")
+            return None
+    
+    except (ValueError, TypeError, IndexError):
+        logger.warning(f"Could not parse time: {time_str}")
+        return None
+
+
+def normalize_event_type(event_id: int, display_text: str) -> str:
+    """
+    Normalize event type using event_id mapping from pnaexchange.
+    Falls back to display_text parsing if event_id not found.
+    """
+    # First try direct event_id mapping
+    if event_id in PNA_EVENT_ID_MAP:
+        return PNA_EVENT_ID_MAP[event_id]
+    
+    # Fallback: parse from display_text
+    display_lower = display_text.lower()
+    
+    if "set intermediate plug" in display_lower or "set cement plug" in display_lower:
+        return "set_cement_plug"
+    if "set surface plug" in display_lower:
+        return "set_surface_plug"
+    if "squeezed" in display_lower or "squeeze" in display_lower:
+        return "squeeze"
+    if "broke circulation" in display_lower:
+        return "broke_circulation"
+    if "pressure up" in display_lower:
+        return "pressure_up"
+    if "set cibp" in display_lower or "set bridge plug" in display_lower:
+        return "set_bridge_plug"
+    if "tag cibp" in display_lower or "tag bridge plug" in display_lower:
+        return "tag_bridge_plug"
+    if "cut casing" in display_lower:
+        return "cut_casing"
+    if "tag toc" in display_lower or "tagged toc" in display_lower:
+        return "tag_toc"
+    if "perforation" in display_lower or "perforated" in display_lower:
+        return "perforate"
+    if "rrc approval" in display_lower:
+        return "rrc_approval"
+    
+    # Final fallback
+    logger.warning(f"Unknown event: id={event_id}, display='{display_text}'")
+    return display_text.lower().replace(" ", "_")
+
+
+def extract_cement_plug_depths(
+    event_id: int,
+    input_values: Dict[str, Any],
+    event_type: str
+) -> tuple[Optional[float], Optional[float]]:
+    """
+    Extract top and bottom depths for cement plug events.
+    
+    Different event templates have different placeholder conventions:
+    - Set Intermediate Plug (id=4): *_2_* = spot, *_4_* to *_5_*
+    - Set Surface Plug (id=3): *_4_* = from, to surface (0)
+    - Squeeze (id=7): *_4_* to *_5_*
+    """
+    depth_top = None
+    depth_bottom = None
+    
+    if event_id == 4:  # Set Intermediate Plug
+        # *_2_* is spot (top), *_4_* to *_5_* is cement range
+        depth_top = parse_numeric(input_values.get("2"))
+        depth_bottom = parse_numeric(input_values.get("5"))
+    
+    elif event_id == 3:  # Set Surface Plug
+        # *_4_* = cement from, to surface (0)
+        depth_top = parse_numeric(input_values.get("4"))
+        depth_bottom = 0.0  # Surface
+    
+    elif event_id == 7:  # Squeeze
+        # *_4_* to *_5_*
+        depth_top = parse_numeric(input_values.get("4"))
+        depth_bottom = parse_numeric(input_values.get("5"))
+    
+    return depth_top, depth_bottom
+
+
+def extract_cement_class_and_sacks(
+    event_id: int,
+    input_values: Dict[str, Any]
+) -> tuple[Optional[str], Optional[float]]:
+    """
+    Extract cement class and sacks for cement plug events.
+    
+    - Cement class: usually single letter (A, B, C, G, etc.)
+    - Sacks: quantity of cement
+    
+    Template placeholder conventions:
+    - Set Intermediate Plug (id=4): *_3_* = class, sacks from context or *_6_*
+    - Set Surface Plug (id=3): *_2_* = sacks, *_3_* = class
+    - Squeeze (id=7): *_2_* = sacks, *_3_* = class
+    """
+    cement_class = None
+    sacks = None
+    
+    if event_id == 4:  # Set Intermediate Plug
+        # *_3_* is cement class
+        cement_class_raw = input_values.get("3")
+        if cement_class_raw:
+            cement_class = str(cement_class_raw).strip().upper()
+        # Sacks may be in template or *_2_* or context
+        sacks = parse_numeric(input_values.get("2"))
+    
+    elif event_id == 3:  # Set Surface Plug
+        # *_2_* = sacks, *_3_* = class
+        sacks = parse_numeric(input_values.get("2"))
+        cement_class_raw = input_values.get("3")
+        if cement_class_raw:
+            cement_class = str(cement_class_raw).strip().upper()
+    
+    elif event_id == 7:  # Squeeze
+        # *_2_* = sacks, *_3_* = class
+        sacks = parse_numeric(input_values.get("2"))
+        cement_class_raw = input_values.get("3")
+        if cement_class_raw:
+            cement_class = str(cement_class_raw).strip().upper()
+    
+    return cement_class, sacks
+
+
+def extract_plug_number(
+    event_id: int,
+    input_values: Dict[str, Any]
+) -> Optional[int]:
+    """
+    Extract plug number from event inputs.
+    
+    For most plug events, *_1_* is the plug number.
+    """
+    if event_id in (3, 4, 7):  # Plug events have *_1_* as plug number
+        plug_num_raw = input_values.get("1")
+        if plug_num_raw is not None:
+            plug_num = parse_numeric(plug_num_raw)
+            if plug_num is not None:
+                return int(plug_num)
+    
+    return None
+
+
+def extract_tag_depth(
+    event_id: int,
+    input_values: Dict[str, Any]
+) -> Optional[float]:
+    """
+    Extract tagged depth from Tag TOC or similar events.
+    
+    - Tag TOC (id=8): *_2_* is depth
+    - Tagged TOC (id=5): *_1_* is depth
+    - Tag CIBP (id=11): *_2_* is depth
+    """
+    if event_id == 8:  # Tag TOC: *_2_*
+        return parse_numeric(input_values.get("2"))
+    elif event_id == 5:  # Tagged TOC: *_1_*
+        return parse_numeric(input_values.get("1"))
+    elif event_id == 11:  # Tag CIBP: *_2_*
+        return parse_numeric(input_values.get("2"))
+    
+    return None
+
+
+def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
+    """
+    Map a raw pnaexchange event dictionary to a W3Event dataclass instance.
+    
+    Args:
+        pna_event: Dictionary with structure:
+            {
+                "event_id": 4,
+                "display_text": "Set Intermediate Plug",
+                "form_template_text": "Plug *_1_* ...",
+                "input_values": {"1": "5", "2": "6997", ...},
+                "transformation_rules": {"jump_plugs_to_next_casing": false},
+                "date": "2025-01-15",
+                "start_time": "09:30:00",
+                "end_time": "10:15:00",
+                "work_assignment_id": 12345,
+                "dwr_id": 67890
+            }
+    
+    Returns:
+        W3Event instance
+    """
+    event_id = pna_event.get("event_id")
+    display_text = pna_event.get("display_text", "unknown")
+    input_values = pna_event.get("input_values", {})
+    transformation_rules = pna_event.get("transformation_rules", {})
+    
+    # Normalize event type
+    event_type = normalize_event_type(event_id, display_text)
+    
+    # Parse dates and times
+    try:
+        event_date = date.fromisoformat(pna_event["date"]) if "date" in pna_event else date.today()
+    except (ValueError, TypeError):
+        event_date = date.today()
+    
+    start_time = parse_time(pna_event.get("start_time"))
+    end_time = parse_time(pna_event.get("end_time"))
+    
+    # Initialize depth values
+    depth_top_ft = None
+    depth_bottom_ft = None
+    perf_depth_ft = None
+    tagged_depth_ft = None
+    plug_number = None
+    cement_class = None
+    sacks = None
+    
+    # Extract event-specific values
+    if event_type in ("set_cement_plug", "set_surface_plug", "squeeze"):
+        depth_top_ft, depth_bottom_ft = extract_cement_plug_depths(event_id, input_values, event_type)
+        cement_class, sacks = extract_cement_class_and_sacks(event_id, input_values)
+        plug_number = extract_plug_number(event_id, input_values)
+    
+    elif event_type == "set_bridge_plug":
+        # *_2_* is depth
+        depth_bottom_ft = parse_numeric(input_values.get("2"))
+    
+    elif event_type == "cut_casing":
+        # *_1_* is cut depth
+        depth_bottom_ft = parse_numeric(input_values.get("1"))
+    
+    elif event_type in ("tag_toc", "tag_bridge_plug"):
+        # Extract tagged depth
+        tagged_depth_ft = extract_tag_depth(event_id, input_values)
+    
+    elif event_type == "perforate":
+        # *_1_* is perforation depth
+        perf_depth_ft = parse_numeric(input_values.get("1"))
+    
+    # Extract jump rule (critical for casing engine)
+    jump_to_next_casing = transformation_rules.get("jump_plugs_to_next_casing", False)
+    if not jump_to_next_casing and event_type == "cut_casing":
+        jump_to_next_casing = True  # Force for cut casing events
+    
+    # Build the W3Event
+    w3_event = W3Event(
+        event_type=event_type,
+        date=event_date,
+        start_time=start_time,
+        end_time=end_time,
+        depth_top_ft=depth_top_ft,
+        depth_bottom_ft=depth_bottom_ft,
+        perf_depth_ft=perf_depth_ft,
+        tagged_depth_ft=tagged_depth_ft,
+        plug_number=plug_number,
+        cement_class=cement_class,
+        sacks=sacks,
+        volume_bbl=None,  # Not provided by pnaexchange, will be calculated
+        pressure_psi=None,  # Not provided by pnaexchange
+        raw_event_detail=f"{display_text}: {pna_event.get('form_template_text', '')}",
+        work_assignment_id=pna_event.get("work_assignment_id"),
+        dwr_id=pna_event.get("dwr_id"),
+        jump_to_next_casing=jump_to_next_casing,
+        raw_input_values=input_values,
+        raw_transformation_rules=transformation_rules,
+    )
+    
+    logger.debug(
+        f"✅ Mapped pna_event (id={event_id}) -> W3Event: "
+        f"{w3_event.event_type} at depths {w3_event.depth_top_ft}-{w3_event.depth_bottom_ft} ft"
+    )
+    
+    return w3_event
+
+
+def map_pna_events_to_w3events(pna_events: List[Dict[str, Any]]) -> List[W3Event]:
+    """
+    Map a list of raw pnaexchange event dictionaries to a list of W3Event instances.
+    
+    Args:
+        pna_events: List of event dictionaries from pnaexchange
+    
+    Returns:
+        List of W3Event instances
+    """
+    w3_events = []
+    
+    for i, pna_event in enumerate(pna_events):
+        try:
+            w3_event = map_pna_event_to_w3event(pna_event)
+            w3_events.append(w3_event)
+        except Exception as e:
+            logger.error(f"Error mapping pna_event[{i}]: {e}", exc_info=True)
+            # Continue processing other events
+            continue
+    
+    logger.info(f"✅ Mapped {len(pna_events)} pnaexchange events to {len(w3_events)} W3Events")
+    return w3_events
+
+
+def validate_event_inputs(event_id: int, input_values: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+    """
+    Validate that required inputs are present for the event type.
+    
+    Args:
+        event_id: pnaexchange event ID
+        input_values: Dictionary of input values
+    
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    required_count = EVENT_INPUT_REQUIREMENTS.get(event_id, 0)
+    
+    if required_count == 0:
+        return True, None
+    
+    # Count non-null inputs
+    provided = sum(1 for v in input_values.values() if v is not None)
+    
+    if provided < required_count:
+        return False, f"Event {event_id} requires {required_count} inputs, got {provided}"
+    
+    return True, None

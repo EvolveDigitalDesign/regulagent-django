@@ -94,6 +94,16 @@ SUPPORTED_TYPES = {
             "remarks",
         ],
     },
+    "w3a": {
+        "prompt_key": "w3a",
+        "required_sections": [
+            "header",
+            "casing_record",
+            "perforations",
+            "plugging_proposal",
+            "duqw",
+        ],
+    },
 }
 
 
@@ -291,6 +301,48 @@ def _load_prompt(prompt_key: str) -> str:
         "formation_tops": (
             "Extract Formation Record. Return JSON with: header; formation_record:[{formation, top_ft, base_ft}]; "
             "h2s_flag; downhole_commingled; remarks. Rules: numbers only (ft), snake_case keys. If a field is missing, set it to null."
+        ),
+        "w3a": (
+            "Extract W-3A (Plugging Responsibility and Plugging Proposal) data. Return JSON with: "
+            "header{api_number, well_name, operator, county, rrc_district, field, total_depth_ft}; "
+            "casing_record:[{string_type:'surface|intermediate|production|liner', size_in, weight_ppf, hole_size_in, top_ft, bottom_ft, shoe_depth_ft, cement_top_ft, removed_to_depth_ft}]; "
+            "perforations:[{interval_top_ft, interval_bottom_ft, formation, status:'open|perforated|squeezed|plugged', perforation_date}]; "
+            "plugging_proposal:[{plug_number, depth_top_ft, depth_bottom_ft, type:'cement_plug|bridge_plug|mechanicalplug|squeeze', cement_class, sacks, volume_bbl, remarks}]; "
+            "operational_steps:[{step_order, step_type, plug_number, depth_ft, wait_hours, description}]; "
+            "duqw{depth_ft, formation, determination_method}; "
+            "remarks. "
+            "CASING RECORD CRITICAL RULES: "
+            "1. Read the casing table row-by-row from 'Casing Record' section. "
+            "2. For SURFACE casing: top_ft=0 (surface), bottom_ft=shoe depth (from table). "
+            "3. For INTERMEDIATE casing: top_ft=0 (or shoe of previous string), bottom_ft=shoe depth from table. "
+            "4. For PRODUCTION casing: top_ft=0 (or shoe of previous string), bottom_ft=shoe depth (usually TD if not deeper). "
+            "5. For LINER (critical): top_ft must be 'Top of Liner' or 'Tool Setting Depth' from table (NOT 0), bottom_ft=liner shoe depth. "
+            "    Example: If table shows 'Top of Liner: 6997 ft' and 'Shoe Depth: 11200 ft', then {top_ft: 6997, bottom_ft: 11200}. "
+            "6. hole_size_in comes from 'Hole Size' column. "
+            "7. cement_top_ft is 'Top of Cement' depth for each string. "
+            "8. If liner depth is shown in a separate column, use that for top_ft - do NOT default to 0. "
+            "OPERATIONAL STEPS (CRITICAL): "
+            "The plugging proposal table has operational steps in TWO places: "
+            "1. FIRST ROW (standalone): Contains pre-plug operational steps like 'Tag top of plug' "
+            "2. PLUG ROWS: Each plug row (starting with 'Cement Plug' or 'Cement Surface Plug') has associated requirements "
+            "READ THE TABLE TOP-TO-BOTTOM: "
+            "- First row often shows 'Additional requirements 3 - Tag top of plug' (no plug data on that row) -> Step 1: tag_toc "
+            "- Second row shows 'Cement Plug Set at 7990 to 7890...' with 'Additional requirements 6 - None' -> Step 2: plug #1 "
+            "- Third row shows 'Cement Plug Set at 7047 to 6947...' with 'Additional requirements 6 - None' -> Step 3: plug #2 "
+            "- When a plug row has requirements like '2 - Perforate and Squeeze, 4 - Wait X hours', create multiple steps for that plug "
+            "Step numbering: Increment step_order for EACH distinct operational requirement, in table order. "
+            "For plugs: plug_number corresponds to the sequence of actual plug rows (first plug row = plug #1). "
+            "Step type mapping: "
+            "- 'Tag top of plug' or 'Tag TOC' = step_type:'tag_toc' "
+            "- 'Perforate and Circulate' = step_type:'perforate_and_circulate' "
+            "- 'Perforate and Squeeze' = step_type:'perforate_and_squeeze' "
+            "- 'Wait X hours and tag' = step_type:'wait_on_cement' with wait_hours:X "
+            "CRITICAL: The first operational step is often 'Tag top of plug' which is step_order:1, and does NOT have a plug_number "
+            "Then the first plug row creates step_order:2 with plug_number:1, and so on. "
+            "Perforations: Extract from 'Record of Perforated Intervals' or 'Open Hole Intervals' showing top/bottom depths, formation name, and current status. "
+            "Plugging Proposal: Extract from 'Plugging Proposal' section showing plug numbers, depths, type (cement plug vs bridge plug), cement class, and sack quantities. "
+            "DUQW: Extract 'Deepest Usable Quality Water' information - the depth, formation, and how it was determined. "
+            "Rules: numbers only (feet/inches/sacks), snake_case keys, no units in numeric values. If a field is missing, set it to null."
         ),
     }
     return base[prompt_key]

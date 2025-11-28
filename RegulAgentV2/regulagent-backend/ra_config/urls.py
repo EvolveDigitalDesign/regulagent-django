@@ -49,6 +49,7 @@ from apps.public_core.views.plan_status import (
     file_plan,
     get_plan_status,
 )
+from apps.public_core.views.w3_from_pna import BuildW3FromPNAView, W3HealthCheckView
 from apps.tenants.views import TenantInfoView
 from apps.tenant_overlay.views.tenant_wells import (
     get_well_by_api,
@@ -84,6 +85,11 @@ urlpatterns = [
     path('api/advisory/sanity-check', AdvisorySanityCheckView.as_view()),
     path('api/rrc/extractions/completions', RRCCompletionsExtractView.as_view()),
     path('api/plans/w3a/from-api', W3AFromApiView.as_view()),
+    
+    # W-3 Form Generation from pnaexchange
+    path('api/w3/health/', W3HealthCheckView.as_view(), name='w3-health'),
+    path('api/w3/build-from-pna/', BuildW3FromPNAView.as_view(), name='w3-build-from-pna'),
+    
     path('api/plans/<str:api>/history', PlanHistoryView.as_view()),
     path('api/plans/<str:api>/artifacts', PlanArtifactsView.as_view()),
     path('api/artifacts/<uuid:artifact_id>/download', ArtifactDownloadView.as_view()),
