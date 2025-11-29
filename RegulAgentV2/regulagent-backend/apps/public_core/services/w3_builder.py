@@ -130,7 +130,7 @@ def build_w3_from_pna_payload(
             casing_state = initialize_casing_state(w3a_casing_record)
             logger.info(f"✅ Casing state initialized: {len(casing_state)} strings")
             for cs in casing_state:
-                logger.debug(f"   - {cs.string_type}: {cs.od_in}\" @ {cs.top_ft}-{cs.bottom_ft} ft")
+                logger.debug(f"   - {cs.name}: {cs.od_in}\" @ {cs.top_ft}-{cs.bottom_ft} ft")
         except Exception as e:
             logger.error(f"❌ Failed to initialize casing state: {e}")
             raise ValueError(f"Cannot initialize casing state: {e}")

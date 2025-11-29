@@ -1,0 +1,186 @@
+{
+  "header": {
+    "api_number": "00305717",
+    "well_name": "MIDLAND FARMS UNIT 90",
+    "operator": "OCCIDENTAL PERMIAN LTD.",
+    "county": "ANDREWS",
+    "rrc_district": "08",
+    "field": "MIDLAND FARMS",
+    "total_depth_ft": 4800
+  },
+  "casing_record": [
+    {
+      "string_type": "surface",
+      "size_in": 8.625,
+      "weight_ppf": 0,
+      "hole_size_in": 12.25,
+      "top_ft": 0,
+      "bottom_ft": 250,
+      "shoe_depth_ft": 250,
+      "cement_top_ft": 0,
+      "removed_to_depth_ft": null
+    },
+    {
+      "string_type": "production",
+      "size_in": 5.5,
+      "weight_ppf": 0,
+      "hole_size_in": 7.875,
+      "top_ft": 0,
+      "bottom_ft": 4600,
+      "shoe_depth_ft": 4600,
+      "cement_top_ft": 0,
+      "removed_to_depth_ft": null
+    }
+  ],
+  "perforations": [
+    {
+      "interval_top_ft": 4600,
+      "interval_bottom_ft": 4855,
+      "formation": null,
+      "status": "open",
+      "perforation_date": null
+    }
+  ],
+  "plugging_proposal": [
+    {
+      "plug_number": 1,
+      "depth_top_ft": 4550,
+      "depth_bottom_ft": 4550,
+      "type": "bridge_plug",
+      "cement_class": null,
+      "sacks": 3,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 2,
+      "depth_top_ft": 4000,
+      "depth_bottom_ft": 3900,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 40,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 3,
+      "depth_top_ft": 3000,
+      "depth_bottom_ft": 2900,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 40,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 4,
+      "depth_top_ft": 1650,
+      "depth_bottom_ft": 1550,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 40,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 5,
+      "depth_top_ft": 1100,
+      "depth_bottom_ft": 1000,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 40,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 6,
+      "depth_top_ft": 300,
+      "depth_bottom_ft": 0,
+      "type": "cement_surface_plug",
+      "cement_class": null,
+      "sacks": 130,
+      "volume_bbl": null,
+      "remarks": null
+    }
+  ],
+  "operational_steps": [
+    {
+      "step_order": 1,
+      "step_type": "tag_toc",
+      "plug_number": null,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Tag top of plug"
+    },
+    {
+      "step_order": 2,
+      "step_type": "wait_on_cement",
+      "plug_number": 1,
+      "depth_ft": null,
+      "wait_hours": 4,
+      "description": "Wait 4 hours and tag top of plug"
+    },
+    {
+      "step_order": 3,
+      "step_type": "perforate_and_squeeze",
+      "plug_number": 2,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Perforate and Squeeze"
+    },
+    {
+      "step_order": 4,
+      "step_type": "wait_on_cement",
+      "plug_number": 2,
+      "depth_ft": null,
+      "wait_hours": 4,
+      "description": "Wait 4 hours and tag top of plug"
+    },
+    {
+      "step_order": 5,
+      "step_type": "perforate_and_squeeze",
+      "plug_number": 3,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Perforate and Squeeze"
+    },
+    {
+      "step_order": 6,
+      "step_type": "perforate_and_squeeze",
+      "plug_number": 4,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Perforate and Squeeze"
+    },
+    {
+      "step_order": 7,
+      "step_type": "wait_on_cement",
+      "plug_number": 4,
+      "depth_ft": null,
+      "wait_hours": 4,
+      "description": "Wait 4 hours and tag top of plug"
+    },
+    {
+      "step_order": 8,
+      "step_type": "perforate_and_squeeze",
+      "plug_number": 5,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Perforate and Squeeze"
+    },
+    {
+      "step_order": 9,
+      "step_type": "perforate_and_circulate",
+      "plug_number": 6,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Perforate and Circulate"
+    }
+  ],
+  "duqw": {
+    "depth_ft": null,
+    "formation": null,
+    "determination_method": null
+  },
+  "remarks": null
+}

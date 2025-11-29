@@ -32,6 +32,7 @@ class CasingStringState:
     od_in: float
     top_ft: float
     bottom_ft: float
+    hole_size_in: Optional[float] = None
     removed_to_depth_ft: Optional[float] = None
     
     def is_present_at_depth(self, depth_ft: float) -> bool:
@@ -95,6 +96,10 @@ class W3Event:
     # Casing state
     jump_to_next_casing: bool = False         # Signal to cut/remove inner casing
     casing_string: Optional[str] = None       # Active casing at event depth (filled by engine)
+    
+    # Raw input tracking (for debugging/audit)
+    raw_input_values: dict = field(default_factory=dict)       # Original input_values from pnaexchange
+    raw_transformation_rules: dict = field(default_factory=dict)  # Original transformation_rules
 
 
 @dataclass
@@ -108,9 +113,33 @@ class Plug:
     Attributes:
         plug_number: Sequential plug number (1, 2, 3, ...)
         events: List of W3Event objects for this plug
+        depth_top_ft: Top depth of plug interval
+        depth_bottom_ft: Bottom depth of plug interval
+        type: Plug type (cement_plug, bridge_plug, squeeze, etc.)
+        plug_operation_type: "spot" (inside casing only) or "squeeze" (perf & squeeze into annulus)
+        cement_class: Cement class used (A, B, C, etc.)
+        sacks: Number of sacks of cement
+        slurry_weight_ppg: Weight of slurry (default 14.8 lbs/gal)
+        hole_size_in: Hole size at plug depth (from active casing)
+        calculated_top_of_plug_ft: Calculated TOC from sacks and yield
+        measured_top_of_plug_ft: Measured TOC from pnaexchange "Tag TOC" event
+        toc_variance_ft: Difference between measured and calculated TOC
     """
     plug_number: int
     events: List[W3Event] = field(default_factory=list)
+    depth_top_ft: Optional[float] = None
+    depth_bottom_ft: Optional[float] = None
+    type: Optional[str] = None
+    plug_operation_type: Optional[str] = None  # "spot" or "squeeze" - determines which casing/annulus
+    cement_class: Optional[str] = None
+    sacks: Optional[float] = None
+    volume_bbl: Optional[float] = None
+    slurry_weight_ppg: Optional[float] = None
+    hole_size_in: Optional[float] = None
+    calculated_top_of_plug_ft: Optional[float] = None
+    measured_top_of_plug_ft: Optional[float] = None
+    toc_variance_ft: Optional[float] = None
+    remarks: Optional[str] = None
     
     @property
     def earliest_date(self) -> Optional[date]:
@@ -170,6 +199,7 @@ class W3Form:
     perforations: List[dict]              # Perforation intervals with status (open, squeezed, plugged)
     duqw: dict                            # {depth_ft, formation, determination_method}
     remarks: str = ""                     # Concatenated event details/notes
+    pdf_url: Optional[str] = None         # URL to original W-3A PDF (if stored)
     
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""

@@ -1,0 +1,168 @@
+
+================================================================================
+🧪 W-3 BUILDER - Management Command
+================================================================================
+📥 STEP 1: Validating inputs...
+✅ PNA JSON: tmp/midland_farms_unit_90_extracted.json
+✅ W-3A PDF: tmp/W3A_Examples/MF Unit 90.pdf
+📋 STEP 2: Loading pnaexchange data...
+✅ Loaded 22 pnaexchange events
+   Well: Midland Farms Unit #90
+   API: 42-003-05717
+   Date range: {'start': '2025-11-04', 'end': '2025-11-07'}
+🔨 STEP 3: Building W-3 builder payload...
+✅ Payload built with 22 events
+  Event ID 4: Set Intermediate Plug - Plug  1 Spot  15 class  C cement From  4435’ to  4287’. Displaced with  24.8.
+  Event ID 4: Set Intermediate Plug - Plug  2 Spot  25 class  C cement From  4056’ to  3809’. Displaced with  22.
+  Event ID 3: Set Surface Plug - Plug 3 Squeezed 40 class C cement from @3000’ to @2900’
+  Event ID 3: Set Surface Plug - Plug 4 Squeezed 40 class C cement from @1650’ to @1550’
+  Event ID 3: Set Surface Plug - Plug 5 Squeezed 40 class C cement from 1100’ to 1000’
+  Event ID 3: Set Surface Plug - Plug 6 Squeezed 200 class C cement from 300 to 13 ft
+
+🏗️ STEP 4: Running W-3 builder...
+🔍 SQUEEZE DETECTION for event_type=set_cement_plug, plug#1
+   raw_event_detail: 'Plug  1 Spot  15 class  C cement From  4435’ to  4287’. Displaced with  24.8.'
+   event_detail_lower: 'plug  1 spot  15 class  c cement from  4435’ to  4287’. displaced with  24.8.'
+   → Event type is SET_CEMENT_PLUG
+   → No 'squeezed' keyword → returning SPOT
+🔍 SQUEEZE DETECTION for event_type=set_cement_plug, plug#2
+   raw_event_detail: 'Plug  2 Spot  25 class  C cement From  4056’ to  3809’. Displaced with  22.'
+   event_detail_lower: 'plug  2 spot  25 class  c cement from  4056’ to  3809’. displaced with  22.'
+   → Event type is SET_CEMENT_PLUG
+   → No 'squeezed' keyword → returning SPOT
+🔍 SQUEEZE DETECTION for event_type=set_surface_plug, plug#3
+   raw_event_detail: 'Plug 3 Squeezed 40 class C cement from @3000’ to @2900’'
+   event_detail_lower: 'plug 3 squeezed 40 class c cement from @3000’ to @2900’'
+   → Event type is SET_SURFACE_PLUG or SQUEEZE
+   → Contains 'squeezed' → returning SQUEEZE
+🔍 SQUEEZE DETECTION for event_type=set_surface_plug, plug#4
+   raw_event_detail: 'Plug 4 Squeezed 40 class C cement from @1650’ to @1550’'
+   event_detail_lower: 'plug 4 squeezed 40 class c cement from @1650’ to @1550’'
+   → Event type is SET_SURFACE_PLUG or SQUEEZE
+   → Contains 'squeezed' → returning SQUEEZE
+🔍 SQUEEZE DETECTION for event_type=set_surface_plug, plug#5
+   raw_event_detail: 'Plug 5 Squeezed 40 class C cement from 1100’ to 1000’'
+   event_detail_lower: 'plug 5 squeezed 40 class c cement from 1100’ to 1000’'
+   → Event type is SET_SURFACE_PLUG or SQUEEZE
+   → Contains 'squeezed' → returning SQUEEZE
+🔍 SQUEEZE DETECTION for event_type=set_surface_plug, plug#6
+   raw_event_detail: 'Plug 6 Squeezed 200 class C cement from 300 to 13 ft'
+   event_detail_lower: 'plug 6 squeezed 200 class c cement from 300 to 13 ft'
+   → Event type is SET_SURFACE_PLUG or SQUEEZE
+   → Contains 'squeezed' → returning SQUEEZE
+📌 FORMAT PLUG #1: operation_type=spot, depth_bottom=4287.0
+🔍 HOLE SIZE CALC: depth=4287.0 ft, operation_type=spot, casings_present=1
+   Innermost: production OD=5.5" hole_size=7.875"
+   → SPOT plug: returning innermost OD = 5.5"
+   → hole_size_in=5.5"
+📌 FORMAT PLUG #2: operation_type=spot, depth_bottom=3809.0
+🔍 HOLE SIZE CALC: depth=3809.0 ft, operation_type=spot, casings_present=1
+   Innermost: production OD=5.5" hole_size=7.875"
+   → SPOT plug: returning innermost OD = 5.5"
+   → hole_size_in=5.5"
+📌 FORMAT PLUG #3: operation_type=squeeze, depth_bottom=2900.0
+🔍 HOLE SIZE CALC: depth=2900.0 ft, operation_type=squeeze, casings_present=1
+   Innermost: production OD=5.5" hole_size=7.875"
+   → SQUEEZE plug (single): returning innermost (production) hole_size = 7.875"
+   → hole_size_in=7.875"
+📌 FORMAT PLUG #4: operation_type=squeeze, depth_bottom=1550.0
+🔍 HOLE SIZE CALC: depth=1550.0 ft, operation_type=squeeze, casings_present=1
+   Innermost: production OD=5.5" hole_size=7.875"
+   → SQUEEZE plug (single): returning innermost (production) hole_size = 7.875"
+   → hole_size_in=7.875"
+📌 FORMAT PLUG #5: operation_type=squeeze, depth_bottom=1000.0
+🔍 HOLE SIZE CALC: depth=1000.0 ft, operation_type=squeeze, casings_present=1
+   Innermost: production OD=5.5" hole_size=7.875"
+   → SQUEEZE plug (single): returning innermost (production) hole_size = 7.875"
+   → hole_size_in=7.875"
+📌 FORMAT PLUG #6: operation_type=squeeze, depth_bottom=13.0
+🔍 HOLE SIZE CALC: depth=13.0 ft, operation_type=squeeze, casings_present=2
+   Innermost: production OD=5.5" hole_size=7.875"
+   → SQUEEZE plug (multi-casing): returning outermost (surface) OD = 8.625"
+   → hole_size_in=8.625"
+
+================================================================================
+📊 RESULTS
+================================================================================
+✅ SUCCESS
+📋 HEADER:
+   API: 00305717
+   Well: MIDLAND FARMS UNIT 90
+   Operator: OCCIDENTAL PERMIAN LTD.
+   County: ANDREWS
+   RRC District: 08
+⚙️  PLUGS (6 total):
+   Plug #1:
+     Depths: 4435.0 - 4287.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 15.0
+     Hole Size: 5.5"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): 4252.0 ft
+     TOC (calculated): 3591.0 ft
+     TOC Variance: +661.0 ft
+
+   Plug #2:
+     Depths: 4056.0 - 3809.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 25.0
+     Hole Size: 5.5"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): 3852.0 ft
+     TOC (calculated): 3307.3 ft
+     TOC Variance: +544.7 ft
+
+   Plug #3:
+     Depths: 3000.0 - 2900.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 40.0
+     Hole Size: 7.875"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): None ft
+     TOC (calculated): 2634.8 ft
+
+   Plug #4:
+     Depths: 1650.0 - 1550.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 40.0
+     Hole Size: 7.875"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): 1430.0 ft
+     TOC (calculated): 1411.0 ft
+     TOC Variance: +19.0 ft
+
+   Plug #5:
+     Depths: 1100.0 - 1000.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 40.0
+     Hole Size: 7.875"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): None ft
+     TOC (calculated): 914.1 ft
+
+   Plug #6:
+     Depths: 300.0 - 13.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 200.0
+     Hole Size: 8.625"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): None ft
+     TOC (calculated): 286.2 ft
+
+📊 METADATA:
+   Events processed: 22
+   Plugs grouped: 6
+   Generated: 2025-11-29T03:41:51.325048+00:00
+💾 STEP 5: Saving output...
+✅ Saved to: tmp/w3_output.json
+   Size: 6110 bytes
+================================================================================
+✅ COMPLETE
+================================================================================
+W-3 form generated successfully and saved to tmp/w3_output.json

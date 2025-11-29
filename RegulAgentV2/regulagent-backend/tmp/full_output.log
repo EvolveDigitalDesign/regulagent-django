@@ -1,0 +1,108 @@
+
+================================================================================
+🧪 W-3 BUILDER - Management Command
+================================================================================
+📥 STEP 1: Validating inputs...
+✅ PNA JSON: tmp/midland_farms_unit_90_extracted.json
+✅ W-3A PDF: tmp/W3A_Examples/MF Unit 90.pdf
+📋 STEP 2: Loading pnaexchange data...
+✅ Loaded 22 pnaexchange events
+   Well: Midland Farms Unit #90
+   API: 42-003-05717
+   Date range: {'start': '2025-11-04', 'end': '2025-11-07'}
+🔨 STEP 3: Building W-3 builder payload...
+✅ Payload built with 22 events
+  Event ID 4: Set Intermediate Plug - Plug  1 Spot  15 class  C cement From  4435’ to  4287’. Displaced with  24.8.
+  Event ID 4: Set Intermediate Plug - Plug  2 Spot  25 class  C cement From  4056’ to  3809’. Displaced with  22.
+  Event ID 3: Set Surface Plug - Plug 3 Squeezed 40 class C cement from @3000’ to @2900’
+  Event ID 3: Set Surface Plug - Plug 4 Squeezed 40 class C cement from @1650’ to @1550’
+  Event ID 3: Set Surface Plug - Plug 5 Squeezed 40 class C cement from 1100’ to 1000’
+  Event ID 3: Set Surface Plug - Plug 6 Squeezed 200 class C cement from 300 to 13 ft
+
+🏗️ STEP 4: Running W-3 builder...
+
+================================================================================
+📊 RESULTS
+================================================================================
+✅ SUCCESS
+📋 HEADER:
+   API: 00305717
+   Well: MIDLAND FARMS UNIT 90
+   Operator: OCCIDENTAL PERMIAN LTD.
+   County: ANDREWS
+   RRC District: 08
+⚙️  PLUGS (6 total):
+   Plug #1:
+     Depths: 4435.0 - 4287.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 15.0
+     Hole Size: 5.5"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): 4252.0 ft
+     TOC (calculated): 3591.0 ft
+     TOC Variance: +661.0 ft
+
+   Plug #2:
+     Depths: 4056.0 - 3809.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 25.0
+     Hole Size: 5.5"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): 3852.0 ft
+     TOC (calculated): 3307.3 ft
+     TOC Variance: +544.7 ft
+
+   Plug #3:
+     Depths: 3000.0 - 2900.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 40.0
+     Hole Size: 5.5"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): None ft
+     TOC (calculated): 2251.3 ft
+
+   Plug #4:
+     Depths: 1650.0 - 1550.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 40.0
+     Hole Size: 5.5"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): 1430.0 ft
+     TOC (calculated): 1160.0 ft
+     TOC Variance: +270.0 ft
+
+   Plug #5:
+     Depths: 1100.0 - 1000.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 40.0
+     Hole Size: 5.5"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): None ft
+     TOC (calculated): 718.9 ft
+
+   Plug #6:
+     Depths: 300.0 - 13.0 ft
+     Type: cement_plug
+     Cement Class: C
+     Sacks: 200.0
+     Hole Size: 7.875"
+     Slurry Weight: 14.8 lbs/gal
+     TOC (measured): None ft
+     TOC (calculated): 283.4 ft
+
+📊 METADATA:
+   Events processed: 22
+   Plugs grouped: 6
+   Generated: 2025-11-29T03:31:11.618288+00:00
+💾 STEP 5: Saving output...
+✅ Saved to: tmp/w3_output.json
+   Size: 6106 bytes
+================================================================================
+✅ COMPLETE
+================================================================================
+W-3 form generated successfully and saved to tmp/w3_output.json

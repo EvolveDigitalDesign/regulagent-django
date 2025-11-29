@@ -64,6 +64,7 @@ def parse_numeric(value: Any) -> Optional[float]:
     Safely parse a numeric value from various input formats.
     
     Handles:
+    - Strings with @ prefix: "@3000'" -> 3000.0
     - Strings with commas: "1,200" -> 1200.0
     - Strings with units: "5.5 in" -> 5.5
     - Already numeric: 123 -> 123.0
@@ -77,11 +78,14 @@ def parse_numeric(value: Any) -> Optional[float]:
         if not s:
             return None
         
+        # Remove @ prefix (used by pnaexchange for measured values)
+        s = s.lstrip('@')
+        
         # Remove commas for thousands separator
         s = s.replace(",", "")
         
-        # Extract first numeric part (ignore units)
-        match = re.match(r'^([-+]?\d+\.?\d*)', s)
+        # Extract first numeric part (ignore units like 'ft', 'in', "'", etc)
+        match = re.search(r'([-+]?\d+\.?\d*)', s)
         if match:
             return float(match.group(1))
         
@@ -162,29 +166,35 @@ def extract_cement_plug_depths(
     event_type: str
 ) -> tuple[Optional[float], Optional[float]]:
     """
-    Extract top and bottom depths for cement plug events.
+    Extract depths for cement plug events.
     
-    Different event templates have different placeholder conventions:
-    - Set Intermediate Plug (id=4): *_2_* = spot, *_4_* to *_5_*
-    - Set Surface Plug (id=3): *_4_* = from, to surface (0)
-    - Squeeze (id=7): *_4_* to *_5_*
+    For W-3 form Column 20 & 21:
+    - Column 20 "Depth to Bottom of Tubing or DP": where the cement plug interval starts
+    - Column 21 "Depth to Top of Plug": initially the design depth, updated by Tag TOC events
+    
+    From pnaexchange events "From X' to Y'" format:
+    - X = *_4_* = bottom of DP where cement starts filling
+    - Y = *_5_* = the target/design top of cement before being squeezed
+    
+    The actual measured TOC comes later from "Tag TOC" events.
+    
+    Template mapping:
+    - Set Intermediate Plug (id=4): *_4_* = from, *_5_* = to
+    - Set Surface Plug (id=3): *_4_* = from, *_5_* = to
+    - Squeeze (id=7): *_4_* = from, *_5_* = to
+    
+    Returns:
+        (depth_top_ft, depth_bottom_ft) where:
+        - depth_top_ft: Bottom of DP = W-3 Column 20
+        - depth_bottom_ft: Design top of cement = will be updated by measured TOC later
     """
     depth_top = None
     depth_bottom = None
     
-    if event_id == 4:  # Set Intermediate Plug
-        # *_2_* is spot (top), *_4_* to *_5_* is cement range
-        depth_top = parse_numeric(input_values.get("2"))
-        depth_bottom = parse_numeric(input_values.get("5"))
-    
-    elif event_id == 3:  # Set Surface Plug
-        # *_4_* = cement from, to surface (0)
+    if event_id in (3, 4, 7):  # All plug types
+        # *_4_* is FROM (bottom of DP)
         depth_top = parse_numeric(input_values.get("4"))
-        depth_bottom = 0.0  # Surface
-    
-    elif event_id == 7:  # Squeeze
-        # *_4_* to *_5_*
-        depth_top = parse_numeric(input_values.get("4"))
+        # *_5_* is TO (design top of cement before squeeze)
         depth_bottom = parse_numeric(input_values.get("5"))
     
     return depth_top, depth_bottom
@@ -201,9 +211,9 @@ def extract_cement_class_and_sacks(
     - Sacks: quantity of cement
     
     Template placeholder conventions:
-    - Set Intermediate Plug (id=4): *_3_* = class, sacks from context or *_6_*
-    - Set Surface Plug (id=3): *_2_* = sacks, *_3_* = class
-    - Squeeze (id=7): *_2_* = sacks, *_3_* = class
+    - Set Intermediate Plug (id=4): *_3_* = class, *_2_* = sacks, *_6_* = volume displaced (bbl)
+    - Set Surface Plug (id=3): *_2_* = sacks, *_3_* = class, *_6_* = volume displaced (bbl)
+    - Squeeze (id=7): *_2_* = sacks, *_3_* = class, *_6_* = volume displaced (bbl)
     """
     cement_class = None
     sacks = None
@@ -213,7 +223,7 @@ def extract_cement_class_and_sacks(
         cement_class_raw = input_values.get("3")
         if cement_class_raw:
             cement_class = str(cement_class_raw).strip().upper()
-        # Sacks may be in template or *_2_* or context
+        # Sacks from *_2_*
         sacks = parse_numeric(input_values.get("2"))
     
     elif event_id == 3:  # Set Surface Plug
@@ -231,6 +241,24 @@ def extract_cement_class_and_sacks(
             cement_class = str(cement_class_raw).strip().upper()
     
     return cement_class, sacks
+
+
+def extract_volume_displaced(
+    event_id: int,
+    input_values: Dict[str, Any]
+) -> Optional[float]:
+    """
+    Extract volume displaced (slurry volume in barrels) for cement plug events.
+    
+    Template placeholder conventions:
+    - Set Intermediate Plug (id=4): *_6_* = volume displaced (bbl)
+    - Set Surface Plug (id=3): *_6_* = volume displaced (bbl)
+    - Squeeze (id=7): *_6_* = volume displaced (bbl)
+    """
+    if event_id in (3, 4, 7):
+        return parse_numeric(input_values.get("6"))
+    
+    return None
 
 
 def extract_plug_number(
@@ -326,6 +354,8 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
         depth_top_ft, depth_bottom_ft = extract_cement_plug_depths(event_id, input_values, event_type)
         cement_class, sacks = extract_cement_class_and_sacks(event_id, input_values)
         plug_number = extract_plug_number(event_id, input_values)
+        # Extract slurry volume displaced (bbl)
+        volume_bbl = extract_volume_displaced(event_id, input_values)
     
     elif event_type == "set_bridge_plug":
         # *_2_* is depth
@@ -348,7 +378,14 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
     if not jump_to_next_casing and event_type == "cut_casing":
         jump_to_next_casing = True  # Force for cut casing events
     
-    # Build the W3Event
+    # Build the W3Event (volume_bbl may be set above for cement events)
+    if 'volume_bbl' not in locals():
+        volume_bbl = None
+    
+    # Use event_detail if available, otherwise fall back to display_text
+    event_detail = pna_event.get('event_detail', '')
+    raw_detail = event_detail if event_detail else display_text
+    
     w3_event = W3Event(
         event_type=event_type,
         date=event_date,
@@ -361,9 +398,9 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
         plug_number=plug_number,
         cement_class=cement_class,
         sacks=sacks,
-        volume_bbl=None,  # Not provided by pnaexchange, will be calculated
+        volume_bbl=volume_bbl,  # Slurry volume in barrels from "Displaced with" field
         pressure_psi=None,  # Not provided by pnaexchange
-        raw_event_detail=f"{display_text}: {pna_event.get('form_template_text', '')}",
+        raw_event_detail=raw_detail,  # Use actual event_detail from pnaexchange
         work_assignment_id=pna_event.get("work_assignment_id"),
         dwr_id=pna_event.get("dwr_id"),
         jump_to_next_casing=jump_to_next_casing,

@@ -171,10 +171,13 @@ class PlugRowSerializer(serializers.Serializer):
     type = serializers.CharField(max_length=50)
     cement_class = serializers.CharField(allow_null=True, max_length=10)
     sacks = serializers.FloatField(allow_null=True)
-    volume_bbl = serializers.FloatField(allow_null=True)
+    slurry_weight_ppg = serializers.FloatField(allow_null=True, help_text="Weight of slurry (default 14.8 lbs/gal)")
+    hole_size_in = serializers.FloatField(allow_null=True, help_text="Hole size at plug depth (from casing record)")
+    top_of_plug_ft = serializers.FloatField(allow_null=True, help_text="TOC for RRC submission (measured or calculated)")
+    measured_top_of_plug_ft = serializers.FloatField(allow_null=True, help_text="Measured TOC from pnaexchange 'Tag TOC' event")
+    calculated_top_of_plug_ft = serializers.FloatField(allow_null=True, help_text="Calculated TOC from sacks and cement yield")
+    toc_variance_ft = serializers.FloatField(allow_null=True, help_text="Difference between measured and calculated TOC")
     remarks = serializers.CharField(allow_blank=True)
-    tag_required = serializers.BooleanField()
-    wait_hours = serializers.IntegerField(allow_null=True)
 
 
 class CasingRowSerializer(serializers.Serializer):

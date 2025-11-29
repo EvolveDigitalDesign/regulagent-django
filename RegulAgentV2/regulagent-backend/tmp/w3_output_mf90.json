@@ -1,0 +1,15 @@
+{
+  "success": false,
+  "error": "Cannot load W-3A form: request object required for PDF extraction",
+  "validation": {
+    "warnings": [],
+    "errors": [
+      "Cannot load W-3A form: request object required for PDF extraction"
+    ]
+  },
+  "metadata": {
+    "api_number": "42-003-05717",
+    "dwr_id": 151,
+    "generated_at": "2025-11-28T20:53:09.741804+00:00"
+  }
+}
