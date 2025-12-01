@@ -98,17 +98,19 @@ class BuildW3FromPNAView(APIView):
         print("=" * 80, file=sys.stderr)
         print("🔵 W-3 API POST METHOD CALLED", file=sys.stderr)
         print("=" * 80, file=sys.stderr)
+        print(f"Request keys: {list(request.data.keys())}", file=sys.stderr)
+        
+        # Log raw payload before any processing - use stderr so it shows
+        print("\n📦 RAW PAYLOAD DUMP:", file=sys.stderr)
+        payload_json = json.dumps(request.data, indent=2, default=str)
+        print(payload_json, file=sys.stderr)
+        print("=" * 80, file=sys.stderr)
         
         logger.info("=" * 80)
         logger.info("🔵 W-3 API REQUEST RECEIVED")
         logger.info("=" * 80)
         logger.info(f"   Request content-type: {request.content_type}")
         logger.info(f"   Request data keys: {list(request.data.keys())}")
-        print(f"Request keys: {list(request.data.keys())}", file=sys.stderr)
-        
-        # Log raw payload before any processing
-        logger.info("\n📦 RAW PAYLOAD DUMP:")
-        logger.info(json.dumps(request.data, indent=2, default=str))
         
         # DEBUG: Check payload structure and unwrap if needed
         data = request.data
