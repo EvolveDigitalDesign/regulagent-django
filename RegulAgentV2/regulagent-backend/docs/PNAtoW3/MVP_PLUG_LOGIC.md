@@ -223,3 +223,4 @@ format_plugs_for_rrc(plugs, casing_state)
 6. **Batch calculations** - Optimize for large number of plugs
 7. **Variance thresholds** - Configurable alerts for TOC mismatches
 
+

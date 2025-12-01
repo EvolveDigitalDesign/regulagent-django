@@ -212,34 +212,53 @@ def _load_w3a_from_db(w3a_reference: Dict[str, Any]) -> Dict[str, Any]:
 
 def _load_w3a_from_pdf_upload(w3a_reference: Dict[str, Any], request) -> Dict[str, Any]:
     """
-    Load W-3A from uploaded PDF file.
+    Load W-3A from uploaded PDF file (multipart) or base64-encoded PDF (JSON).
     
     Args:
-        w3a_reference: {"type": "pdf"}
-        request: HTTP request with FILES
+        w3a_reference: 
+            - Multipart: {"type": "pdf", "w3a_file": UploadedFile}
+            - JSON: {"type": "pdf", "w3a_file_base64": "base64string", "w3a_filename": "..."}
+        request: HTTP request object
         
     Returns:
         W-3A form dictionary
     """
-    w3a_file = request.FILES.get("w3a_file")
-    
-    if not w3a_file:
-        raise ValueError("w3a_file not provided in request.FILES")
-    
-    # Save to temporary location for extraction
     import tempfile
     import os
+    import base64
     
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-        # Write uploaded file to temp
+    # Try base64 first (JSON request)
+    w3a_file_base64 = w3a_reference.get("w3a_file_base64")
+    if w3a_file_base64:
+        logger.info(f"📄 Processing base64-encoded PDF from JSON request...")
+        try:
+            pdf_content = base64.b64decode(w3a_file_base64)
+            logger.info(f"   Decoded {len(pdf_content)} bytes from base64")
+        except Exception as e:
+            raise ValueError(f"Failed to decode base64 PDF: {e}")
+    else:
+        # Fall back to multipart upload
+        logger.info(f"📄 Processing PDF file from multipart upload...")
+        w3a_file = request.FILES.get("w3a_file") if request else None
+        
+        if not w3a_file:
+            raise ValueError("w3a_file not provided in request.FILES or w3a_file_base64 in JSON")
+        
+        # Read uploaded file into memory
+        pdf_content = b""
         for chunk in w3a_file.chunks():
-            tmp.write(chunk)
+            pdf_content += chunk
+        logger.info(f"   Read {len(pdf_content)} bytes from uploaded file")
+    
+    # Save to temporary location for extraction
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp.write(pdf_content)
         tmp_path = tmp.name
     
     try:
         # Extract W-3A from PDF
         w3a_form = extract_w3a_from_pdf(tmp_path)
-        logger.info(f"✅ W-3A extracted from uploaded PDF")
+        logger.info(f"✅ W-3A extracted from PDF")
         return w3a_form
         
     finally:

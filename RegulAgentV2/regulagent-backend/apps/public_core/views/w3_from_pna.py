@@ -55,6 +55,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 import logging
 
 from apps.public_core.serializers.w3_from_pna import (
@@ -73,10 +76,12 @@ class BuildW3FromPNAView(APIView):
     POST /api/w3/build-from-pna/
     
     Authentication: JWT token (pnaexchange API key)
-    Content-Type: multipart/form-data (for PDF upload) or application/json
+    Content-Type: multipart/form-data (for PDF upload) or application/json (with base64 PDF)
     """
     
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
     
     def post(self, request, *args, **kwargs):
         """
@@ -188,4 +193,5 @@ class W3HealthCheckView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
 

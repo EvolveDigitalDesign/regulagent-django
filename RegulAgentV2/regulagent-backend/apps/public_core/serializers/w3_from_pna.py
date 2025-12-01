@@ -91,7 +91,7 @@ class W3AReference(serializers.Serializer):
     type = serializers.ChoiceField(
         choices=["regulagent", "pdf"],
         required=True,
-        help_text="'regulagent' to load from database, 'pdf' to upload"
+        help_text="'regulagent' to load from database, 'pdf' to upload/base64"
     )
     
     w3a_id = serializers.IntegerField(
@@ -103,7 +103,22 @@ class W3AReference(serializers.Serializer):
     w3a_file = serializers.FileField(
         required=False,
         allow_null=True,
-        help_text="W-3A PDF file upload (if type='pdf')"
+        help_text="W-3A PDF file upload (if type='pdf' with multipart)"
+    )
+    
+    w3a_file_base64 = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        help_text="Base64-encoded PDF content (if type='pdf' with JSON request)"
+    )
+    
+    w3a_filename = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=255,
+        help_text="Original filename (optional, used with base64)"
     )
     
     def validate(self, data):
@@ -115,10 +130,15 @@ class W3AReference(serializers.Serializer):
                 "w3a_id is required when type='regulagent'"
             )
         
-        if ref_type == "pdf" and not data.get("w3a_file"):
-            raise serializers.ValidationError(
-                "w3a_file is required when type='pdf'"
-            )
+        if ref_type == "pdf":
+            # Either w3a_file (multipart) or w3a_file_base64 (JSON) must be present
+            has_file = bool(data.get("w3a_file"))
+            has_base64 = bool(data.get("w3a_file_base64"))
+            
+            if not has_file and not has_base64:
+                raise serializers.ValidationError(
+                    "Either 'w3a_file' (multipart) or 'w3a_file_base64' (JSON) is required when type='pdf'"
+                )
         
         return data
 

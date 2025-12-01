@@ -538,3 +538,4 @@ class TestW3AExtractionIntegration(TestCase):
         self.assertEqual(last_plug["plug_number"], 8)
         self.assertEqual(last_plug["type"], "surface_cement_plug")
 
+
