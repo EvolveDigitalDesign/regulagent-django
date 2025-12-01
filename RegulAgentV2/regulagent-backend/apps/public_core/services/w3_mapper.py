@@ -120,14 +120,55 @@ def parse_time(time_str: Optional[str]) -> Optional[time]:
         return None
 
 
-def normalize_event_type(event_id: int, display_text: str) -> str:
+def normalize_event_type(event_id: Optional[int], display_text: str, event_type: Optional[str] = None) -> str:
     """
-    Normalize event type using event_id mapping from pnaexchange.
-    Falls back to display_text parsing if event_id not found.
+    Normalize event type using multiple sources in priority order.
+    
+    Priority:
+    1. event_id (numeric) via PNA_EVENT_ID_MAP
+    2. event_type (text field from pnaexchange payload)
+    3. display_text (fallback)
+    
+    Args:
+        event_id: Numeric event ID (if available)
+        display_text: Display text from event
+        event_type: Text event_type field from pnaexchange payload
+    
+    Returns:
+        Normalized event type string
     """
     # First try direct event_id mapping
-    if event_id in PNA_EVENT_ID_MAP:
+    if event_id is not None and event_id in PNA_EVENT_ID_MAP:
         return PNA_EVENT_ID_MAP[event_id]
+    
+    # Try event_type field (primary source from pnaexchange)
+    if event_type:
+        event_type_lower = event_type.lower()
+        
+        if "set intermediate plug" in event_type_lower or "set cement plug" in event_type_lower:
+            return "set_cement_plug"
+        if "set surface plug" in event_type_lower:
+            return "set_surface_plug"
+        if "squeezed" in event_type_lower or "squeeze" in event_type_lower:
+            return "squeeze"
+        if "broke circulation" in event_type_lower:
+            return "broke_circulation"
+        if "pressure up" in event_type_lower:
+            return "pressure_up"
+        if "set cibp" in event_type_lower or "set bridge plug" in event_type_lower:
+            return "set_bridge_plug"
+        if "tag cibp" in event_type_lower or "tag bridge plug" in event_type_lower:
+            return "tag_bridge_plug"
+        if "cut casing" in event_type_lower:
+            return "cut_casing"
+        if "tag toc" in event_type_lower or "tagged toc" in event_type_lower:
+            return "tag_toc"
+        if "tag top of cement" in event_type_lower:
+            return "tag_toc"
+        if "perforation" in event_type_lower or "perforated" in event_type_lower:
+            return "perforate"
+        if "rrc approval" in event_type_lower:
+            return "rrc_approval"
     
     # Fallback: parse from display_text
     display_lower = display_text.lower()
@@ -156,12 +197,12 @@ def normalize_event_type(event_id: int, display_text: str) -> str:
         return "rrc_approval"
     
     # Final fallback
-    logger.warning(f"Unknown event: id={event_id}, display='{display_text}'")
+    logger.warning(f"Unknown event: id={event_id}, event_type='{event_type}', display='{display_text}'")
     return display_text.lower().replace(" ", "_")
 
 
 def extract_cement_plug_depths(
-    event_id: int,
+    event_id: Optional[int],
     input_values: Dict[str, Any],
     event_type: str
 ) -> tuple[Optional[float], Optional[float]]:
@@ -191,7 +232,16 @@ def extract_cement_plug_depths(
     depth_top = None
     depth_bottom = None
     
-    if event_id in (3, 4, 7):  # All plug types
+    # Try numeric event_id first
+    if event_id is not None and event_id in (3, 4, 7):  # All plug types
+        # *_4_* is FROM (bottom of DP)
+        depth_top = parse_numeric(input_values.get("4"))
+        # *_5_* is TO (design top of cement before squeeze)
+        depth_bottom = parse_numeric(input_values.get("5"))
+    
+    # Fallback: use event_type to determine extraction method
+    elif event_type in ("set_cement_plug", "set_surface_plug", "squeeze"):
+        # All these types use positions 4 and 5 for depths
         # *_4_* is FROM (bottom of DP)
         depth_top = parse_numeric(input_values.get("4"))
         # *_5_* is TO (design top of cement before squeeze)
@@ -201,7 +251,8 @@ def extract_cement_plug_depths(
 
 
 def extract_cement_class_and_sacks(
-    event_id: int,
+    event_id: Optional[int],
+    event_type: str,
     input_values: Dict[str, Any]
 ) -> tuple[Optional[str], Optional[float]]:
     """
@@ -218,6 +269,7 @@ def extract_cement_class_and_sacks(
     cement_class = None
     sacks = None
     
+    # Try numeric event_id first
     if event_id == 4:  # Set Intermediate Plug
         # *_3_* is cement class
         cement_class_raw = input_values.get("3")
@@ -240,11 +292,27 @@ def extract_cement_class_and_sacks(
         if cement_class_raw:
             cement_class = str(cement_class_raw).strip().upper()
     
+    # Fallback: use event_type to determine extraction method
+    elif event_type == "set_cement_plug":  # Set Intermediate Plug template
+        # *_3_* is cement class, *_2_* is sacks
+        cement_class_raw = input_values.get("3")
+        if cement_class_raw:
+            cement_class = str(cement_class_raw).strip().upper()
+        sacks = parse_numeric(input_values.get("2"))
+    
+    elif event_type in ("set_surface_plug", "squeeze"):  # Set Surface Plug / Squeeze templates
+        # *_2_* = sacks, *_3_* = class
+        sacks = parse_numeric(input_values.get("2"))
+        cement_class_raw = input_values.get("3")
+        if cement_class_raw:
+            cement_class = str(cement_class_raw).strip().upper()
+    
     return cement_class, sacks
 
 
 def extract_volume_displaced(
-    event_id: int,
+    event_id: Optional[int],
+    event_type: str,
     input_values: Dict[str, Any]
 ) -> Optional[float]:
     """
@@ -255,14 +323,20 @@ def extract_volume_displaced(
     - Set Surface Plug (id=3): *_6_* = volume displaced (bbl)
     - Squeeze (id=7): *_6_* = volume displaced (bbl)
     """
-    if event_id in (3, 4, 7):
+    # Try numeric event_id first
+    if event_id is not None and event_id in (3, 4, 7):
+        return parse_numeric(input_values.get("6"))
+    
+    # Fallback: use event_type to determine extraction method
+    if event_type in ("set_cement_plug", "set_surface_plug", "squeeze"):
         return parse_numeric(input_values.get("6"))
     
     return None
 
 
 def extract_plug_number(
-    event_id: int,
+    event_id: Optional[int],
+    event_type: str,
     input_values: Dict[str, Any]
 ) -> Optional[int]:
     """
@@ -270,7 +344,16 @@ def extract_plug_number(
     
     For most plug events, *_1_* is the plug number.
     """
-    if event_id in (3, 4, 7):  # Plug events have *_1_* as plug number
+    # Try numeric event_id first
+    if event_id is not None and event_id in (3, 4, 7):  # Plug events have *_1_* as plug number
+        plug_num_raw = input_values.get("1")
+        if plug_num_raw is not None:
+            plug_num = parse_numeric(plug_num_raw)
+            if plug_num is not None:
+                return int(plug_num)
+    
+    # Fallback: use event_type to determine extraction method
+    if event_type in ("set_cement_plug", "set_surface_plug", "squeeze"):
         plug_num_raw = input_values.get("1")
         if plug_num_raw is not None:
             plug_num = parse_numeric(plug_num_raw)
@@ -281,7 +364,8 @@ def extract_plug_number(
 
 
 def extract_tag_depth(
-    event_id: int,
+    event_id: Optional[int],
+    event_type: str,
     input_values: Dict[str, Any]
 ) -> Optional[float]:
     """
@@ -290,13 +374,33 @@ def extract_tag_depth(
     - Tag TOC (id=8): *_2_* is depth
     - Tagged TOC (id=5): *_1_* is depth
     - Tag CIBP (id=11): *_2_* is depth
+    
+    For event_type fallback:
+    - tag_toc: Try *_2_* first, then *_1_*
+    - tag_bridge_plug: Try *_2_* first, then *_1_*
     """
+    # Try numeric event_id first
     if event_id == 8:  # Tag TOC: *_2_*
         return parse_numeric(input_values.get("2"))
     elif event_id == 5:  # Tagged TOC: *_1_*
         return parse_numeric(input_values.get("1"))
     elif event_id == 11:  # Tag CIBP: *_2_*
         return parse_numeric(input_values.get("2"))
+    
+    # Fallback: use event_type to determine extraction method
+    if event_type == "tag_toc":
+        # Try position 2 first (standard Tag TOC position), then position 1 (fallback)
+        depth = parse_numeric(input_values.get("2"))
+        if depth is not None:
+            return depth
+        return parse_numeric(input_values.get("1"))
+    
+    if event_type == "tag_bridge_plug":
+        # Try position 2 first, then position 1
+        depth = parse_numeric(input_values.get("2"))
+        if depth is not None:
+            return depth
+        return parse_numeric(input_values.get("1"))
     
     return None
 
@@ -305,10 +409,13 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
     """
     Map a raw pnaexchange event dictionary to a W3Event dataclass instance.
     
+    Handles both old format (event_id numeric) and new format (event_type text).
+    
     Args:
         pna_event: Dictionary with structure:
             {
-                "event_id": 4,
+                "event_id": 4,  # Optional numeric ID
+                "event_type": "Set Intermediate Plug",  # Text event type (new format)
                 "display_text": "Set Intermediate Plug",
                 "form_template_text": "Plug *_1_* ...",
                 "input_values": {"1": "5", "2": "6997", ...},
@@ -324,12 +431,13 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
         W3Event instance
     """
     event_id = pna_event.get("event_id")
+    event_type_field = pna_event.get("event_type", "")  # NEW: Extract event_type text field
     display_text = pna_event.get("display_text", "unknown")
     input_values = pna_event.get("input_values", {})
     transformation_rules = pna_event.get("transformation_rules", {})
     
-    # Normalize event type
-    event_type = normalize_event_type(event_id, display_text)
+    # Normalize event type with new event_type parameter
+    event_type = normalize_event_type(event_id, display_text, event_type_field)
     
     # Parse dates and times
     try:
@@ -352,10 +460,10 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
     # Extract event-specific values
     if event_type in ("set_cement_plug", "set_surface_plug", "squeeze"):
         depth_top_ft, depth_bottom_ft = extract_cement_plug_depths(event_id, input_values, event_type)
-        cement_class, sacks = extract_cement_class_and_sacks(event_id, input_values)
-        plug_number = extract_plug_number(event_id, input_values)
+        cement_class, sacks = extract_cement_class_and_sacks(event_id, event_type, input_values)
+        plug_number = extract_plug_number(event_id, event_type, input_values)
         # Extract slurry volume displaced (bbl)
-        volume_bbl = extract_volume_displaced(event_id, input_values)
+        volume_bbl = extract_volume_displaced(event_id, event_type, input_values)
     
     elif event_type == "set_bridge_plug":
         # *_2_* is depth
@@ -367,7 +475,7 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
     
     elif event_type in ("tag_toc", "tag_bridge_plug"):
         # Extract tagged depth
-        tagged_depth_ft = extract_tag_depth(event_id, input_values)
+        tagged_depth_ft = extract_tag_depth(event_id, event_type, input_values)
     
     elif event_type == "perforate":
         # *_1_* is perforation depth
@@ -409,8 +517,9 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
     )
     
     logger.debug(
-        f"✅ Mapped pna_event (id={event_id}) -> W3Event: "
-        f"{w3_event.event_type} at depths {w3_event.depth_top_ft}-{w3_event.depth_bottom_ft} ft"
+        f"✅ Mapped pna_event (id={event_id}, type_field='{event_type_field}') -> W3Event: "
+        f"{w3_event.event_type} at depths {w3_event.depth_top_ft}-{w3_event.depth_bottom_ft} ft, "
+        f"plug#{plug_number}, class={cement_class}, sacks={sacks}"
     )
     
     return w3_event
