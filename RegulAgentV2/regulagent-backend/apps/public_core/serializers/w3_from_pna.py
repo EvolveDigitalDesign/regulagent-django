@@ -16,14 +16,30 @@ class PNAEventSerializer(serializers.Serializer):
     """Serializer for a single pnaexchange event."""
     
     event_id = serializers.IntegerField(
-        required=True,
-        help_text="Event type ID (1-12) from pnaexchange FormContext"
+        required=False,
+        allow_null=True,
+        help_text="Event type ID (1-12) from pnaexchange FormContext (optional if event_type provided)"
+    )
+    
+    event_type = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=500,
+        help_text="Event type as text (e.g., 'Set Intermediate Plug') - NEW pnaexchange format"
     )
     
     display_text = serializers.CharField(
-        required=True,
+        required=False,
+        allow_blank=True,
         max_length=500,
         help_text="Human-readable event name (e.g., 'Set Intermediate Plug')"
+    )
+    
+    event_detail = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=1000,
+        help_text="Detailed event description from pnaexchange"
     )
     
     form_template_text = serializers.CharField(
@@ -75,9 +91,15 @@ class PNAEventSerializer(serializers.Serializer):
         """Validate that required inputs are present for the event type."""
         from apps.public_core.services.w3_mapper import validate_event_inputs
         
+        # Either event_id or event_type must be present
         event_id = data.get("event_id")
-        input_values = data.get("input_values", {})
+        event_type = data.get("event_type", "")
         
+        if not event_id and not event_type:
+            raise serializers.ValidationError("Either 'event_id' (numeric) or 'event_type' (text) must be provided")
+        
+        # Validate input values
+        input_values = data.get("input_values", {})
         is_valid, error_msg = validate_event_inputs(event_id, input_values)
         if not is_valid:
             raise serializers.ValidationError(error_msg)

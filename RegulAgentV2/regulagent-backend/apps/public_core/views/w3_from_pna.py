@@ -99,6 +99,15 @@ class BuildW3FromPNAView(APIView):
         logger.info("=" * 80)
         logger.info(f"   Request content-type: {request.content_type}")
         logger.info(f"   Request data keys: {list(request.data.keys())}")
+        
+        # DEBUG: Check payload structure
+        if 'w3_form' in request.data:
+            logger.info("   ⚠️  Payload has 'w3_form' wrapper - checking structure")
+            w3_form_data = request.data.get('w3_form', {})
+            logger.info(f"      w3_form keys: {list(w3_form_data.keys())}")
+            if 'events' in w3_form_data:
+                logger.info(f"      Found 'events' in w3_form (not 'pna_events')")
+                logger.info(f"      Number of events: {len(w3_form_data.get('events', []))}")
 
         data = request.data
         if hasattr(request.data, "copy"):
@@ -144,10 +153,17 @@ class BuildW3FromPNAView(APIView):
         validated_data = serializer.validated_data
         api_number = validated_data.get("api_number")
         dwr_id = validated_data.get("dwr_id")
+        pna_events = validated_data.get('pna_events', [])
         
         logger.info(f"   API Number: {api_number}")
         logger.info(f"   DWR ID: {dwr_id}")
-        logger.info(f"   Events: {len(validated_data.get('pna_events', []))}")
+        logger.info(f"   Events: {len(pna_events)}")
+        
+        # DEBUG: Log first few events
+        for i, evt in enumerate(pna_events[:3]):
+            event_type_field = evt.get('event_type', '')
+            event_id_field = evt.get('event_id')
+            logger.info(f"   Event[{i}]: event_type='{event_type_field}', event_id={event_id_field}")
         
         try:
             # Build W-3 form

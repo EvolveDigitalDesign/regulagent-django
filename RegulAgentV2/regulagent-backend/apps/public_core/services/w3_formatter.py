@@ -248,6 +248,7 @@ def group_events_into_plugs(
         # Handle plug events
         elif event.event_type in ("set_cement_plug", "set_surface_plug", "squeeze"):
             plug_num = event.plug_number or (len(plugs) + 1)
+            logger.info(f"🔌 PLUG EVENT: plug#{plug_num}, depths={event.depth_top_ft}-{event.depth_bottom_ft}, sacks={event.sacks}, class={event.cement_class}")
             
             if plug_num not in plugs:
                 # Determine operation type (spot vs squeeze) for hole size selection

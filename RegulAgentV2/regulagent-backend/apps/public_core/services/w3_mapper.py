@@ -539,10 +539,16 @@ def map_pna_events_to_w3events(pna_events: List[Dict[str, Any]]) -> List[W3Event
     
     for i, pna_event in enumerate(pna_events):
         try:
+            event_type_field = pna_event.get("event_type", "")
+            display_text = pna_event.get("display_text", "")
+            logger.debug(f"📍 Processing event[{i}]: event_type='{event_type_field}', display_text='{display_text}'")
+            
             w3_event = map_pna_event_to_w3event(pna_event)
             w3_events.append(w3_event)
+            
+            logger.debug(f"   ✅ Mapped to W3Event: {w3_event.event_type}, plug#{w3_event.plug_number}")
         except Exception as e:
-            logger.error(f"Error mapping pna_event[{i}]: {e}", exc_info=True)
+            logger.error(f"❌ Error mapping pna_event[{i}]: {e}", exc_info=True)
             # Continue processing other events
             continue
     
