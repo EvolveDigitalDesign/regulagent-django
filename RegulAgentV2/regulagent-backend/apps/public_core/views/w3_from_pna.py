@@ -100,18 +100,34 @@ class BuildW3FromPNAView(APIView):
         logger.info(f"   Request content-type: {request.content_type}")
         logger.info(f"   Request data keys: {list(request.data.keys())}")
         
-        # DEBUG: Check payload structure
-        if 'w3_form' in request.data:
-            logger.info("   ⚠️  Payload has 'w3_form' wrapper - checking structure")
-            w3_form_data = request.data.get('w3_form', {})
-            logger.info(f"      w3_form keys: {list(w3_form_data.keys())}")
-            if 'events' in w3_form_data:
-                logger.info(f"      Found 'events' in w3_form (not 'pna_events')")
-                logger.info(f"      Number of events: {len(w3_form_data.get('events', []))}")
-
+        # DEBUG: Check payload structure and unwrap if needed
         data = request.data
         if hasattr(request.data, "copy"):
             data = request.data.copy()
+        
+        # Handle pnaexchange payload wrapped in w3_form
+        if 'w3_form' in data and 'pna_events' not in data:
+            logger.info("   ⚠️  Payload has 'w3_form' wrapper - unwrapping...")
+            w3_form_data = data.get('w3_form', {})
+            logger.info(f"      w3_form keys: {list(w3_form_data.keys())}")
+            
+            # Extract well info from wrapper
+            well_data = w3_form_data.get('well', {})
+            events = w3_form_data.get('events', [])
+            
+            logger.info(f"      Well ID: {well_data.get('well_id')}")
+            logger.info(f"      API Number: {well_data.get('api_number')}")
+            logger.info(f"      Number of events: {len(events)}")
+            
+            # Unwrap to flat structure expected by serializer
+            data['api_number'] = well_data.get('api_number') or data.get('api_number')
+            data['well_name'] = well_data.get('well_name') or data.get('well_name')
+            data['dwr_id'] = data.get('dwr_id') or 0  # Will need real DWR ID
+            data['pna_events'] = events
+            
+            logger.info(f"      Unwrapped payload: api_number={data['api_number']}, events={len(events)}")
+        else:
+            logger.info("   ✓ Payload structure is flat (not wrapped in w3_form)")
 
         if isinstance(data.get("w3a_reference"), str):
             try:
