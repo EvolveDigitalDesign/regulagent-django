@@ -59,6 +59,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 import logging
+import json
 
 from apps.public_core.serializers.w3_from_pna import (
     BuildW3FromPNARequestSerializer,
@@ -98,16 +99,33 @@ class BuildW3FromPNAView(APIView):
         logger.info("=" * 80)
         logger.info(f"   Request content-type: {request.content_type}")
         logger.info(f"   Request data keys: {list(request.data.keys())}")
-        logger.info(f"   w3a_reference in request: {'w3a_reference' in request.data}")
-        if 'w3a_reference' in request.data:
-            w3a_ref = request.data['w3a_reference']
-            logger.info(f"   w3a_reference keys: {list(w3a_ref.keys()) if isinstance(w3a_ref, dict) else type(w3a_ref)}")
-            if isinstance(w3a_ref, dict):
-                logger.info(f"   w3a_file_base64 present: {'w3a_file_base64' in w3a_ref}")
-                logger.info(f"   w3a_file_base64 length: {len(w3a_ref.get('w3a_file_base64', ''))}")
-        
+
+        data = request.data
+        if hasattr(request.data, "copy"):
+            data = request.data.copy()
+
+        if isinstance(data.get("w3a_reference"), str):
+            try:
+                data["w3a_reference"] = json.loads(data["w3a_reference"])
+                logger.info("   Parsed w3a_reference JSON string into dict")
+            except json.JSONDecodeError:
+                logger.warning("   Failed to parse w3a_reference string as JSON")
+
+        if isinstance(data.get("pna_events"), str):
+            try:
+                data["pna_events"] = json.loads(data["pna_events"])
+                logger.info("   Parsed pna_events JSON string into list")
+            except json.JSONDecodeError:
+                logger.warning("   Failed to parse pna_events string as JSON")
+
+        w3a_ref = data.get("w3a_reference", {})
+        if isinstance(w3a_ref, dict):
+            logger.info(f"   w3a_reference keys: {list(w3a_ref.keys())}")
+            logger.info(f"   w3a_file_base64 present: {'w3a_file_base64' in w3a_ref}")
+            logger.info(f"   w3a_file_base64 length: {len(w3a_ref.get('w3a_file_base64', '') or '')}")
+
         # Deserialize and validate request
-        serializer = BuildW3FromPNARequestSerializer(data=request.data)
+        serializer = BuildW3FromPNARequestSerializer(data=data)
         
         if not serializer.is_valid():
             logger.warning(f"❌ Request validation failed: {serializer.errors}")
