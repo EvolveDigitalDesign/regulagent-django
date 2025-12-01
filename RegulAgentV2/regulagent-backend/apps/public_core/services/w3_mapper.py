@@ -275,6 +275,7 @@ def extract_cement_plug_depths(
         # Only has 4 values, so position 5 is missing. Default to 0 (surface).
         if event_id == 3 and depth_bottom is None and depth_top is not None:
             # For surface plugs with no position 5, use 0 (surface)
+            print(f"🔴 DEBUG: Set Surface Plug (id=3) missing position 5 - setting depth_bottom=0.0 (input_values keys: {list(input_values.keys())})", flush=True)
             depth_bottom = 0.0
     
     # Fallback: use event_type to determine extraction method
@@ -561,10 +562,11 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
         raw_transformation_rules=transformation_rules,
     )
     
-    logger.debug(
+    print(
         f"✅ Mapped pna_event (id={event_id}, type_field='{event_type_field}') -> W3Event: "
         f"{w3_event.event_type} at depths {w3_event.depth_top_ft}-{w3_event.depth_bottom_ft} ft, "
-        f"plug#{plug_number}, class={cement_class}, sacks={sacks}"
+        f"plug#{plug_number}, class={cement_class}, sacks={sacks}",
+        flush=True
     )
     
     return w3_event
@@ -597,7 +599,15 @@ def map_pna_events_to_w3events(pna_events: List[Dict[str, Any]]) -> List[W3Event
             # Continue processing other events
             continue
     
-    logger.info(f"✅ Mapped {len(pna_events)} pnaexchange events to {len(w3_events)} W3Events")
+    print(f"✅ Mapped {len(pna_events)} pnaexchange events to {len(w3_events)} W3Events", flush=True)
+    # Print each W3Event for visibility
+    for event in w3_events:
+        if event.event_type in ("set_cement_plug", "set_surface_plug", "squeeze"):
+            print(
+                f"   📍 W3Event: plug#{event.plug_number}, type={event.event_type}, "
+                f"depths={event.depth_top_ft}-{event.depth_bottom_ft}, sacks={event.sacks}",
+                flush=True
+            )
     return w3_events
 
 
