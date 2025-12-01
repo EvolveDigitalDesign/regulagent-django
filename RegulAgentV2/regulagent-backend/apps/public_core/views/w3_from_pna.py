@@ -106,6 +106,10 @@ class BuildW3FromPNAView(APIView):
         logger.info(f"   Request data keys: {list(request.data.keys())}")
         print(f"Request keys: {list(request.data.keys())}", file=sys.stderr)
         
+        # Log raw payload before any processing
+        logger.info("\n📦 RAW PAYLOAD DUMP:")
+        logger.info(json.dumps(request.data, indent=2, default=str))
+        
         # DEBUG: Check payload structure and unwrap if needed
         data = request.data
         if hasattr(request.data, "copy"):
