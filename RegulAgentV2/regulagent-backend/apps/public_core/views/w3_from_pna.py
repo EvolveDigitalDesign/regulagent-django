@@ -94,6 +94,24 @@ class BuildW3FromPNAView(APIView):
         Returns:
             Response with W-3 form data or error
         """
+        import sys
+        print("=" * 80, file=sys.stderr)
+        print("🔵 W-3 API POST METHOD CALLED", file=sys.stderr)
+        print("=" * 80, file=sys.stderr)
+        print(f"Request keys: {list(request.data.keys())}", file=sys.stderr)
+        
+        # Log raw payload before any processing - use stderr so it shows
+        print("\n📦 RAW PAYLOAD DUMP:", file=sys.stderr)
+        # Don't include full PDF base64 - just show structure
+        payload_for_print = dict(request.data)
+        if 'w3a_reference' in payload_for_print and isinstance(payload_for_print['w3a_reference'], dict):
+            w3a_ref = dict(payload_for_print['w3a_reference'])
+            if 'w3a_file_base64' in w3a_ref:
+                w3a_ref['w3a_file_base64'] = '<base64 PDF data - truncated>'
+            payload_for_print['w3a_reference'] = w3a_ref
+        print(json.dumps(payload_for_print, indent=2, default=str), file=sys.stderr)
+        print("=" * 80, file=sys.stderr)
+        
         logger.info("=" * 80)
         logger.info("🔵 W-3 API REQUEST RECEIVED")
         logger.info("=" * 80)
