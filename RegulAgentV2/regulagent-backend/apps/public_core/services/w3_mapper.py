@@ -125,9 +125,9 @@ def normalize_event_type(event_id: Optional[int], display_text: str, event_type:
     Normalize event type using multiple sources in priority order.
     
     Priority:
-    1. event_id (numeric) via PNA_EVENT_ID_MAP
-    2. event_type (text field from pnaexchange payload)
-    3. display_text (fallback)
+    1. display_text (most reliable - check for plug keywords first)
+    2. event_id (numeric) via PNA_EVENT_ID_MAP
+    3. event_type (text field from pnaexchange payload)
     
     Args:
         event_id: Numeric event ID (if available)
@@ -137,7 +137,35 @@ def normalize_event_type(event_id: Optional[int], display_text: str, event_type:
     Returns:
         Normalized event type string
     """
-    # First try direct event_id mapping
+    display_lower = display_text.lower() if display_text else ""
+    
+    # Priority 1: Check display_text for explicit plug/perforation keywords
+    # This overrides event_id since display_text is more reliable
+    if "plug" in display_lower and "set" in display_lower:
+        if "surface" in display_lower or "circulate" in display_lower:
+            return "set_surface_plug"
+        elif "intermediate" in display_lower or "cement" in display_lower:
+            # Could be intermediate plug or just "set cement plug"
+            if "squeeze" in display_lower or "squeezed" in display_lower:
+                return "squeeze"
+            return "set_cement_plug"
+    
+    if "perforat" in display_lower:
+        return "perforate"
+    
+    if "tag" in display_lower and "toc" in display_lower:
+        return "tag_toc"
+    
+    if "tag" in display_lower and ("cibp" in display_lower or "bridge" in display_lower):
+        return "tag_bridge_plug"
+    
+    if "pressure" in display_lower:
+        return "pressure_up"
+    
+    if "circulation" in display_lower or "circulate" in display_lower:
+        return "broke_circulation"
+    
+    # Priority 2: Try direct event_id mapping
     if event_id is not None and event_id in PNA_EVENT_ID_MAP:
         return PNA_EVENT_ID_MAP[event_id]
     
