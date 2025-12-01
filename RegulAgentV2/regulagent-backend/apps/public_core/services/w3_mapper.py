@@ -252,7 +252,7 @@ def extract_cement_plug_depths(
     
     Template mapping:
     - Set Intermediate Plug (id=4): *_4_* = from, *_5_* = to
-    - Set Surface Plug (id=3): *_4_* = from, *_5_* = to
+    - Set Surface Plug (id=3): *_4_* = from, *_5_* = to (may be "surface" → 0)
     - Squeeze (id=7): *_4_* = from, *_5_* = to
     
     Returns:
@@ -269,6 +269,13 @@ def extract_cement_plug_depths(
         depth_top = parse_numeric(input_values.get("4"))
         # *_5_* is TO (design top of cement before squeeze)
         depth_bottom = parse_numeric(input_values.get("5"))
+        
+        # Special case: Set Surface Plug (id=3) with "to surface" - position 5 may be missing
+        # Template: "Plug (# *_) Rigged up pump and circulated (*_ sxs) class (*_) cement from (*_) to surface."
+        # Only has 4 values, so position 5 is missing. Default to 0 (surface).
+        if event_id == 3 and depth_bottom is None and depth_top is not None:
+            # For surface plugs with no position 5, use 0 (surface)
+            depth_bottom = 0.0
     
     # Fallback: use event_type to determine extraction method
     elif event_type in ("set_cement_plug", "set_surface_plug", "squeeze"):
@@ -277,6 +284,13 @@ def extract_cement_plug_depths(
         depth_top = parse_numeric(input_values.get("4"))
         # *_5_* is TO (design top of cement before squeeze)
         depth_bottom = parse_numeric(input_values.get("5"))
+        
+        # Special case: Set Surface Plug with "to surface" - position 5 may be missing
+        # Template: "Plug (# *_) Rigged up pump and circulated (*_ sxs) class (*_) cement from (*_) to surface."
+        # Only has 4 values, so position 5 is missing. Default to 0 (surface).
+        if event_type == "set_surface_plug" and depth_bottom is None and depth_top is not None:
+            # For surface plugs with no position 5, use 0 (surface)
+            depth_bottom = 0.0
     
     return depth_top, depth_bottom
 
