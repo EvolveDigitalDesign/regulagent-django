@@ -264,6 +264,8 @@ def group_events_into_plugs(
                     cement_class=event.cement_class,
                     sacks=event.sacks,
                     volume_bbl=event.volume_bbl,
+                    # Calculated TOC should reflect user-provided "to" depth (or surface = 0)
+                    calculated_top_of_plug_ft=event.depth_bottom_ft,
                 )
                 plug_sequence.append(plug_num)
                 last_plug_num = plug_num  # Track this as most recent
