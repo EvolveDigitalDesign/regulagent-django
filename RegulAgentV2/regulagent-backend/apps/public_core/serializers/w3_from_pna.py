@@ -94,6 +94,7 @@ class PNAEventSerializer(serializers.Serializer):
         # Either event_id or event_type must be present
         event_id = data.get("event_id")
         event_type = data.get("event_type", "")
+        display_text = data.get("display_text", "")
         
         if not event_id and not event_type:
             raise serializers.ValidationError("Either 'event_id' (numeric) or 'event_type' (text) must be provided")
@@ -101,6 +102,11 @@ class PNAEventSerializer(serializers.Serializer):
         # Validate input values
         input_values = data.get("input_values", {})
         is_valid, error_msg = validate_event_inputs(event_id, input_values)
+        
+        # DEBUG: Print for Plug 5 (display_text contains "Plug 5")
+        if "Plug 5" in display_text or "surface" in display_text.lower():
+            print(f"🔴 PNAEventSerializer.validate: event_id={event_id}, event_type='{event_type}', display='{display_text[:50]}...', input_count={len(input_values)}, is_valid={is_valid}, error={error_msg}", flush=True)
+        
         if not is_valid:
             raise serializers.ValidationError(error_msg)
         
