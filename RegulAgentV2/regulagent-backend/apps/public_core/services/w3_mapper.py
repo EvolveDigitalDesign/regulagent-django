@@ -125,23 +125,54 @@ def normalize_event_type(event_id: Optional[int], display_text: str, event_type:
     Normalize event type using multiple sources in priority order.
     
     Priority:
-    1. event_id (numeric) via PNA_EVENT_ID_MAP - primary source from pnaexchange
-    2. event_type (text field from pnaexchange payload)
-    3. display_text (fallback when event_id/event_type don't map)
+    1. display_text (most reliable - explicit descriptions like "Plug 1", "Perforated", etc)
+    2. event_id (numeric) via PNA_EVENT_ID_MAP
+    3. event_type (text field from pnaexchange payload)
+    
+    Note: pnaexchange's event_id can be unreliable (e.g., sending event_id=1 for plugs),
+    so display_text takes priority as it contains explicit descriptions.
     
     Args:
-        event_id: Numeric event ID (primary source)
-        display_text: Display text from event (fallback)
-        event_type: Text event_type field from pnaexchange payload
+        event_id: Numeric event ID (secondary source)
+        display_text: Display text from event (primary source)
+        event_type: Text event_type field from pnaexchange payload (tertiary)
     
     Returns:
         Normalized event type string
     """
-    # Priority 1: Try direct event_id mapping (most reliable)
+    display_lower = display_text.lower() if display_text else ""
+    
+    # Priority 1: Check display_text for explicit keywords (most reliable)
+    if "plug" in display_lower:
+        if "squeeze" in display_lower or "squeezed" in display_lower:
+            return "squeeze"
+        elif "surface" in display_lower or "circulate" in display_lower:
+            return "set_surface_plug"
+        elif "intermediate" in display_lower or "cement" in display_lower or "spot" in display_lower or "add plug" in display_lower:
+            return "set_cement_plug"
+        elif "cibp" in display_lower or "bridge" in display_lower:
+            return "set_bridge_plug"
+    
+    if "perforat" in display_lower:
+        return "perforate"
+    
+    if "tag" in display_lower:
+        if "toc" in display_lower or "cement" in display_lower:
+            return "tag_toc"
+        elif "cibp" in display_lower or "bridge" in display_lower:
+            return "tag_bridge_plug"
+    
+    if "pressure" in display_lower:
+        return "pressure_up"
+    
+    if "circulation" in display_lower or "circulate" in display_lower:
+        return "broke_circulation"
+    
+    # Priority 2: Try direct event_id mapping
     if event_id is not None and event_id in PNA_EVENT_ID_MAP:
         return PNA_EVENT_ID_MAP[event_id]
     
-    # Priority 2: Try event_type field (pnaexchange text format)
+    # Priority 3: Try event_type field (pnaexchange text format)
     if event_type:
         event_type_lower = event_type.lower()
         
