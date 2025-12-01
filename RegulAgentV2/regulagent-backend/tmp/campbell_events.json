@@ -1,0 +1,310 @@
+{
+    "status": "success",
+    "w3_form": {
+      "well": {
+        "well_id": 535,
+        "operator": "Summit Petroleum LLC",
+        "well_name": "CAMPBELL - 209",
+        "api_number": "42-461-38656"
+      },
+      "events": [
+        {
+          "date": "2025-11-20",
+          "dwr_id": 1181,
+          "end_time": "11:00:00",
+          "event_type": "Tag CIBP",
+          "start_time": "08:15:00",
+          "event_detail": "Tagged CIBP at Tag existing cibp 20 ft of cement tag at 6404 ",
+          "input_values": {
+            "1": "196 joints ",
+            "2": "Tag existing cibp 20 ft of cement tag at 6404 "
+          },
+          "duration_hours": 2.75,
+          "original_values": {
+            "1": "196 joints ",
+            "2": "Tag existing cibp 20 ft of cement tag at 6404 "
+          },
+          "work_assignment_id": 15612,
+          "transformation_rules": {
+            "required_inputs": 1
+          }
+        },
+        {
+          "date": "2025-11-20",
+          "dwr_id": 1181,
+          "end_time": "13:00:00",
+          "event_type": "Set Intermediate Plug",
+          "start_time": "12:15:00",
+          "event_detail": "Plug  1 add plug to well  Spot  40 class  C cement From  6404 to  5971. Displaced with  23.1.",
+          "input_values": {
+            "1": "1 add plug to well ",
+            "2": "40",
+            "3": "C",
+            "4": "6404",
+            "5": "5971",
+            "6": "23.1"
+          },
+          "duration_hours": 0.75,
+          "original_values": {
+            "1": "1 add plug to well ",
+            "2": "40",
+            "3": "C",
+            "4": "6404",
+            "5": "5971",
+            "6": "23.1"
+          },
+          "work_assignment_id": 15616,
+          "transformation_rules": {
+            "required_inputs": 6
+          }
+        },
+        {
+          "date": "2025-11-20",
+          "dwr_id": 1181,
+          "end_time": "14:15:00",
+          "event_type": "Set Intermediate Plug",
+          "start_time": "13:45:00",
+          "event_detail": "Plug  2 Spot  60 class  C cement From  4500 to  3850. Displaced with  14.1.",
+          "input_values": {
+            "1": "2",
+            "2": "60",
+            "3": "C",
+            "4": "4500",
+            "5": "3850",
+            "6": "14.1"
+          },
+          "duration_hours": 0.5,
+          "original_values": {
+            "1": "2",
+            "2": "60",
+            "3": "C",
+            "4": "4500",
+            "5": "3850",
+            "6": "14.1"
+          },
+          "work_assignment_id": 15670,
+          "transformation_rules": {
+            "required_inputs": 6
+          }
+        },
+        {
+          "date": "2025-11-21",
+          "dwr_id": 1215,
+          "end_time": "08:45:00",
+          "event_type": "Tag TOC",
+          "start_time": "08:15:00",
+          "event_detail": "Tagged top of cement at 3858",
+          "input_values": {
+            "1": "30 stands total 118 ",
+            "2": "3858"
+          },
+          "duration_hours": 0.5,
+          "original_values": {
+            "1": "30 stands total 118 ",
+            "2": "3858"
+          },
+          "work_assignment_id": 16050,
+          "transformation_rules": {
+            "required_inputs": 1
+          }
+        },
+        {
+          "date": "2025-11-21",
+          "dwr_id": 1215,
+          "end_time": "09:45:00",
+          "event_type": "Perforation",
+          "start_time": "09:15:00",
+          "event_detail": "Perforated at 2500 ft.",
+          "input_values": {
+            "1": "2500"
+          },
+          "duration_hours": 0.5,
+          "original_values": {
+            "1": "2500"
+          },
+          "work_assignment_id": 16052,
+          "transformation_rules": {
+            "required_inputs": 1
+          }
+        },
+        {
+          "date": "2025-11-21",
+          "dwr_id": 1215,
+          "end_time": "10:00:00",
+          "event_type": "Pressure Up",
+          "start_time": "09:45:00",
+          "event_detail": "Pressure Up",
+          "input_values": {
+            "1": "2000 only could pump 3 bbls and I realize valve got back 3 bbls "
+          },
+          "duration_hours": 0.25,
+          "original_values": {
+            "1": "2000 only could pump 3 bbls and I realize valve got back 3 bbls "
+          },
+          "work_assignment_id": 16053,
+          "transformation_rules": {
+            "required_inputs": 0
+          }
+        },
+        {
+          "date": "2025-11-21",
+          "dwr_id": 1215,
+          "end_time": "11:00:00",
+          "event_type": "Set Intermediate Plug",
+          "start_time": "10:30:00",
+          "event_detail": "Plug  3 Spot  40 class  C cement From  2550 to  2117. Displaced with  8.1.",
+          "input_values": {
+            "1": "3",
+            "2": "40",
+            "3": "C",
+            "4": "2550",
+            "5": "2117",
+            "6": "8.1"
+          },
+          "duration_hours": 0.5,
+          "original_values": {
+            "1": "3",
+            "2": "40",
+            "3": "C",
+            "4": "2550",
+            "5": "2117",
+            "6": "8.1"
+          },
+          "work_assignment_id": 16056,
+          "transformation_rules": {
+            "required_inputs": 6
+          }
+        },
+        {
+          "date": "2025-11-21",
+          "dwr_id": 1215,
+          "end_time": "13:30:00",
+          "event_type": "Perforation",
+          "start_time": "13:00:00",
+          "event_detail": "Perforated at 788 ft.",
+          "input_values": {
+            "1": "788"
+          },
+          "duration_hours": 0.5,
+          "original_values": {
+            "1": "788"
+          },
+          "work_assignment_id": 16185,
+          "transformation_rules": {
+            "required_inputs": 1
+          }
+        },
+        {
+          "date": "2025-11-21",
+          "dwr_id": 1215,
+          "end_time": "15:45:00",
+          "event_type": "Set Surface Plug",
+          "start_time": "15:15:00",
+          "event_detail": "Plug 4 add plug from rrc Squeezed 45 class C cement from 788 to 688",
+          "input_values": {
+            "1": "4 add plug from rrc",
+            "2": "45",
+            "3": "C",
+            "4": "788",
+            "5": "688",
+            "6": "8.3",
+            "7": "300"
+          },
+          "duration_hours": 0.5,
+          "original_values": {
+            "1": "4 add plug from rrc",
+            "2": "45",
+            "3": "C",
+            "4": "788",
+            "5": "688",
+            "6": "8.3",
+            "7": "300"
+          },
+          "work_assignment_id": 16190,
+          "transformation_rules": {
+            "required_inputs": 5
+          }
+        },
+        {
+          "date": "2025-11-24",
+          "dwr_id": 1279,
+          "end_time": "08:30:00",
+          "event_type": "Tag TOC",
+          "start_time": "08:15:00",
+          "event_detail": "Tagged top of cement at 622 ft ",
+          "input_values": {
+            "1": "Pick 7 joints total 19",
+            "2": "622 ft "
+          },
+          "duration_hours": 0.25,
+          "original_values": {
+            "1": "Pick 7 joints total 19",
+            "2": "622 ft "
+          },
+          "work_assignment_id": 16841,
+          "transformation_rules": {
+            "required_inputs": 1
+          }
+        },
+        {
+          "date": "2025-11-24",
+          "dwr_id": 1279,
+          "end_time": "09:15:00",
+          "event_type": "Perforation",
+          "start_time": "09:00:00",
+          "event_detail": "Perforated at 525  ft.",
+          "input_values": {
+            "1": "525 "
+          },
+          "duration_hours": 0.25,
+          "original_values": {
+            "1": "525 "
+          },
+          "work_assignment_id": 16844,
+          "transformation_rules": {
+            "required_inputs": 1
+          }
+        },
+        {
+          "date": "2025-11-24",
+          "dwr_id": 1279,
+          "end_time": "12:00:00",
+          "event_type": "Set Surface Plug",
+          "start_time": "11:15:00",
+          "event_detail": "Plug 5 Rigged up pump and circulated 140 class C cement from 525 to surface.",
+          "input_values": {
+            "1": "5",
+            "2": "140",
+            "3": "C",
+            "4": "525"
+          },
+          "duration_hours": 0.75,
+          "original_values": {
+            "1": "5",
+            "2": "140",
+            "3": "C",
+            "4": "525"
+          },
+          "work_assignment_id": 16849,
+          "transformation_rules": {}
+        }
+      ],
+      "summary": {
+        "date_range": {
+          "end": "2025-11-24",
+          "start": "2025-11-20"
+        },
+        "total_hours": 8.0,
+        "total_events": 12
+      },
+      "subproject": {
+        "id": 355,
+        "name": "CAMPBELL - 209 - P&A - 11-18-2025",
+        "type": "P&A",
+        "status": "completed"
+      },
+      "generated_at": "2025-12-01T19:24:20.573864+00:00"
+    }
+  }
+  
+  

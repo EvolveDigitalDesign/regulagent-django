@@ -1,0 +1,116 @@
+{
+  "header": {
+    "api_number": "46138656",
+    "well_name": "209",
+    "operator": "SUMMIT PETROLEUM LLC",
+    "county": "UPTON",
+    "rrc_district": "7C",
+    "field": "SPRABERRY [TREND AREA]",
+    "total_depth_ft": 9402
+  },
+  "casing_record": [
+    {
+      "string_type": "surface",
+      "size_in": 8.625,
+      "weight_ppf": null,
+      "hole_size_in": 13.5,
+      "top_ft": 0,
+      "bottom_ft": 738,
+      "shoe_depth_ft": 738,
+      "cement_top_ft": 670,
+      "removed_to_depth_ft": null
+    },
+    {
+      "string_type": "production",
+      "size_in": 5.5,
+      "weight_ppf": null,
+      "hole_size_in": 7.875,
+      "top_ft": 0,
+      "bottom_ft": 9402,
+      "shoe_depth_ft": 9402,
+      "cement_top_ft": 3130,
+      "removed_to_depth_ft": null
+    }
+  ],
+  "perforations": [
+    {
+      "interval_top_ft": 6484,
+      "interval_bottom_ft": 9030,
+      "formation": null,
+      "status": "plugged",
+      "perforation_date": null
+    }
+  ],
+  "plugging_proposal": [
+    {
+      "plug_number": 1,
+      "depth_top_ft": 4500,
+      "depth_bottom_ft": 4300,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 30,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 2,
+      "depth_top_ft": 2500,
+      "depth_bottom_ft": 2400,
+      "type": "cement_plug",
+      "cement_class": null,
+      "sacks": 45,
+      "volume_bbl": null,
+      "remarks": null
+    },
+    {
+      "plug_number": 3,
+      "depth_top_ft": 788,
+      "depth_bottom_ft": 3,
+      "type": "cement_surface_plug",
+      "cement_class": null,
+      "sacks": 296,
+      "volume_bbl": null,
+      "remarks": null
+    }
+  ],
+  "operational_steps": [
+    {
+      "step_order": 1,
+      "step_type": "tag_toc",
+      "plug_number": null,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Tag existing CIBP @ 6405 w/ 20' cmt on top"
+    },
+    {
+      "step_order": 2,
+      "step_type": "wait_on_cement",
+      "plug_number": 1,
+      "depth_ft": null,
+      "wait_hours": 4,
+      "description": "Wait 4 hours and tag top of plug"
+    },
+    {
+      "step_order": 3,
+      "step_type": "perforate_and_squeeze",
+      "plug_number": 2,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Perforate and Squeeze"
+    },
+    {
+      "step_order": 4,
+      "step_type": "perforate_and_circulate",
+      "plug_number": 3,
+      "depth_ft": null,
+      "wait_hours": null,
+      "description": "Perforate and Circulate"
+    }
+  ],
+  "duqw": {
+    "depth_ft": 475,
+    "formation": null,
+    "determination_method": null
+  },
+  "remarks": null
+}
