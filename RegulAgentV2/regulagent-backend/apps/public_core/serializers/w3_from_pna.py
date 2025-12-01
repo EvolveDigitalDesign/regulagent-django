@@ -175,9 +175,9 @@ class W3AReference(serializers.Serializer):
 class BuildW3FromPNARequestSerializer(serializers.Serializer):
     """Request payload for POST /api/w3/build-from-pna/"""
     
-    dwr_id = serializers.IntegerField(
+    subproject_id = serializers.IntegerField(
         required=True,
-        help_text="DWR (Daily Work Report) ID from pnaexchange"
+        help_text="Subproject ID (RegulAgent identifier for this W-3 run)"
     )
     
     api_number = serializers.CharField(
