@@ -94,18 +94,6 @@ class BuildW3FromPNAView(APIView):
         Returns:
             Response with W-3 form data or error
         """
-        import sys
-        print("=" * 80, file=sys.stderr)
-        print("🔵 W-3 API POST METHOD CALLED", file=sys.stderr)
-        print("=" * 80, file=sys.stderr)
-        print(f"Request keys: {list(request.data.keys())}", file=sys.stderr)
-        
-        # Log raw payload before any processing - use stderr so it shows
-        print("\n📦 RAW PAYLOAD DUMP:", file=sys.stderr)
-        payload_json = json.dumps(request.data, indent=2, default=str)
-        print(payload_json, file=sys.stderr)
-        print("=" * 80, file=sys.stderr)
-        
         logger.info("=" * 80)
         logger.info("🔵 W-3 API REQUEST RECEIVED")
         logger.info("=" * 80)
