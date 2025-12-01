@@ -133,11 +133,12 @@ class W3AReference(serializers.Serializer):
         if ref_type == "pdf":
             # Either w3a_file (multipart) or w3a_file_base64 (JSON) must be present
             has_file = bool(data.get("w3a_file"))
-            has_base64 = bool(data.get("w3a_file_base64"))
+            has_base64 = bool(data.get("w3a_file_base64"))  # Non-empty string
             
             if not has_file and not has_base64:
+                available_keys = list(data.keys())
                 raise serializers.ValidationError(
-                    "Either 'w3a_file' (multipart) or 'w3a_file_base64' (JSON) is required when type='pdf'"
+                    f"Either 'w3a_file' (multipart) or 'w3a_file_base64' (JSON) is required when type='pdf'. Got keys: {available_keys}"
                 )
         
         return data

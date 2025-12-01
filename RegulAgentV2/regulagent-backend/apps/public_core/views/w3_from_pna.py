@@ -96,6 +96,15 @@ class BuildW3FromPNAView(APIView):
         logger.info("=" * 80)
         logger.info("🔵 W-3 API REQUEST RECEIVED")
         logger.info("=" * 80)
+        logger.info(f"   Request content-type: {request.content_type}")
+        logger.info(f"   Request data keys: {list(request.data.keys())}")
+        logger.info(f"   w3a_reference in request: {'w3a_reference' in request.data}")
+        if 'w3a_reference' in request.data:
+            w3a_ref = request.data['w3a_reference']
+            logger.info(f"   w3a_reference keys: {list(w3a_ref.keys()) if isinstance(w3a_ref, dict) else type(w3a_ref)}")
+            if isinstance(w3a_ref, dict):
+                logger.info(f"   w3a_file_base64 present: {'w3a_file_base64' in w3a_ref}")
+                logger.info(f"   w3a_file_base64 length: {len(w3a_ref.get('w3a_file_base64', ''))}")
         
         # Deserialize and validate request
         serializer = BuildW3FromPNARequestSerializer(data=request.data)
