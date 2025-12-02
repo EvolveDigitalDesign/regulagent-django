@@ -176,8 +176,15 @@ class BuildW3FromPNARequestSerializer(serializers.Serializer):
     """Request payload for POST /api/w3/build-from-pna/"""
     
     subproject_id = serializers.IntegerField(
-        required=True,
+        required=False,
+        allow_null=True,
         help_text="Subproject ID (RegulAgent identifier for this W-3 run)"
+    )
+    
+    dwr_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text="Deprecated (was previously subproject ID). Provided for backwards compatibility."
     )
     
     api_number = serializers.CharField(
@@ -209,6 +216,24 @@ class BuildW3FromPNARequestSerializer(serializers.Serializer):
         allow_null=True,
         help_text="Multi-tenant support: tenant ID"
     )
+    
+    def validate(self, data):
+        """
+        Ensure subproject_id is present (either via new field or legacy dwr_id)
+        and normalize legacy payloads.
+        """
+        subproject_id = data.get("subproject_id")
+        legacy_dwr_id = data.get("dwr_id")
+        
+        if subproject_id is None and legacy_dwr_id is None:
+            raise serializers.ValidationError({
+                "subproject_id": "This field is required.",
+                "dwr_id": "Provide either 'subproject_id' or (legacy) 'dwr_id'."
+            })
+        
+        # Normalize: always set subproject_id, keep legacy dwr_id for logging.
+        data["subproject_id"] = subproject_id or legacy_dwr_id
+        return data
 
 
 class PlugRowSerializer(serializers.Serializer):
@@ -303,7 +328,8 @@ class MetadataSerializer(serializers.Serializer):
     """Metadata about the generated W-3 form."""
     
     api_number = serializers.CharField(max_length=20)
-    dwr_id = serializers.IntegerField()
+    subproject_id = serializers.IntegerField()
+    dwr_id = serializers.IntegerField(required=False, allow_null=True)
     events_processed = serializers.IntegerField(help_text="Number of pnaexchange events processed")
     plugs_grouped = serializers.IntegerField(help_text="Number of plugs in final form")
     generated_at = serializers.DateTimeField(help_text="ISO format timestamp")

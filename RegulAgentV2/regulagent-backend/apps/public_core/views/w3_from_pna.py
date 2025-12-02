@@ -186,11 +186,11 @@ class BuildW3FromPNAView(APIView):
         # Extract validated data
         validated_data = serializer.validated_data
         api_number = validated_data.get("api_number")
-        dwr_id = validated_data.get("dwr_id")
+        subproject_id = validated_data.get("subproject_id")
         pna_events = validated_data.get('pna_events', [])
         
         logger.info(f"   API Number: {api_number}")
-        logger.info(f"   DWR ID: {dwr_id}")
+        logger.info(f"   Subproject ID: {subproject_id}")
         logger.info(f"   Events: {len(pna_events)}")
         
         # DEBUG: Log first few events

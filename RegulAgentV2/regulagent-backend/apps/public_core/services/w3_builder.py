@@ -102,6 +102,7 @@ def build_w3_from_pna_payload(
     
     warnings = []
     errors = []
+    subproject_id = pna_payload.get("subproject_id") or pna_payload.get("dwr_id")
     
     try:
         # ============================================================
@@ -214,7 +215,8 @@ def build_w3_from_pna_payload(
             },
             "metadata": {
                 "api_number": w3a_form.get("header", {}).get("api_number"),
-                "dwr_id": pna_payload.get("dwr_id"),
+                "subproject_id": subproject_id,
+                "dwr_id": subproject_id,  # legacy key kept for backward compatibility
                 "events_processed": len(w3_events),
                 "plugs_grouped": len(w3_form.plugs),
                 "generated_at": datetime.now(pytz.UTC).isoformat(),
@@ -240,7 +242,8 @@ def build_w3_from_pna_payload(
             },
             "metadata": {
                 "api_number": pna_payload.get("api_number"),
-                "dwr_id": pna_payload.get("dwr_id"),
+                "subproject_id": subproject_id,
+                "dwr_id": subproject_id,
                 "generated_at": datetime.now(pytz.UTC).isoformat(),
             }
         }
