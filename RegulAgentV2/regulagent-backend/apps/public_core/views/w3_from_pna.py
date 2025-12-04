@@ -202,53 +202,86 @@ class BuildW3FromPNAView(APIView):
         # ============================================================
         # AUTO-GENERATE W-3A FOR THIS API (using orchestrator)
         # ============================================================
-        logger.info("\n🔍 STEP: Triggering auto-W-3A generation...")
+        logger.info("\n" + "=" * 80)
+        logger.info("🔍 STEP: Checking for W-3A plan and triggering generation if needed...")
+        logger.info("=" * 80)
         auto_w3a_result = None
+        w3a_geometry_from_db = None
         try:
             from apps.public_core.services.w3_utils import normalize_api_number
             from apps.public_core.services.w3a_orchestrator import generate_w3a_for_api
+            from apps.public_core.services.w3_extraction import get_w3a_geometry_from_database
             from apps.public_core.models import ExtractedDocument
             
             # Normalize the API number
+            logger.info(f"📥 Input API number: {api_number}")
             normalized_api = normalize_api_number(api_number)
+            logger.info(f"✅ Normalized API: {normalized_api}")
+            
             if normalized_api:
-                logger.info(f"   Checking for existing W-3A extractions for API: {normalized_api}")
+                logger.info(f"\n🔎 PHASE 1: Checking for existing W-3A plan in database...")
                 
-                # Check if we already have w2, w15, gau extractions for this API
-                w2_exists = ExtractedDocument.objects.filter(
-                    api_number__contains=normalized_api[-8:],  # Match last 8 digits
-                    document_type="w2"
-                ).exists()
+                # FIRST: Try to retrieve existing W-3A plan from database
+                logger.info(f"   → Calling get_w3a_geometry_from_database()...")
+                w3a_geometry_from_db = get_w3a_geometry_from_database(normalized_api)
                 
-                if not w2_exists:
-                    logger.info(f"   ⚠️  No W-2 extraction found, triggering full W-3A generation...")
-                    try:
-                        # Call orchestrator with default auto-generation parameters
-                        auto_w3a_result = generate_w3a_for_api(
-                            api_number=normalized_api,
-                            plugs_mode="combined",           # Best practice
-                            input_mode="extractions",        # RRC data only
-                            merge_threshold_ft=500.0,
-                            request=request,
-                            confirm_fact_updates=False,       # Don't auto-modify well registry
-                            allow_precision_upgrades_only=True,  # Conservative
-                            use_gau_override_if_invalid=False
-                        )
-                        
-                        if auto_w3a_result and auto_w3a_result.get("success"):
-                            logger.info(f"   ✅ W-3A generation succeeded: snapshot_id={auto_w3a_result.get('snapshot_id')}")
-                        else:
-                            logger.warning(f"   ⚠️  W-3A generation failed: {auto_w3a_result.get('error') if auto_w3a_result else 'Unknown error'}")
-                    except Exception as e:
-                        logger.warning(f"   ⚠️  W-3A generation failed (non-fatal): {e}")
-                        # Continue anyway - don't block W-3 generation
+                if w3a_geometry_from_db:
+                    logger.info(f"\n✅ SUCCESS - Found existing W-3A plan in database!")
+                    logger.info(f"   Will use this geometry for W3 response")
                 else:
-                    logger.info(f"   ✅ W-3A data already extracted for this API")
+                    logger.info(f"\n⚠️  No W-3A plan found in database")
+                    logger.info(f"   Proceeding to PHASE 2: Check for RRC extractions...")
+                    
+                    # SECOND: Check if we have RRC extractions (W-2, W-15, GAU)
+                    logger.info(f"\n🔎 PHASE 2: Checking for existing RRC extractions (W-2, W-15, GAU)...")
+                    logger.info(f"   Searching for W-2 document with API containing: {normalized_api[-8:]}")
+                    
+                    w2_exists = ExtractedDocument.objects.filter(
+                        api_number__contains=normalized_api[-8:],  # Match last 8 digits
+                        document_type="w2"
+                    ).exists()
+                    
+                    if w2_exists:
+                        logger.info(f"   ✅ Found existing W-2 extraction")
+                        logger.info(f"\n✅ RRC extractions already exist for this API")
+                        logger.info(f"   W-3A plan should have been created (but not found in DB)")
+                        logger.info(f"   → Skipping W-3A orchestrator call")
+                    else:
+                        logger.info(f"   ❌ No W-2 extraction found")
+                        logger.info(f"\n⚠️  PHASE 3: Triggering full W-3A generation via orchestrator...")
+                        logger.info(f"   No RRC extractions exist, need to generate complete W-3A plan")
+                        try:
+                            logger.info(f"   → Calling generate_w3a_for_api()...")
+                            # Call orchestrator with default auto-generation parameters
+                            auto_w3a_result = generate_w3a_for_api(
+                                api_number=normalized_api,
+                                plugs_mode="combined",           # Best practice
+                                input_mode="extractions",        # RRC data only
+                                merge_threshold_ft=500.0,
+                                request=request,
+                                confirm_fact_updates=False,       # Don't auto-modify well registry
+                                allow_precision_upgrades_only=True,  # Conservative
+                                use_gau_override_if_invalid=False
+                            )
+                            
+                            if auto_w3a_result and auto_w3a_result.get("success"):
+                                logger.info(f"\n✅ W-3A generation SUCCEEDED")
+                                logger.info(f"   Snapshot ID: {auto_w3a_result.get('snapshot_id')}")
+                                logger.info(f"   Will include this geometry in W3 response")
+                            else:
+                                error_msg = auto_w3a_result.get('error') if auto_w3a_result else 'Unknown error'
+                                logger.warning(f"\n❌ W-3A generation FAILED: {error_msg}")
+                                logger.warning(f"   Continuing with W-3 generation anyway (non-fatal)")
+                        except Exception as e:
+                            logger.warning(f"\n❌ Exception during W-3A orchestrator call: {e}", exc_info=True)
+                            logger.warning(f"   Continuing with W-3 generation anyway (non-fatal)")
+                            # Continue anyway - don't block W-3 generation
             else:
-                logger.warning(f"   ⚠️  Could not normalize API number: {api_number}")
+                logger.warning(f"❌ Could not normalize API number: {api_number}")
         
         except Exception as e:
-            logger.warning(f"   ⚠️  Auto-W-3A generation check failed (non-fatal): {e}")
+            logger.error(f"❌ Unexpected exception in auto-W-3A generation check: {e}", exc_info=True)
+            logger.warning(f"   Continuing with W-3 generation anyway (non-fatal)")
             # Continue anyway - don't block W-3 generation
         
         try:
@@ -274,16 +307,45 @@ class BuildW3FromPNAView(APIView):
             
             logger.info("✅ Response validated successfully")
             
-            # Add well geometry from auto-generated W-3A if available
-            if auto_w3a_result and auto_w3a_result.get("success"):
-                logger.info("Adding auto-generated W-3A well geometry to response...")
-                result["w3a_well_geometry"] = auto_w3a_result.get("w3a_well_geometry")
+            # Add well geometry from W-3A (prioritize database, fallback to newly generated)
+            logger.info("\n" + "=" * 80)
+            logger.info("📦 PHASE 4: Building final response with W-3A geometry...")
+            logger.info("=" * 80)
+            
+            w3a_geometry_to_include = None
+            
+            if w3a_geometry_from_db:
+                logger.info("✅ PRIORITY 1: Using W-3A geometry from DATABASE")
+                logger.info(f"   - Casing strings: {len(w3a_geometry_from_db.get('casing_record', []))}")
+                logger.info(f"   - Formation tops: {len(w3a_geometry_from_db.get('formation_tops', []))}")
+                logger.info(f"   - Perforations: {len(w3a_geometry_from_db.get('perforations', []))}")
+                logger.info(f"   - Operational steps: {len(w3a_geometry_from_db.get('operational_steps', []))}")
+                w3a_geometry_to_include = w3a_geometry_from_db
+            elif auto_w3a_result and auto_w3a_result.get("success"):
+                logger.info("✅ PRIORITY 2: Using W-3A geometry from NEWLY-GENERATED orchestrator result")
+                geometry = auto_w3a_result.get("w3a_well_geometry", {})
+                logger.info(f"   - Casing strings: {len(geometry.get('casing_record', []))}")
+                logger.info(f"   - Formation tops: {len(geometry.get('formation_tops', []))}")
+                logger.info(f"   - Perforations: {len(geometry.get('perforations', []))}")
+                w3a_geometry_to_include = geometry
+            else:
+                logger.warning("⚠️  NO W-3A geometry available (neither from DB nor newly-generated)")
+                logger.warning("   W3 response will be generated without well geometry data")
+            
+            if w3a_geometry_to_include:
+                logger.info("✅ Adding W-3A geometry to response...")
+                result["w3a_well_geometry"] = w3a_geometry_to_include
                 
                 # Re-validate with well geometry added
                 response_serializer = BuildW3FromPNAResponseSerializer(data=result)
                 if not response_serializer.is_valid():
                     logger.warning(f"⚠️ Response validation failed after adding geometry: {response_serializer.errors}")
+                    logger.warning(f"   Still including geometry (it's informational)")
                     # Still include it even if validation fails (geometry is informational)
+                else:
+                    logger.info("✅ Response validation successful with geometry included")
+            else:
+                logger.warning("⚠️  Skipping geometry addition (none available)")
             
             # Return response
             if result.get("success"):
