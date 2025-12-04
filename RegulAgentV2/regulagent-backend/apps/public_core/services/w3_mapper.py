@@ -451,7 +451,7 @@ def extract_tag_depth(
     return None
 
 
-def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
+def map_pna_event_to_w3event(pna_event: Dict[str, Any], api_number: Optional[str] = None) -> W3Event:
     """
     Map a raw pnaexchange event dictionary to a W3Event dataclass instance.
     
@@ -470,11 +470,14 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
                 "start_time": "09:30:00",
                 "end_time": "10:15:00",
                 "work_assignment_id": 12345,
-                "dwr_id": 67890
+                "dwr_id": 67890,
+                "api_number": "42-501-70575"  # Optional; will be normalized if provided
             }
+        api_number: Normalized API number (8-digit) to attach to event. If provided,
+                   takes precedence over api_number in pna_event.
     
     Returns:
-        W3Event instance
+        W3Event instance with api_number attached
     """
     event_id = pna_event.get("event_id")
     event_type_field = pna_event.get("event_type", "")  # NEW: Extract event_type text field
@@ -540,9 +543,17 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
     event_detail = pna_event.get('event_detail', '')
     raw_detail = event_detail if event_detail else display_text
     
+    # Determine which API number to use (prioritize parameter, then event-level, then None)
+    event_api = api_number
+    if not event_api:
+        from apps.public_core.services.w3_utils import normalize_api_number
+        event_api_input = pna_event.get("api_number")
+        event_api = normalize_api_number(event_api_input) if event_api_input else None
+    
     w3_event = W3Event(
         event_type=event_type,
         date=event_date,
+        api_number=event_api,  # Attach normalized API to each event
         start_time=start_time,
         end_time=end_time,
         depth_top_ft=depth_top_ft,
@@ -572,12 +583,13 @@ def map_pna_event_to_w3event(pna_event: Dict[str, Any]) -> W3Event:
     return w3_event
 
 
-def map_pna_events_to_w3events(pna_events: List[Dict[str, Any]]) -> List[W3Event]:
+def map_pna_events_to_w3events(pna_events: List[Dict[str, Any]], api_number: Optional[str] = None) -> List[W3Event]:
     """
     Map a list of raw pnaexchange event dictionaries to a list of W3Event instances.
     
     Args:
         pna_events: List of event dictionaries from pnaexchange
+        api_number: Normalized API number (8-digit) to attach to all events
     
     Returns:
         List of W3Event instances
@@ -590,7 +602,7 @@ def map_pna_events_to_w3events(pna_events: List[Dict[str, Any]]) -> List[W3Event
             display_text = pna_event.get("display_text", "")
             logger.debug(f"📍 Processing event[{i}]: event_type='{event_type_field}', display_text='{display_text}'")
             
-            w3_event = map_pna_event_to_w3event(pna_event)
+            w3_event = map_pna_event_to_w3event(pna_event, api_number=api_number)
             w3_events.append(w3_event)
             
             logger.debug(f"   ✅ Mapped to W3Event: {w3_event.event_type}, plug#{w3_event.plug_number}")

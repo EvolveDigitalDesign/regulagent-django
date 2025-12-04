@@ -199,6 +199,58 @@ class BuildW3FromPNAView(APIView):
             event_id_field = evt.get('event_id')
             logger.info(f"   Event[{i}]: event_type='{event_type_field}', event_id={event_id_field}")
         
+        # ============================================================
+        # AUTO-GENERATE W-3A FOR THIS API (using orchestrator)
+        # ============================================================
+        logger.info("\n🔍 STEP: Triggering auto-W-3A generation...")
+        auto_w3a_result = None
+        try:
+            from apps.public_core.services.w3_utils import normalize_api_number
+            from apps.public_core.services.w3a_orchestrator import generate_w3a_for_api
+            from apps.public_core.models import ExtractedDocument
+            
+            # Normalize the API number
+            normalized_api = normalize_api_number(api_number)
+            if normalized_api:
+                logger.info(f"   Checking for existing W-3A extractions for API: {normalized_api}")
+                
+                # Check if we already have w2, w15, gau extractions for this API
+                w2_exists = ExtractedDocument.objects.filter(
+                    api_number__contains=normalized_api[-8:],  # Match last 8 digits
+                    document_type="w2"
+                ).exists()
+                
+                if not w2_exists:
+                    logger.info(f"   ⚠️  No W-2 extraction found, triggering full W-3A generation...")
+                    try:
+                        # Call orchestrator with default auto-generation parameters
+                        auto_w3a_result = generate_w3a_for_api(
+                            api_number=normalized_api,
+                            plugs_mode="combined",           # Best practice
+                            input_mode="extractions",        # RRC data only
+                            merge_threshold_ft=500.0,
+                            request=request,
+                            confirm_fact_updates=False,       # Don't auto-modify well registry
+                            allow_precision_upgrades_only=True,  # Conservative
+                            use_gau_override_if_invalid=False
+                        )
+                        
+                        if auto_w3a_result and auto_w3a_result.get("success"):
+                            logger.info(f"   ✅ W-3A generation succeeded: snapshot_id={auto_w3a_result.get('snapshot_id')}")
+                        else:
+                            logger.warning(f"   ⚠️  W-3A generation failed: {auto_w3a_result.get('error') if auto_w3a_result else 'Unknown error'}")
+                    except Exception as e:
+                        logger.warning(f"   ⚠️  W-3A generation failed (non-fatal): {e}")
+                        # Continue anyway - don't block W-3 generation
+                else:
+                    logger.info(f"   ✅ W-3A data already extracted for this API")
+            else:
+                logger.warning(f"   ⚠️  Could not normalize API number: {api_number}")
+        
+        except Exception as e:
+            logger.warning(f"   ⚠️  Auto-W-3A generation check failed (non-fatal): {e}")
+            # Continue anyway - don't block W-3 generation
+        
         try:
             # Build W-3 form
             result = build_w3_from_pna_payload(
@@ -221,6 +273,17 @@ class BuildW3FromPNAView(APIView):
                 )
             
             logger.info("✅ Response validated successfully")
+            
+            # Add well geometry from auto-generated W-3A if available
+            if auto_w3a_result and auto_w3a_result.get("success"):
+                logger.info("Adding auto-generated W-3A well geometry to response...")
+                result["w3a_well_geometry"] = auto_w3a_result.get("w3a_well_geometry")
+                
+                # Re-validate with well geometry added
+                response_serializer = BuildW3FromPNAResponseSerializer(data=result)
+                if not response_serializer.is_valid():
+                    logger.warning(f"⚠️ Response validation failed after adding geometry: {response_serializer.errors}")
+                    # Still include it even if validation fails (geometry is informational)
             
             # Return response
             if result.get("success"):

@@ -72,6 +72,7 @@ class W3Event:
     # Event identification
     event_type: str                           # "Set Surface Plug", "Squeeze", "Perforate", etc.
     date: date                                # Work date
+    api_number: Optional[str] = None          # RRC API number (8-digit normalized, e.g., "4250170575")
     start_time: Optional[time] = None         # Work start time
     end_time: Optional[time] = None           # Work end time
     
@@ -113,6 +114,7 @@ class Plug:
     Attributes:
         plug_number: Sequential plug number (1, 2, 3, ...)
         events: List of W3Event objects for this plug
+        api_number: RRC API number (inherited from events, for tracking)
         depth_top_ft: Top depth of plug interval
         depth_bottom_ft: Bottom depth of plug interval
         type: Plug type (cement_plug, bridge_plug, squeeze, etc.)
@@ -127,6 +129,7 @@ class Plug:
     """
     plug_number: int
     events: List[W3Event] = field(default_factory=list)
+    api_number: Optional[str] = None           # RRC API number (inherited from events)
     depth_top_ft: Optional[float] = None
     depth_bottom_ft: Optional[float] = None
     type: Optional[str] = None

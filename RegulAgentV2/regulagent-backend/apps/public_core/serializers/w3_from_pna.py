@@ -35,6 +35,14 @@ class PNAEventSerializer(serializers.Serializer):
         help_text="Human-readable event name (e.g., 'Set Intermediate Plug')"
     )
     
+    api_number = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=20,
+        help_text="RRC API number (10-digit format, e.g., '42-501-70575' - will be normalized to 8-digit)"
+    )
+    
     event_detail = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -190,7 +198,7 @@ class BuildW3FromPNARequestSerializer(serializers.Serializer):
     api_number = serializers.CharField(
         required=True,
         max_length=20,
-        help_text="RRC API number (e.g., '42-501-70575')"
+        help_text="RRC API number (10-digit format, e.g., '42-501-70575' - will be normalized to 8-digit and attached to all events)"
     )
     
     well_name = serializers.CharField(
@@ -324,6 +332,135 @@ class ValidationResultSerializer(serializers.Serializer):
     )
 
 
+class ExistingToolsSerializer(serializers.Serializer):
+    """Existing mechanical tools from well history."""
+    
+    existing_mechanical_barriers = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        help_text="List of barrier types: CIBP, PACKER, DV_TOOL"
+    )
+    
+    existing_cibp_ft = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text="Depth of existing Cast Iron Bridge Plug"
+    )
+    
+    existing_packer_ft = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text="Depth of existing packer"
+    )
+    
+    existing_dv_tool_ft = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text="Depth of existing DV tool"
+    )
+
+
+class RetainerToolSerializer(serializers.Serializer):
+    """Retainer tools (float collar, pup joint, straddle packer, retainer)."""
+    
+    tool_type = serializers.CharField(
+        help_text="Tool type: float_collar, pup_joint, straddle_packer, retainer"
+    )
+    
+    depth_ft = serializers.FloatField(
+        help_text="Depth of tool in feet"
+    )
+
+
+class HistoricCementJobSerializer(serializers.Serializer):
+    """Historic cement job from W-15 data."""
+    
+    job_type = serializers.CharField(
+        required=False,
+        allow_null=True,
+        help_text="Type: surface, intermediate, production, plug, squeeze"
+    )
+    
+    interval_top_ft = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text="Top of cement interval"
+    )
+    
+    interval_bottom_ft = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text="Bottom of cement interval"
+    )
+    
+    cement_top_ft = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text="Depth where cement reaches"
+    )
+    
+    sacks = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text="Sacks of cement used"
+    )
+    
+    slurry_density_ppg = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text="Slurry density in pounds per gallon"
+    )
+
+
+class KOPSerializer(serializers.Serializer):
+    """Kick-Off Point data for horizontal wells."""
+    
+    kop_md_ft = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text="Measured depth of KOP"
+    )
+    
+    kop_tvd_ft = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        help_text="True vertical depth of KOP"
+    )
+
+
+class W3AWellGeometrySerializer(serializers.Serializer):
+    """Well geometry and historical data extracted from W-3A."""
+    
+    casing_record = serializers.ListField(
+        child=serializers.DictField(),
+        required=False,
+        help_text="Casing strings with sizes, depths, and removal info"
+    )
+    
+    existing_tools = ExistingToolsSerializer(
+        required=False,
+        help_text="Existing mechanical barriers in wellbore"
+    )
+    
+    retainer_tools = RetainerToolSerializer(
+        many=True,
+        required=False,
+        help_text="Retainer tools (float collar, pup joint, etc)"
+    )
+    
+    historic_cement_jobs = HistoricCementJobSerializer(
+        many=True,
+        required=False,
+        help_text="Historic cement jobs from well history"
+    )
+    
+    kop = KOPSerializer(
+        required=False,
+        allow_null=True,
+        help_text="Kick-off point for horizontal wells"
+    )
+
+
 class MetadataSerializer(serializers.Serializer):
     """Metadata about the generated W-3 form."""
     
@@ -344,6 +481,12 @@ class BuildW3FromPNAResponseSerializer(serializers.Serializer):
         required=False,
         allow_null=True,
         help_text="Complete W-3 form (if success=true)"
+    )
+    
+    w3a_well_geometry = W3AWellGeometrySerializer(
+        required=False,
+        allow_null=True,
+        help_text="Well geometry and historical data from auto-generated W-3A (for plugged wellbore diagram)"
     )
     
     error = serializers.CharField(

@@ -802,6 +802,34 @@ class W3AFromApiView(APIView):
         except Exception:
             prod_iv = None
 
+        # Extract historic cement jobs from W-15 cementing data
+        historic_cement_jobs: List[Dict[str, Any]] = []
+        try:
+            cementing_data = w15.get("cementing_data") or []
+            if isinstance(cementing_data, list):
+                for cement_job in cementing_data:
+                    if isinstance(cement_job, dict):
+                        try:
+                            job_entry: Dict[str, Any] = {
+                                "job_type": cement_job.get("job"),  # surface|intermediate|production|plug|squeeze
+                                "interval_top_ft": cement_job.get("interval_top_ft"),
+                                "interval_bottom_ft": cement_job.get("interval_bottom_ft"),
+                                "cement_top_ft": cement_job.get("cement_top_ft"),
+                                "sacks": cement_job.get("sacks"),
+                                "slurry_density_ppg": cement_job.get("slurry_density_ppg"),
+                            }
+                            # Only add if we have meaningful data
+                            if job_entry.get("job_type") or job_entry.get("sacks"):
+                                # Filter out None values to keep output clean
+                                job_entry = {k: v for k, v in job_entry.items() if v is not None}
+                                historic_cement_jobs.append(job_entry)
+                        except Exception:
+                            pass
+            logger.info(f"Extracted {len(historic_cement_jobs)} historic cement jobs from W-15")
+        except Exception:
+            logger.exception("Failed to extract historic cement jobs from W-15")
+            historic_cement_jobs = []
+
         # Formation tops map
         formation_tops_map: Dict[str, float] = {}
         try:
@@ -893,6 +921,82 @@ class W3AFromApiView(APIView):
             # Fail silently - existing tools extraction is enhancement, not critical
             pass
 
+        # Extract retainer tools from W-2 remarks
+        retainer_tools: List[Dict[str, Any]] = []
+        try:
+            # Combine remarks and RRC remarks for searching
+            remarks_txt = str(w2.get("remarks") or "")
+            rrc_remarks_obj = w2.get("rrc_remarks") or {}
+            rrc_remarks_txt = ""
+            if isinstance(rrc_remarks_obj, dict):
+                for key, val in rrc_remarks_obj.items():
+                    if val:
+                        rrc_remarks_txt += f" {val}"
+            elif isinstance(rrc_remarks_obj, str):
+                rrc_remarks_txt = rrc_remarks_obj
+            
+            combined_remarks = f"{remarks_txt} {rrc_remarks_txt}"
+            
+            # Search for Retainer depth
+            for pattern in [
+                r"retainer\s*(?:at|@)?\s*(\d{3,5})",
+                r"retainer\s+(?:packer\s+)?(?:at|@)?\s*(\d{3,5})"
+            ]:
+                retainer_matches = re.finditer(pattern, combined_remarks, flags=re.IGNORECASE)
+                for match in retainer_matches:
+                    try:
+                        depth = float(match.group(1))
+                        retainer_tools.append({"tool_type": "retainer", "depth_ft": depth})
+                    except Exception:
+                        pass
+            
+            # Search for Straddle Packer depth
+            for pattern in [
+                r"straddle\s*(?:packer\s+)?(?:at|@)?\s*(\d{3,5})",
+                r"straddle\s*(?:at|@)?\s*(\d{3,5})"
+            ]:
+                straddle_matches = re.finditer(pattern, combined_remarks, flags=re.IGNORECASE)
+                for match in straddle_matches:
+                    try:
+                        depth = float(match.group(1))
+                        if not any(t.get("tool_type") == "straddle_packer" and t.get("depth_ft") == depth for t in retainer_tools):
+                            retainer_tools.append({"tool_type": "straddle_packer", "depth_ft": depth})
+                    except Exception:
+                        pass
+            
+            # Search for Float Collar depth
+            for pattern in [
+                r"float\s*(?:collar\s+)?(?:at|@)?\s*(\d{3,5})",
+                r"float\s*(?:at|@)?\s*(\d{3,5})"
+            ]:
+                float_matches = re.finditer(pattern, combined_remarks, flags=re.IGNORECASE)
+                for match in float_matches:
+                    try:
+                        depth = float(match.group(1))
+                        if not any(t.get("tool_type") == "float_collar" and t.get("depth_ft") == depth for t in retainer_tools):
+                            retainer_tools.append({"tool_type": "float_collar", "depth_ft": depth})
+                    except Exception:
+                        pass
+            
+            # Search for Pup Joint depth
+            for pattern in [
+                r"pup\s*(?:joint\s+)?(?:at|@)?\s*(\d{3,5})",
+                r"pup\s*(?:at|@)?\s*(\d{3,5})"
+            ]:
+                pup_matches = re.finditer(pattern, combined_remarks, flags=re.IGNORECASE)
+                for match in pup_matches:
+                    try:
+                        depth = float(match.group(1))
+                        if not any(t.get("tool_type") == "pup_joint" and t.get("depth_ft") == depth for t in retainer_tools):
+                            retainer_tools.append({"tool_type": "pup_joint", "depth_ft": depth})
+                    except Exception:
+                        pass
+        
+        except Exception:
+            # Fail silently - retainer tools extraction is enhancement, not critical
+            logger.exception("Failed to extract retainer tools from remarks")
+            pass
+
         # Extract KOP (Kick-Off Point) from W-2 for horizontal well CIBP placement
         kop_md_ft = None
         kop_tvd_ft = None
@@ -936,6 +1040,16 @@ class W3AFromApiView(APIView):
             facts["packer_ft"] = wrap(existing_packer_ft)
         if existing_dv_tool_ft is not None:
             facts["dv_tool_ft"] = wrap(existing_dv_tool_ft)
+        
+        # Add retainer tools if found
+        if retainer_tools:
+            facts["retainer_tools"] = retainer_tools
+            logger.info(f"🔧 Added {len(retainer_tools)} retainer tools to facts: {retainer_tools}")
+        
+        # Add historic cement jobs from W-15 if found
+        if historic_cement_jobs:
+            facts["historic_cement_jobs"] = historic_cement_jobs
+            logger.info(f"🧱 Added {len(historic_cement_jobs)} historic cement jobs to facts")
         
         # Add KOP data for horizontal well CIBP placement
         if kop_md_ft is not None or kop_tvd_ft is not None:
@@ -1323,6 +1437,30 @@ class W3AFromApiView(APIView):
                         break
         except Exception:
             pass
+        
+        # Add existing mechanical barriers if found
+        if existing_mech_barriers:
+            result["existing_mechanical_barriers"] = existing_mech_barriers
+            logger.info(f"📊 Added existing mechanical barriers to response: {existing_mech_barriers}")
+        
+        # Add retainer tools if found
+        if retainer_tools:
+            result["retainer_tools"] = retainer_tools
+            logger.info(f"🔧 Added {len(retainer_tools)} retainer tools to response")
+        
+        # Add historic cement jobs from W-15 if found
+        if historic_cement_jobs:
+            result["historic_cement_jobs"] = historic_cement_jobs
+            logger.info(f"🧱 Added {len(historic_cement_jobs)} historic cement jobs to response")
+        
+        # Add KOP (Kick-off Point) data if present
+        if kop_md_ft is not None or kop_tvd_ft is not None:
+            result["kop"] = {
+                "kop_md_ft": kop_md_ft,
+                "kop_tvd_ft": kop_tvd_ft
+            }
+            logger.info(f"📍 Added KOP data to response: MD={kop_md_ft} ft, TVD={kop_tvd_ft} ft")
+        
         return result
 
 

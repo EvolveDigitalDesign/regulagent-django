@@ -22,6 +22,7 @@ from apps.public_core.services.w3_extraction import extract_w3a_from_pdf, load_w
 from apps.public_core.services.w3_casing_engine import initialize_casing_state
 from apps.public_core.services.w3_mapper import map_pna_events_to_w3events, validate_event_inputs
 from apps.public_core.services.w3_formatter import build_w3_form
+from apps.public_core.services.w3_utils import normalize_api_number
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,11 @@ def build_w3_from_pna_payload(
     errors = []
     subproject_id = pna_payload.get("subproject_id") or pna_payload.get("dwr_id")
     
+    # Normalize API number from pnaexchange format (10-digit: xx-xxx-xxxxx) to 8-digit
+    api_number_input = pna_payload.get("api_number")
+    normalized_api = normalize_api_number(api_number_input) if api_number_input else None
+    logger.info(f"🔢 API Number: {api_number_input} → normalized: {normalized_api}")
+    
     try:
         # ============================================================
         # STEP 1: Load W-3A form
@@ -162,7 +168,7 @@ def build_w3_from_pna_payload(
         logger.info("\n🔄 STEP 4: Mapping pnaexchange events to W3Events...")
         
         try:
-            w3_events = map_pna_events_to_w3events(pna_events)
+            w3_events = map_pna_events_to_w3events(pna_events, api_number=normalized_api)
             logger.info(f"✅ Mapped {len(pna_events)} events to {len(w3_events)} W3Events")
             
             for i, event in enumerate(w3_events[:3]):  # Show first 3
