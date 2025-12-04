@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import re
+import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -197,20 +198,65 @@ def generate_w3a_for_api(
         api = api_in
         if input_mode in ("extractions", "hybrid"):
             logger.info("   Extracting RRC documents...")
+            print("\n" + "="*80, file=sys.stderr)
+            print("📄 RRC DOCUMENT EXTRACTION STARTING", file=sys.stderr)
+            print("="*80, file=sys.stderr)
+            print(f"API: {api_in}", file=sys.stderr)
+            print(f"Document types requested: w2, w15, gau", file=sys.stderr)
+            print(f"Extraction mode: {input_mode}", file=sys.stderr)
+            
             dl = extract_completions_all_documents(api_in, allowed_kinds=["w2", "w15", "gau"])
             files = dl.get("files") or []
             api = dl.get("api") or api_in
+            
+            print(f"\n📊 EXTRACTION RESULT:", file=sys.stderr)
+            print(f"   Status: {dl.get('status')}", file=sys.stderr)
+            print(f"   Source: {dl.get('source')}", file=sys.stderr)
+            print(f"   Output directory: {dl.get('output_dir')}", file=sys.stderr)
+            print(f"   Total files found: {len(files)}", file=sys.stderr)
+            
+            if files:
+                print(f"\n📥 FILES DOWNLOADED:", file=sys.stderr)
+                for i, f in enumerate(files, 1):
+                    print(f"   [{i}] Name: {f.get('name')}", file=sys.stderr)
+                    print(f"       Type: {f.get('content_type')}", file=sys.stderr)
+                    print(f"       Size: {f.get('size_bytes', 0):,} bytes", file=sys.stderr)
+                    print(f"       Path: {f.get('path')}", file=sys.stderr)
+            else:
+                print(f"\n❌ NO FILES DOWNLOADED", file=sys.stderr)
+                if dl.get('status') != 'success':
+                    print(f"   Reason: {dl.get('status')}", file=sys.stderr)
+            
+            print("="*80 + "\n", file=sys.stderr)
             logger.info(f"   ✅ RRC extraction: {len(files)} files found")
             
-            for f in files:
+            print("\n" + "="*80, file=sys.stderr)
+            print("🔄 PROCESSING RRC DOCUMENTS", file=sys.stderr)
+            print("="*80, file=sys.stderr)
+            
+            for idx, f in enumerate(files, 1):
                 path = f.get("path")
                 if not path:
+                    print(f"\n⏭️  [{idx}] SKIPPED: No path found", file=sys.stderr)
                     continue
+                
+                print(f"\n📖 [{idx}] PROCESSING: {f.get('name')}", file=sys.stderr)
+                print(f"    Path: {path}", file=sys.stderr)
+                
                 try:
                     doc_type = classify_document(Path(path))
+                    print(f"    Classified as: {doc_type}", file=sys.stderr)
+                    
                     if doc_type not in ("gau", "w2", "w15", "schematic", "formation_tops"):
+                        print(f"    ⏭️  SKIPPED: Document type '{doc_type}' not in allowed list", file=sys.stderr)
                         continue
+                    
                     ext = extract_json_from_pdf(Path(path), doc_type)
+                    print(f"    Extraction model: {ext.model_tag}", file=sys.stderr)
+                    
+                    if ext.errors:
+                        print(f"    ⚠️  Extraction errors: {ext.errors}", file=sys.stderr)
+                    
                     with transaction.atomic():
                         ed = ExtractedDocument.objects.create(
                             well=well,
@@ -222,26 +268,57 @@ def generate_w3a_for_api(
                             errors=ext.errors,
                             json_data=ext.json_data,
                         )
+                        print(f"    ✅ Created ExtractedDocument: {ed.id}", file=sys.stderr)
+                        print(f"       Document Type: {ed.document_type}", file=sys.stderr)
+                        print(f"       Status: {ed.status}", file=sys.stderr)
+                        
                         try:
                             vectorize_extracted_document(ed)
-                        except Exception:
+                            print(f"    ✅ Vectorization successful", file=sys.stderr)
+                        except Exception as vec_err:
+                            print(f"    ⚠️  Vectorization failed (non-fatal): {vec_err}", file=sys.stderr)
                             logger.exception("vectorize: failed for RRC doc")
+                    
                     created.append({"document_type": doc_type, "extracted_document_id": str(ed.id)})
+                    print(f"    ✅ SUCCESS: Document processed and stored", file=sys.stderr)
+                
                 except Exception as e:
+                    print(f"    ❌ FAILED: {type(e).__name__}: {e}", file=sys.stderr)
                     logger.warning(f"Failed to process RRC file {path}: {e}")
-                    warnings.append(f"Failed to extract RRC {doc_type}: {e}")
+                    warnings.append(f"Failed to extract RRC {doc_type if 'doc_type' in locals() else 'unknown'}: {e}")
+            
+            print("\n" + "="*80, file=sys.stderr)
+            print(f"📊 EXTRACTION PROCESSING SUMMARY", file=sys.stderr)
+            print(f"   Total files to process: {len(files)}", file=sys.stderr)
+            print(f"   Successfully processed: {len(created)}", file=sys.stderr)
+            print(f"   Failed: {len(files) - len(created)}", file=sys.stderr)
+            print("="*80 + "\n", file=sys.stderr)
         
         # Phase 2b: User File Upload Ingestion
         if input_mode in ("user_files", "hybrid"):
             logger.info("   Processing user file uploads...")
+            print("\n" + "="*80, file=sys.stderr)
+            print("📤 USER FILE UPLOAD PROCESSING", file=sys.stderr)
+            print("="*80, file=sys.stderr)
+            
             uploads = [("w2", w2_file), ("w15", w15_file), ("gau", gau_file), ("schematic", schematic_file), ("formation_tops", formation_tops_file)]
+            uploads_provided = sum(1 for _, f in uploads if f is not None)
+            print(f"Files provided: {uploads_provided}", file=sys.stderr)
+            
             for label, fobj in uploads:
                 if not fobj:
+                    print(f"\n⏭️  {label.upper()}: Not provided", file=sys.stderr)
                     continue
+                
+                print(f"\n📥 Processing {label.upper()} upload", file=sys.stderr)
+                
                 try:
                     content_type = getattr(fobj, "content_type", "") or ""
                     filename = getattr(fobj, "name", "") or ""
                     is_json = ("json" in content_type.lower()) or filename.lower().endswith(".json")
+                    print(f"   Filename: {filename}", file=sys.stderr)
+                    print(f"   Content type: {content_type}", file=sys.stderr)
+                    print(f"   Format: {'JSON' if is_json else 'PDF'}", file=sys.stderr)
                     
                     if is_json:
                         raw = fobj.read()
@@ -321,11 +398,44 @@ def generate_w3a_for_api(
                                 logger.exception("Failed to persist TenantArtifact for PDF upload")
                         created.append({"document_type": doc_type, "extracted_document_id": str(ed.id)})
                         uploaded_refs.append({"type": doc_type, "filename": os.path.basename(saved_path), "kind": "pdf"})
+                        print(f"   ✅ SUCCESS: {label.upper()} upload processed", file=sys.stderr)
                 except Exception as e:
+                    print(f"   ❌ FAILED: {label.upper()} upload - {type(e).__name__}: {e}", file=sys.stderr)
                     logger.warning(f"Failed to process user upload {label}: {e}")
                     warnings.append(f"Failed to ingest {label} upload: {e}")
+            
+            print("\n" + "="*80, file=sys.stderr)
+            print(f"📊 USER UPLOADS PROCESSING SUMMARY", file=sys.stderr)
+            print(f"   Total uploads provided: {uploads_provided}", file=sys.stderr)
+            print(f"   Successfully processed: {len([u for u in uploaded_refs if u.get('kind')])}", file=sys.stderr)
+            print("="*80 + "\n", file=sys.stderr)
         
         logger.info(f"   ✅ Document acquisition complete: {len(created)} extractions")
+        
+        # Print comprehensive document extraction summary
+        print("\n" + "="*80, file=sys.stderr)
+        print("📋 DOCUMENT ACQUISITION PHASE COMPLETE", file=sys.stderr)
+        print("="*80, file=sys.stderr)
+        print(f"Input mode: {input_mode}", file=sys.stderr)
+        print(f"Total ExtractedDocuments created: {len(created)}", file=sys.stderr)
+        
+        if created:
+            print(f"\n✅ Successfully extracted {len(created)} document(s):", file=sys.stderr)
+            for i, doc in enumerate(created, 1):
+                print(f"   [{i}] Type: {doc.get('document_type')}", file=sys.stderr)
+                print(f"       ID: {doc.get('extracted_document_id')}", file=sys.stderr)
+        else:
+            print(f"\n❌ NO DOCUMENTS EXTRACTED!", file=sys.stderr)
+            print(f"   RRC extraction status: {dl.get('status')}", file=sys.stderr)
+            print(f"   Files found: {len(files)}", file=sys.stderr)
+            print(f"   Uploads processed: {uploads_provided if input_mode in ('user_files', 'hybrid') else 0}", file=sys.stderr)
+        
+        print(f"\nWarnings: {len(warnings)}", file=sys.stderr)
+        if warnings:
+            for w in warnings:
+                print(f"   ⚠️  {w}", file=sys.stderr)
+        
+        print("="*80 + "\n", file=sys.stderr)
         
         # ============================================================
         # STEP 3: WELLREGISTRY ENSURANCE & ENRICHMENT
