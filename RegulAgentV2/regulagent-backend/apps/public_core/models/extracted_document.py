@@ -32,6 +32,13 @@ class ExtractedDocument(models.Model):
     # Raw identifiers for convenient lookup (may duplicate WellRegistry data for denormalized access)
     api_number = models.CharField(max_length=16, db_index=True)
     document_type = models.CharField(max_length=64, db_index=True)
+    tracking_no = models.CharField(
+        max_length=64,
+        db_index=True,
+        null=True,
+        blank=True,
+        help_text="Tracking No. from W-2 form header (used for revision tracking and consolidation)"
+    )
 
     # Provenance
     source_path = models.TextField(blank=True)  # absolute/relative path where the file was saved
@@ -78,6 +85,8 @@ class ExtractedDocument(models.Model):
         db_table = "public_core_extracted_documents"
         indexes = [
             models.Index(fields=["api_number", "document_type"]),
+            models.Index(fields=["api_number", "document_type", "tracking_no"]),
+            models.Index(fields=["tracking_no", "document_type"]),
             models.Index(fields=["created_at"]),
             models.Index(fields=["uploaded_by_tenant", "source_type"]),
             models.Index(fields=["is_validated", "document_type"]),

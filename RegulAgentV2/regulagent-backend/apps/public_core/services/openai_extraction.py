@@ -62,6 +62,7 @@ SUPPORTED_TYPES = {
             "remarks",
             "rrc_remarks",
             "operator_certification",
+            "revisions",
         ],
     },
     "w15": {
@@ -257,14 +258,23 @@ def _load_prompt(prompt_key: str) -> str:
         ),
         "w2": (
             "Extract W-2 (Oil/Gas Well Completion) data. Return JSON with: "
-            "header; operator_info{name,address,operator_number}; well_info{api,district,county,field,lease,well_no,location{lat,lon}}; filing_info; completion_info; "
+            "header{tracking_no}; operator_info{name,address,operator_number}; well_info{api,district,county,field,lease,well_no,location{lat,lon}}; filing_info; completion_info; "
             "surface_casing_determination{gau_groundwater_protection_determination_depth,surface_shoe_depth_ft}; "
             "casing_record:[{string:'surface|intermediate|production|liner', size_in, weight_per_ft, hole_size_in, top_ft, bottom_ft, shoe_depth_ft, cement_top_ft}]; "
             "liner_record:[{size_in, top_ft, bottom_ft, cement_top_ft}]; "
             "tubing_record:[{size_in, top_ft, bottom_ft}]; "
             "producing_injection_disposal_interval; acid_fracture_operations; formation_record:[{formation, top_ft, base_ft}]; "
             "kop:{kop_md_ft,kop_tvd_ft} (Kick-Off Point - look in remarks section for 'KOP' followed by MD and TV/TVD depths); "
-            "commingling_and_h2s; remarks; rrc_remarks; operator_certification. "
+            "commingling_and_h2s; remarks; rrc_remarks; operator_certification; "
+            "revisions:{revising_tracking_number, revision_reason, other_changes}. "
+            "TRACKING NO EXTRACTION: Extract 'Tracking No.' from the header/top section of the form (not ticket number). Format is typically 'Tracking No. XXXX' or similar. "
+            "REVISION DETECTION: If remarks indicate this is a revision/correction filing of a previous submission, extract: "
+            "  - revising_tracking_number: The tracking number of the previous W-2 being revised/corrected "
+            "  - revision_reason: What was being revised (e.g., 'Incorrect CIBP size (4.5\" to 5.5\")', 'Cement quantity correction', 'Perforation depth revision') "
+            "  - other_changes: true if there are additional changes beyond the revision noted in remarks, false if this is ONLY a correction filing "
+            "If remarks do NOT indicate a revision, set revisions to null. "
+            "Example: If remarks say 'This document is to revise the incorrect spec of 4.5 cibp, a 5.5 cibp was used and tracking no was 1572' "
+            "Then extract: revisions:{revising_tracking_number:'1572', revision_reason:'Incorrect CIBP size (4.5 to 5.5 inch)', other_changes:false} "
             "Cement tops: For each casing string, extract cement_top_ft (the depth where cement reaches in the annulus). "
             "Look for phrases like 'cemented to surface', 'cement returns', 'cement top at X ft', 'cemented from X to Y ft'. "
             "If cemented to surface, set cement_top_ft to 0. If no cement data is found for a string, set cement_top_ft to null. "

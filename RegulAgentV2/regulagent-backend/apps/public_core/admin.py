@@ -40,9 +40,9 @@ class WellRegistryAdmin(admin.ModelAdmin):
 @admin.register(ExtractedDocument)
 class ExtractedDocumentAdmin(admin.ModelAdmin):
     """Admin interface for extracted regulatory documents."""
-    list_display = ('api_number', 'document_type', 'source_type', 'status', 'is_validated', 'created_at')
+    list_display = ('api_number', 'document_type', 'tracking_no', 'source_type', 'status', 'is_validated', 'created_at')
     list_filter = ('document_type', 'source_type', 'status', 'is_validated', 'created_at')
-    search_fields = ('api_number', 'source_path', 'model_tag')
+    search_fields = ('api_number', 'tracking_no', 'source_path', 'model_tag')
     readonly_fields = ('created_at', 'updated_at', 'json_data_display')
     date_hierarchy = 'created_at'
     
@@ -59,7 +59,7 @@ class ExtractedDocumentAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Document Info', {
-            'fields': ('api_number', 'document_type', 'well')
+            'fields': ('api_number', 'document_type', 'tracking_no', 'well')
         }),
         ('Extraction Status', {
             'fields': ('status', 'errors', 'model_tag')

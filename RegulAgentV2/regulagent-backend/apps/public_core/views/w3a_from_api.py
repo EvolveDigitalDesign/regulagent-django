@@ -198,11 +198,24 @@ class W3AFromApiView(APIView):
                     if doc_type not in ("gau", "w2", "w15", "schematic", "formation_tops"):
                         continue
                     ext = extract_json_from_pdf(Path(path), doc_type)
+                    
+                    # Extract tracking_no for W-2 documents (for revision tracking)
+                    tracking_no = None
+                    if doc_type == "w2" and ext.json_data:
+                        try:
+                            header = ext.json_data.get("header", {})
+                            tracking_no = header.get("tracking_no")
+                            if tracking_no:
+                                logger.debug(f"📝 W-2 extracted with tracking_no: {tracking_no}")
+                        except Exception as e:
+                            logger.warning(f"⚠️  Failed to extract tracking_no from W-2: {e}")
+                    
                     with transaction.atomic():
                         ed = ExtractedDocument.objects.create(
                             well=well,
                             api_number=api,
                             document_type=doc_type,
+                            tracking_no=tracking_no,  # Store tracking_no for W-2s
                             source_path=str(path),
                             model_tag=ext.model_tag,
                             status="success" if not ext.errors else "error",
@@ -213,7 +226,7 @@ class W3AFromApiView(APIView):
                             vectorize_extracted_document(ed)
                         except Exception:
                             logger.exception("vectorize: failed for RRC doc")
-                    created.append({"document_type": doc_type, "extracted_document_id": str(ed.id)})
+                    created.append({"document_type": doc_type, "extracted_document_id": str(ed.id), "tracking_no": tracking_no})
 
             # Ingest user files for user_files or hybrid modes
             if input_mode in ("user_files", "hybrid"):
@@ -229,11 +242,22 @@ class W3AFromApiView(APIView):
                             raw = fobj.read()
                             data = json.loads(raw.decode("utf-8")) if isinstance(raw, (bytes, bytearray)) else json.loads(str(raw))
                             doc_type = _detect_doc_type_from_json(data) or label
+                            
+                            # Extract tracking_no for W-2 documents
+                            tracking_no = None
+                            if doc_type == "w2" and isinstance(data, dict):
+                                try:
+                                    header = data.get("header", {})
+                                    tracking_no = header.get("tracking_no")
+                                except Exception:
+                                    pass
+                            
                             with transaction.atomic():
                                 ed = ExtractedDocument.objects.create(
                                     well=well,
                                     api_number=api,
                                     document_type=doc_type,
+                                    tracking_no=tracking_no,
                                     source_path=f"upload:{filename or 'user.json'}",
                                     model_tag="user_uploaded_json",
                                     status="success",
@@ -269,11 +293,22 @@ class W3AFromApiView(APIView):
                         if doc_type not in ("gau", "w2", "w15", "schematic", "formation_tops"):
                             continue
                         ext = extract_json_from_pdf(Path(saved_path), doc_type)
+                        
+                        # Extract tracking_no for W-2 documents
+                        tracking_no = None
+                        if doc_type == "w2" and ext.json_data:
+                            try:
+                                header = ext.json_data.get("header", {})
+                                tracking_no = header.get("tracking_no")
+                            except Exception:
+                                pass
+                        
                         with transaction.atomic():
                             ed = ExtractedDocument.objects.create(
                                 well=well,
                                 api_number=api,
                                 document_type=doc_type,
+                                tracking_no=tracking_no,
                                 source_path=saved_path,
                                 model_tag="user_uploaded_pdf",
                                 status="success" if not ext.errors else "error",
@@ -675,9 +710,59 @@ class W3AFromApiView(APIView):
                 .order_by("-created_at")
                 .first()
             )
+        
+        def get_consolidated_w2() -> Dict[str, Any]:
+            """
+            Retrieve and consolidate all W-2 extractions, applying revisions.
+            
+            Returns the consolidated W-2 JSON with revisions applied.
+            """
+            logger.info("\n🔀 CONSOLIDATING W-2 EXTRACTIONS")
+            try:
+                from apps.public_core.services.w2_revision_consolidator import consolidate_w2_extractions
+                
+                # Get all W-2 extractions for this API (not just latest)
+                w2_docs = ExtractedDocument.objects.filter(
+                    api_number=api,
+                    document_type="w2"
+                ).order_by("created_at")
+                
+                if not w2_docs.exists():
+                    logger.info("   ℹ️  No W-2 documents found")
+                    return {}
+                
+                logger.info(f"   Found {w2_docs.count()} W-2 extraction(s)")
+                
+                # Build input for consolidator
+                w2_extractions = []
+                for w2_doc in w2_docs:
+                    w2_extractions.append({
+                        "json_data": w2_doc.json_data,
+                        "revisions": w2_doc.json_data.get("revisions")
+                    })
+                
+                # Run consolidation
+                consolidation_result = consolidate_w2_extractions(w2_extractions)
+                
+                # Extract the final consolidated W-2 (use the last one after all revisions applied)
+                consolidated_list = consolidation_result.get("consolidated_w2s", [])
+                if consolidated_list:
+                    # Use the last consolidated W-2 (most recent chronologically)
+                    final_w2 = consolidated_list[-1]["json_data"]
+                    logger.info(f"   ✅ Using consolidated W-2 (tracking_no: {consolidated_list[-1].get('tracking_no')})")
+                    return final_w2
+                else:
+                    logger.warning(f"   ⚠️  Consolidation returned empty list")
+                    return (w2_docs.last().json_data) if w2_docs.exists() else {}
+                
+            except Exception as e:
+                logger.warning(f"   ⚠️  Consolidation failed (non-fatal), falling back to latest W-2: {e}")
+                # Fallback to latest W-2
+                w2_doc = latest("w2")
+                return (w2_doc and w2_doc.json_data) or {}
 
-        w2_doc = latest("w2"); gau_doc = latest("gau"); w15_doc = latest("w15"); schematic_doc = latest("schematic")
-        w2 = (w2_doc and w2_doc.json_data) or {}
+        w2 = get_consolidated_w2()
+        gau_doc = latest("gau"); w15_doc = latest("w15"); schematic_doc = latest("schematic")
         gau = (gau_doc and gau_doc.json_data) or {}
         w15 = (w15_doc and w15_doc.json_data) or {}
         schematic = (schematic_doc and schematic_doc.json_data) or {}
@@ -792,14 +877,58 @@ class W3AFromApiView(APIView):
 
         # Producing interval from W-2 if present
         prod_iv = None
+        perforations_from_w2: List[Dict[str, Any]] = []
         try:
             piv = w2.get("producing_injection_disposal_interval") or {}
-            if isinstance(piv, dict) and piv.get("from_ft") and piv.get("to_ft"):
-                f = float(piv["from_ft"]) if piv["from_ft"] is not None else None
-                t = float(piv["to_ft"]) if piv["to_ft"] is not None else None
-                if f is not None and t is not None:
-                    prod_iv = [f, t]
-        except Exception:
+            
+            # Check if it's a single interval (dict) or multiple intervals (list)
+            if isinstance(piv, dict):
+                # Single interval
+                if piv.get("from_ft") and piv.get("to_ft"):
+                    f = float(piv["from_ft"]) if piv["from_ft"] is not None else None
+                    t = float(piv["to_ft"]) if piv["to_ft"] is not None else None
+                    if f is not None and t is not None:
+                        prod_iv = [f, t]
+                        # Add as perforation interval
+                        perf_interval = {
+                            "interval_top_ft": min(f, t),
+                            "interval_bottom_ft": max(f, t),
+                            "status": "perforated" if piv.get("open_hole") != "Yes" else "open_hole"
+                        }
+                        perforations_from_w2.append(perf_interval)
+                        logger.info(f"📍 Extracted W-2 producing interval: {perf_interval}")
+            
+            elif isinstance(piv, list):
+                # Multiple intervals (as shown in the user's image - Ro 1, 2, 3, etc.)
+                logger.info(f"📍 Found {len(piv)} producing/injection/disposal intervals in W-2")
+                for idx, interval in enumerate(piv):
+                    if isinstance(interval, dict):
+                        f = interval.get("from_ft") or interval.get("From (ft.)")
+                        t = interval.get("to_ft") or interval.get("To (ft.)")
+                        open_hole = interval.get("open_hole") or interval.get("Open hole?")
+                        
+                        if f is not None and t is not None:
+                            try:
+                                f_val = float(f)
+                                t_val = float(t)
+                                
+                                # Use the first interval as overall producing_iv
+                                if prod_iv is None:
+                                    prod_iv = [min(f_val, t_val), max(f_val, t_val)]
+                                
+                                # Add all intervals as perforations
+                                perf_interval = {
+                                    "interval_top_ft": min(f_val, t_val),
+                                    "interval_bottom_ft": max(f_val, t_val),
+                                    "status": "open_hole" if (open_hole and str(open_hole).upper() == "YES") else "perforated"
+                                }
+                                perforations_from_w2.append(perf_interval)
+                                logger.info(f"   [{idx+1}] Interval {min(f_val, t_val)}-{max(f_val, t_val)} ft ({perf_interval['status']})")
+                            except (ValueError, TypeError):
+                                pass
+        
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to extract producing intervals from W-2: {e}")
             prod_iv = None
 
         # Extract historic cement jobs from W-15 cementing data
@@ -1092,6 +1221,18 @@ class W3AFromApiView(APIView):
                 pass
         if prod_iv is not None:
             facts["producing_interval_ft"] = wrap(prod_iv)
+        
+        # Add perforations from W-2 producing intervals to facts for CIBP placement logic
+        if perforations_from_w2:
+            facts["perforations"] = perforations_from_w2
+            logger.info(f"🔫 Added {len(perforations_from_w2)} perforation intervals to facts for kernel CIBP placement")
+            
+            # Calculate shallowest perforation for CIBP placement (50 ft shallower than shallowest perf)
+            shallowest_perf_top = min(p.get("interval_top_ft", float('inf')) for p in perforations_from_w2 if p.get("interval_top_ft"))
+            if shallowest_perf_top != float('inf'):
+                logger.info(f"   Shallowest perforation top: {shallowest_perf_top} ft")
+                logger.info(f"   CIBP should be placed 50 ft shallower: {shallowest_perf_top - 50.0} ft")
+        
         if formation_tops_map:
             facts["formation_tops_map"] = formation_tops_map
         if production_shoe_ft is None and deepest_shoe_any_ft is not None:

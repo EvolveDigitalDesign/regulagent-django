@@ -153,17 +153,38 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
             # Producing interval from facts (primary)
             piv = resolved_facts.get("producing_interval_ft") or {}
             interval = piv.get("value") if isinstance(piv, dict) else piv
-            deepest_prod_top_ft = None
+            shallowest_perf_top_ft = None
             if isinstance(interval, (list, tuple)) and len(interval) == 2:
                 try:
                     a, b = float(interval[0]), float(interval[1])
                     # Use top-of-interval (shallower) for CIBP placement policy
                     top_iv = min(a, b)
-                    deepest_prod_top_ft = top_iv
+                    shallowest_perf_top_ft = top_iv
                 except Exception:
-                    deepest_prod_top_ft = None
+                    shallowest_perf_top_ft = None
+            
+            # PRIORITY: Use perforations array from W-2 if available
+            # Per requirement: CIBP should be placed 50 ft shallower than SHALLOWEST perforation top
+            perforations_list = resolved_facts.get("perforations") or []
+            if isinstance(perforations_list, list) and len(perforations_list) > 0:
+                logger.critical(f"🔧 CIBP: Found {len(perforations_list)} perforations in facts")
+                temp_shallowest = None
+                for perf in perforations_list:
+                    if isinstance(perf, dict) and perf.get("interval_top_ft") is not None:
+                        try:
+                            top = float(perf.get("interval_top_ft"))
+                            if temp_shallowest is None or top < temp_shallowest:
+                                temp_shallowest = top
+                                logger.critical(f"   Perf {perf['interval_top_ft']}-{perf['interval_bottom_ft']} ft, top={top}")
+                        except (ValueError, TypeError):
+                            pass
+                
+                if temp_shallowest is not None:
+                    shallowest_perf_top_ft = temp_shallowest
+                    logger.critical(f"🔧 CIBP: Using shallowest perforation top for placement: {shallowest_perf_top_ft} ft")
+            
             # Fallback: infer from formations (treat all provided formations as producing; use deepest top)
-            if deepest_prod_top_ft is None:
+            if shallowest_perf_top_ft is None:
                 try:
                     tops_map = resolved_facts.get("formation_tops_map") or {}
                     if isinstance(tops_map, dict) and tops_map:
@@ -174,9 +195,9 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
                             except Exception:
                                 continue
                         if vals:
-                            deepest_prod_top_ft = max(vals)
+                            shallowest_perf_top_ft = max(vals)
                 except Exception:
-                    deepest_prod_top_ft = None
+                    shallowest_perf_top_ft = None
 
             # Production shoe (exposure check): require exposure for CIBP+cap
             prod_shoe_obj = resolved_facts.get("production_shoe_ft") or {}
@@ -190,9 +211,9 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
             # For cased-hole completions, perforations above the shoe = exposed and need CIBP
             # Per SWR-14(g)(3): "when plugging back through casing perforations, a CIBP shall be set and capped"
             # CORRECTED: Was using >=, but should be <= for cased-hole completions
-            exposed = (deepest_prod_top_ft is not None) and (production_shoe_ft is not None) and (float(deepest_prod_top_ft) <= float(production_shoe_ft))
-
-            # If a squeeze/perf step will fully isolate at deepest_perf_ft, skip emitting new CIBP+cap
+            exposed = (shallowest_perf_top_ft is not None) and (production_shoe_ft is not None) and (float(shallowest_perf_top_ft) <= float(production_shoe_ft))
+            
+            # If a squeeze/perf step will fully isolate at shallowest_perf_top_ft, skip emitting new CIBP+cap
             def _covered_by_ops(existing_steps: List[Dict[str, Any]], depth_ft: float) -> bool:
                 """
                 Check if a depth is already covered by isolation operations.
@@ -237,9 +258,9 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
                     return False
                 return False
 
-            covered = _covered_by_ops(steps, float(deepest_prod_top_ft)) if deepest_prod_top_ft is not None else True
+            covered = _covered_by_ops(steps, float(shallowest_perf_top_ft)) if shallowest_perf_top_ft is not None else True
             
-            logger.critical(f"🔧 CIBP DETECTOR: exposed={exposed}, has_existing_cibp={has_existing_cibp}, has_cap_step={has_cap_step}, deepest_prod_top_ft={deepest_prod_top_ft}, covered_by_ops={covered}")
+            logger.critical(f"🔧 CIBP DETECTOR: exposed={exposed}, has_existing_cibp={has_existing_cibp}, has_cap_step={has_cap_step}, shallowest_perf_top_ft={shallowest_perf_top_ft}, covered_by_ops={covered}")
             logger.critical(f"🔧 CIBP DETECTOR: production_shoe_ft={production_shoe_ft}")
             
             if exposed and (not has_existing_cibp) and (not has_cap_step) and (not covered):
@@ -249,11 +270,12 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
                 
                 try:
                     # Determine CIBP placement: consider both perforations and KOP (kick-off point)
-                    # Rule: Shallowest depth wins (min of perf-10 and kop-50)
-                    logger.critical(f"🔧 CIBP: Step 1 - Calculating perf-based depth from deepest_prod_top_ft={deepest_prod_top_ft}")
-                    plug_depth_from_perfs = max(float(deepest_prod_top_ft) - 10.0, 0.0)
-                    placement_reason = "perforations (10 ft above top)"
-                    logger.critical(f"🔧 CIBP: Step 1 COMPLETE - plug_depth_from_perfs={plug_depth_from_perfs}")
+                    # Rule: Shallowest depth wins (min of perf-50 and kop-50)
+                    # Per requirement: Place 50 ft shallower than shallowest perforation top
+                    logger.critical(f"🔧 CIBP: Step 1 - Calculating perf-based depth from shallowest_perf_top_ft={shallowest_perf_top_ft}")
+                    plug_depth_from_perfs = max(float(shallowest_perf_top_ft) - 50.0, 0.0)
+                    placement_reason = "perforations (50 ft above shallowest perf top)"
+                    logger.critical(f"🔧 CIBP: Step 1 COMPLETE - plug_depth_from_perfs={plug_depth_from_perfs} (50 ft above shallowest perf top)")
                     
                     # Check for KOP (Kick-Off Point) - horizontal well consideration
                     logger.critical(f"🔧 CIBP: Step 2 - Checking for KOP in resolved_facts: {list(resolved_facts.keys())}")
