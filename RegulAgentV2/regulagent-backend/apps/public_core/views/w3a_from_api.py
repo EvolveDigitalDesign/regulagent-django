@@ -1307,16 +1307,36 @@ class W3AFromApiView(APIView):
         logger.critical(f"🔍 GETTING POLICY: district={district_val}, county={county_val}, field={field_name}")
         
         # get_effective_policy already returns the correct structure with both top-level and nested keys
-        policy = get_effective_policy(district=district_val, county=county_val, field=field_name)
+        try:
+            print(f"🔍 About to call get_effective_policy...", flush=True)
+            policy = get_effective_policy(district=district_val, county=county_val, field=field_name)
+            print(f"🔍 get_effective_policy returned successfully!", flush=True)
+        except Exception as e:
+            print(f"🔍 EXCEPTION in get_effective_policy: {type(e).__name__}: {e}", flush=True)
+            logger.exception(f"Failed to load policy: {e}")
+            # Return empty policy with error
+            policy = {
+                "policy_id": "tx.w3a",
+                "complete": False,
+                "effective": {},
+                "preferences": {},
+            }
+        
+        print(f"🔍 Policy type: {type(policy)}", flush=True)
         
         # DEBUG: Verify formation_tops are loaded
         effective_policy = policy.get("effective") or {}
+        print(f"🔍 effective_policy type: {type(effective_policy)}", flush=True)
         dist_overrides = effective_policy.get("district_overrides") or {}
+        print(f"🔍 dist_overrides type: {type(dist_overrides)}, keys: {list(dist_overrides.keys())}", flush=True)
         formation_tops = dist_overrides.get("formation_tops") or []
+        print(f"🔍 formation_tops: {len(formation_tops)} found", flush=True)
         
         if formation_tops:
+            print(f"🔍 POLICY: Formations: {[ft.get('formation') for ft in formation_tops]}", flush=True)
             logger.info(f"🔍 POLICY: Found {len(formation_tops)} formation tops: {[ft.get('formation') for ft in formation_tops]}")
         else:
+            print(f"🔍 POLICY ERROR: No formation_tops!", flush=True)
             logger.error(f"🔍 POLICY ERROR: No formation_tops found for {county_val} / {field_name}")
         
         # Override policy metadata
