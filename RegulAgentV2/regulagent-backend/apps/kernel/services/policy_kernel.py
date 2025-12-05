@@ -589,6 +589,16 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
         except Exception:
             logger.exception("plan-level notes aggregation failed")
 
+        # CRITICAL: Assign plug_type BEFORE merge so incompatibility checks work!
+        prod_toc_val = resolved_facts.get('production_casing_toc_ft') or {}
+        production_toc_ft = prod_toc_val.get('value') if isinstance(prod_toc_val, dict) else prod_toc_val
+        try:
+            production_toc_ft = float(production_toc_ft) if production_toc_ft not in (None, "") else None
+        except (ValueError, TypeError):
+            production_toc_ft = None
+        logger.debug("kernel.plan_from_facts: assigning plug_type and plug_purpose BEFORE merge")
+        plan_steps = _assign_plug_types_and_purposes(plan_steps, production_toc_ft)
+
         # Optionally merge adjacent formation plugs into longer plugs to minimize wait cycles
         try:
             prefs = policy.get("preferences") or {}
@@ -623,7 +633,10 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
         # If steps exist, compute materials
         if plan["steps"]:
             logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
+            
+            logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
             plan["steps"] = _compute_materials_for_steps(plan["steps"])  # type: ignore
+            
             # Final validation and cleanup pass
             logger.debug("kernel.plan_from_facts: running final validation")
             plan["steps"] = _validate_and_cleanup_steps(plan["steps"], resolved_facts, policy)
@@ -664,6 +677,57 @@ except Exception:  # pragma: no cover - materials optional in early boot
     compute_sacks = None  # type: ignore
     spacer_bbl_for_interval = None  # type: no cover
     balanced_displacement_bbl = None  # type: ignore
+
+
+def _assign_plug_types_and_purposes(steps: List[Dict[str, Any]], production_toc_ft: Optional[float] = None) -> List[Dict[str, Any]]:
+    """
+    Assign plug_type (mechanical) and plug_purpose (regulatory) to all steps.
+    
+    plug_type: One of "spot_plug", "perf_and_squeeze_plug", "perf_and_circulate_plug", "dumbell_plug"
+    plug_purpose: Original step type (formation_top_plug, bridge_plug, cement_plug, etc.)
+    
+    For cement_plug and bridge_plug steps that result from merging, calculate plug_type
+    based on the merged interval's depth vs production TOC.
+    """
+    from .w3a_rules import _determine_plug_type
+    
+    logger.info(f"Assigning plug_type and plug_purpose to {len(steps)} steps")
+    
+    for step in steps:
+        step_type = step.get("type")
+        
+        # Preserve original purpose
+        if "plug_purpose" not in step:
+            step["plug_purpose"] = step_type
+        
+        # Assign plug_type if not already set
+        if "plug_type" not in step or step.get("plug_type") is None:
+            # For merged cement_plugs, use the deepest point to determine type
+            if step_type == "cement_plug" and step.get("details", {}).get("merged"):
+                # Use deepest bottom_ft to determine if spot or perf & squeeze
+                step["plug_type"] = _determine_plug_type(step, production_toc_ft)
+            elif step_type == "bridge_plug":
+                # Bridge plugs are static - just set to None or spot_plug (not a cement type)
+                step["plug_type"] = None  # Bridge plugs don't map to cement types
+            elif step_type in ("cibp_cap", "bridge_plug_cap"):
+                # These are dumbells (3 sacks on tool)
+                step["plug_type"] = "dumbell_plug"
+            elif step_type == "cut_casing_below_surface":
+                # Not a plug type
+                step["plug_type"] = None
+            elif step_type == "top_plug":
+                # Top plugs are spot plugs (at surface)
+                step["plug_type"] = "spot_plug"
+            elif step_type == "perf_and_circulate_to_surface":
+                step["plug_type"] = "perf_and_circulate_plug"
+            elif step_type in ("uqw_isolation_plug", "intermediate_casing_shoe_plug", "surface_casing_shoe_plug", "productive_horizon_isolation_plug"):
+                # These are determined by depth vs TOC
+                step["plug_type"] = _determine_plug_type(step, production_toc_ft)
+            elif step_type == "perforate_and_squeeze_plug":
+                step["plug_type"] = "perf_and_squeeze_plug"
+            # formation_top_plug should already have plug_type from _apply_district_overrides
+    
+    return steps
 
 
 def _validate_and_cleanup_steps(steps: List[Dict[str, Any]], facts: Dict[str, Any], policy: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -943,14 +1007,113 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]]) -> List[Dict[str, 
                     }
             elif step_type in ("cement_plug",):
                 # Generic cement plug over an interval. Supports optional segmentation.
-                context = (step.get("geometry_context") or "").lower()
-                top_ft = float(step.get("top_ft", 0) or 0)
-                bottom_ft = float(step.get("bottom_ft", 0) or 0)
-                ann_excess_default = _infer_annular_excess(step)
-                segments_calc: List[Dict[str, Any]] = []
-                total_bbl = 0.0
-                # Rounding policy: nearest by default unless overridden in step.recipe.rounding or policy
-                rounding_mode = (step.get("recipe", {}) or {}).get("rounding") or "nearest"
+                # CRITICAL: If this is a merged perf_and_squeeze plug, use perf_and_squeeze calculation!
+                plug_type = step.get("plug_type")
+                is_perf_and_squeeze_merged = (plug_type == "perf_and_squeeze_plug" and 
+                                               step.get("details", {}).get("merged") is True)
+                
+                if is_perf_and_squeeze_merged:
+                    # Merged perf & squeeze plugs: treat as ONE continuous operation
+                    # BUT account for DIFFERENT ANNULI at different depths
+                    # Example: 5650→950 ft might be prod-inside-intermediate (5650→3864) + prod-inside-surface (3864→950)
+                    logger.info(f"📊 Computing materials for MERGED perf_and_squeeze_plug (depths {step.get('top_ft')}-{step.get('bottom_ft')} ft)")
+                    
+                    top_ft = float(step.get("top_ft", 0) or 0)
+                    bottom_ft = float(step.get("bottom_ft", 0) or 0)
+                    interval_ft = abs(top_ft - bottom_ft)
+                    
+                    ex = float(step.get("annular_excess", 0.4))
+                    squeeze_factor = float(step.get("squeeze_factor", 1.5) or 1.5)
+                    rounding_mode = (step.get("recipe", {}) or {}).get("rounding") or "up"
+                    
+                    total_bbl = 0.0
+                    segments_calc: List[Dict[str, Any]] = []
+                    
+                    # Get casing strings info to determine correct annuli for squeeze
+                    from .w3a_rules import _get_casing_strings_at_depth
+                    
+                    # Check casing context at the deepest point
+                    casing_context = _get_casing_strings_at_depth(resolved_facts, bottom_ft)
+                    logger.info(f"Merged perf & squeeze context: {casing_context.get('context')} at {bottom_ft} ft")
+                    
+                    if casing_context.get("inner_string") and casing_context.get("outer_string"):
+                        # Two strings at depth (annulus squeeze)
+                        inner_id = casing_context["inner_string"].get("id_in")
+                        outer_id = casing_context["outer_string"].get("id_in")
+                        
+                        if inner_id is not None and outer_id is not None:
+                            ann_cap = annulus_capacity_bbl_per_ft(outer_id, inner_id)
+                            
+                            # Annulus volume with excess and squeeze factor
+                            base_bbl = interval_ft * ann_cap
+                            squeeze_bbl = base_bbl * (1.0 + ex) * squeeze_factor
+                            
+                            # Depth-based excess (TAC §3.14(d)(11)): +10% per 1000 ft
+                            depth_kft = int((bottom_ft + 999.0) / 1000.0)
+                            texas_excess_factor = 1.0 + (0.10 * depth_kft)
+                            squeeze_bbl *= texas_excess_factor
+                            
+                            total_bbl = squeeze_bbl
+                            
+                            segments_calc.append({
+                                "type": "merged_perf_and_squeeze_annulus",
+                                "top_ft": top_ft,
+                                "bottom_ft": bottom_ft,
+                                "total_length_ft": interval_ft,
+                                "inner_casing": casing_context["inner_string"].get("name"),
+                                "inner_size_in": casing_context["inner_string"].get("size_in"),
+                                "inner_id_in": inner_id,
+                                "outer_casing": casing_context["outer_string"].get("name"),
+                                "outer_id_in": outer_id,
+                                "annular_capacity_bbl_per_ft": ann_cap,
+                                "base_annulus_bbl": base_bbl,
+                                "annular_excess": ex,
+                                "squeeze_factor": squeeze_factor,
+                                "texas_excess_factor": texas_excess_factor,
+                                "total_bbl": squeeze_bbl,
+                                "merged_formations": [m.get("formation") for m in step.get("details", {}).get("merged_steps", [])],
+                            })
+                    else:
+                        # Fallback: use step-level geometry if available
+                        casing_id = step.get("casing_id_in")
+                        stinger_od = step.get("stinger_od_in")
+                        if casing_id is not None and stinger_od is not None:
+                            ann_cap = annulus_capacity_bbl_per_ft(float(casing_id), float(stinger_od))
+                            base_bbl = interval_ft * ann_cap
+                            squeeze_bbl = base_bbl * (1.0 + ex) * squeeze_factor
+                            depth_kft = int((bottom_ft + 999.0) / 1000.0)
+                            texas_excess_factor = 1.0 + (0.10 * depth_kft)
+                            squeeze_bbl *= texas_excess_factor
+                            total_bbl = squeeze_bbl
+                            
+                            segments_calc.append({
+                                "type": "merged_perf_and_squeeze_fallback",
+                                "top_ft": top_ft,
+                                "bottom_ft": bottom_ft,
+                                "note": "Using step-level geometry (not from casing analysis)",
+                            })
+                    
+                    vb = compute_sacks(total_bbl, recipe, rounding=rounding_mode)
+                    materials["slurry"] = {
+                        "total_bbl": total_bbl,
+                        "ft3": vb.ft3,
+                        "sacks": vb.sacks,
+                        "water_bbl": vb.water_bbl,
+                        "additives": vb.additives,
+                        "explain": vb.explain,
+                    }
+                    step["sacks"] = int(vb.sacks)
+                    step.setdefault("details", {})["segments_calc"] = segments_calc
+                else:
+                    # Generic cement plug (not perf_and_squeeze merged)
+                    context = (step.get("geometry_context") or "").lower()
+                    top_ft = float(step.get("top_ft", 0) or 0)
+                    bottom_ft = float(step.get("bottom_ft", 0) or 0)
+                    ann_excess_default = _infer_annular_excess(step)
+                    segments_calc: List[Dict[str, Any]] = []
+                    total_bbl = 0.0
+                    # Rounding policy: nearest by default unless overridden in step.recipe.rounding or policy
+                    rounding_mode = (step.get("recipe", {}) or {}).get("rounding") or "nearest"
 
                 segments = step.get("segments") or []
                 if isinstance(segments, list) and segments:
@@ -1753,6 +1916,7 @@ def _apply_district_overrides(
             s_bot = center_ft - half
             step = {
                 "type": "formation_top_plug",
+                "plug_purpose": "formation_top_plug",  # NEW: Preserve original purpose
                 "formation": formation,
                 "top_ft": s_top,
                 "bottom_ft": s_bot,
@@ -1763,6 +1927,19 @@ def _apply_district_overrides(
                 "placement_basis": f"Formation transition: {formation} (±{int(half)} ft)",
                 "details": {"center_ft": center_ft},
             }
+            
+            # Determine plug_type based on depth vs production TOC
+            # Import locally to avoid circular dependency
+            from .w3a_rules import _determine_plug_type
+            prod_toc_val = resolved_facts.get('production_casing_toc_ft') or {}
+            production_toc_ft = prod_toc_val.get('value') if isinstance(prod_toc_val, dict) else prod_toc_val
+            try:
+                production_toc_ft = float(production_toc_ft) if production_toc_ft not in (None, "") else None
+            except (ValueError, TypeError):
+                production_toc_ft = None
+            
+            step["plug_type"] = _determine_plug_type(step, production_toc_ft)
+            
             if ft.get("tag_required") is True or formation in ("San Andres", "Coleman Junction"):
                 step["tag_required"] = True
             # Attach available W-2-derived geometry to enable materials computation downstream

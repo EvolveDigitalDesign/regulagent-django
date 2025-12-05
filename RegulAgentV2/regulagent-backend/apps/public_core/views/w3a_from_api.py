@@ -1471,6 +1471,7 @@ class W3AFromApiView(APIView):
             out_s = {
                 "type": s.get("type"),
                 "plug_type": s.get("plug_type"),  # Mechanical type (spot, perf & squeeze, etc.)
+                "plug_purpose": s.get("plug_purpose"),  # NEW: Original purpose (formation_top_plug, bridge_plug, etc.)
                 "top": top,  # Consistent field name for AI tools
                 "base": bottom,  # Consistent field name for AI tools
                 "top_ft": top,  # Keep legacy field for backward compat
