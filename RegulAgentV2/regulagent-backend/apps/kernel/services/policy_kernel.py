@@ -594,11 +594,28 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
             prefs = policy.get("preferences") or {}
             lp = (prefs.get("long_plug_merge") or {}) if isinstance(prefs, dict) else {}
             enabled = bool(lp.get("enabled"))
-            threshold_ft = float(lp.get("threshold_ft", 0) or 0)
+            threshold_ft = float(lp.get("threshold_ft", 0) or 0)  # Deprecated, kept for backward compat
             types = lp.get("types") or ["formation_top_plug"]
             preserve_tagging = True if lp.get("preserve_tagging", True) is not False else False
-            if enabled and threshold_ft > 0:
-                plan_steps = _merge_adjacent_plugs(plan_steps, types=types, threshold_ft=threshold_ft, preserve_tagging=preserve_tagging)
+            
+            # Extract sack limits from policy (NEW: sack-based merging)
+            sack_limit_no_tag = float(lp.get("sack_limit_no_tag", 50.0) or 50.0)
+            sack_limit_with_tag = float(lp.get("sack_limit_with_tag", 150.0) or 150.0)
+            
+            logger.info(
+                f"Long plug merge config: enabled={enabled}, types={types}, "
+                f"sack_limit_no_tag={sack_limit_no_tag}, sack_limit_with_tag={sack_limit_with_tag}"
+            )
+            
+            if enabled:
+                plan_steps = _merge_adjacent_plugs(
+                    plan_steps,
+                    types=types,
+                    threshold_ft=threshold_ft,  # Deprecated but kept for compat
+                    preserve_tagging=preserve_tagging,
+                    sack_limit_no_tag=sack_limit_no_tag,
+                    sack_limit_with_tag=sack_limit_with_tag,
+                )
         except Exception:
             logger.exception("kernel.long_plug_merge: merge failed; continuing with unmerged steps")
 
@@ -747,6 +764,119 @@ def _validate_and_cleanup_steps(steps: List[Dict[str, Any]], facts: Dict[str, An
     )
     
     return validated_steps
+
+
+def _estimate_sacks_for_step(step: Dict[str, Any]) -> Optional[float]:
+    """
+    Estimate sack count for a single step (preliminary calculation for merge decisions).
+    
+    This runs BEFORE full materials computation to provide sack estimates for merge logic.
+    Returns estimated sacks, or None if cannot estimate.
+    """
+    step_type = step.get("type")
+    
+    try:
+        # Use existing sacks if already calculated
+        if step.get("materials", {}).get("slurry", {}).get("sacks"):
+            return float(step["materials"]["slurry"]["sacks"])
+        
+        # For steps without full materials, use geometry-based estimation
+        top_ft = step.get("top_ft")
+        bottom_ft = step.get("bottom_ft")
+        
+        if top_ft is None or bottom_ft is None:
+            return None
+        
+        interval_ft = abs(float(bottom_ft) - float(top_ft))
+        
+        # Get recipe (default to Class H 15.8 ppg)
+        recipe_dict = step.get("recipe") or {}
+        yield_ft3_per_sk = float(recipe_dict.get("yield_ft3_per_sk", 1.18) or 1.18)
+        
+        if step_type in ("spot_plug", "cement_plug", "formation_top_plug", "uqw_isolation_plug", "intermediate_casing_shoe_plug"):
+            # Cased-hole plug: estimate annular volume
+            casing_id_in = step.get("casing_id_in")
+            stinger_od_in = step.get("stinger_od_in")
+            ann_excess = float(step.get("annular_excess", 0.4) or 0.4)
+            
+            if casing_id_in is not None and stinger_od_in is not None:
+                try:
+                    casing_id = float(casing_id_in)
+                    stinger_od = float(stinger_od_in)
+                    
+                    # Annular area ≈ (casing_id² - stinger_od²) / 1029
+                    annulus_area = ((casing_id ** 2) - (stinger_od ** 2)) / 1029.0
+                    annulus_bbl = annulus_area * interval_ft
+                    total_bbl = annulus_bbl * (1.0 + ann_excess)
+                    
+                    estimated_sacks = total_bbl / yield_ft3_per_sk
+                    logger.debug(f"Estimated sacks for {step_type}: {estimated_sacks:.1f} (interval {interval_ft} ft, annulus {annulus_bbl:.1f} bbl)")
+                    return estimated_sacks
+                except Exception:
+                    pass
+        
+        elif step_type in ("perf_and_squeeze_plug", "squeeze"):
+            # Perf & squeeze: estimate annular volume with squeeze factor
+            casing_id_in = step.get("casing_id_in")
+            stinger_od_in = step.get("stinger_od_in")
+            ann_excess = float(step.get("annular_excess", 0.4) or 0.4)
+            squeeze_factor = float(step.get("squeeze_factor", 1.5) or 1.5)
+            
+            if casing_id_in is not None and stinger_od_in is not None:
+                try:
+                    casing_id = float(casing_id_in)
+                    stinger_od = float(stinger_od_in)
+                    
+                    annulus_area = ((casing_id ** 2) - (stinger_od ** 2)) / 1029.0
+                    annulus_bbl = annulus_area * interval_ft
+                    total_bbl = annulus_bbl * (1.0 + ann_excess) * squeeze_factor
+                    
+                    estimated_sacks = total_bbl / yield_ft3_per_sk
+                    logger.debug(f"Estimated sacks for {step_type}: {estimated_sacks:.1f} (squeeze factor {squeeze_factor})")
+                    return estimated_sacks
+                except Exception:
+                    pass
+    
+    except Exception as e:
+        logger.warning(f"Could not estimate sacks for {step_type}: {e}")
+    
+    return None
+
+
+def _estimate_sacks_for_merged_interval(
+    bottom_ft: float,
+    top_ft: float,
+    casing_id_in: Optional[float],
+    stinger_od_in: Optional[float],
+    ann_excess: float = 0.4,
+    yield_ft3_per_sk: float = 1.18,
+) -> Optional[float]:
+    """
+    Estimate sack count for a merged interval (bottom_ft to top_ft).
+    
+    Used to calculate sacks required to fill a gap between plugs when determining merge feasibility.
+    """
+    try:
+        if casing_id_in is None or stinger_od_in is None:
+            return None
+        
+        interval_ft = abs(float(top_ft) - float(bottom_ft))
+        if interval_ft <= 0:
+            return None
+        
+        casing_id = float(casing_id_in)
+        stinger_od = float(stinger_od_in)
+        
+        annulus_area = ((casing_id ** 2) - (stinger_od ** 2)) / 1029.0
+        annulus_bbl = annulus_area * interval_ft
+        total_bbl = annulus_bbl * (1.0 + ann_excess)
+        
+        estimated_sacks = total_bbl / yield_ft3_per_sk
+        return estimated_sacks
+    
+    except Exception as e:
+        logger.warning(f"Could not estimate merged interval sacks: {e}")
+        return None
 
 
 def _compute_materials_for_steps(steps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -1243,18 +1373,25 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]]) -> List[Dict[str, 
 def _merge_adjacent_plugs(
     steps: List[Dict[str, Any]],
     types: List[str],
-    threshold_ft: float,
+    threshold_ft: float = None,  # Deprecated: kept for backward compatibility
     preserve_tagging: bool = True,
+    sack_limit_no_tag: float = 50.0,  # Max sacks to merge plugs WITHOUT tag
+    sack_limit_with_tag: float = 150.0,  # Max sacks to merge plugs WITH tag
 ) -> List[Dict[str, Any]]:
-    """Merge adjacent cement-bearing steps of specified types when gaps ≤ threshold.
-    v1 scope: operate only on cased-annulus formation plugs; do not cross operational steps.
+    """Merge adjacent cement-bearing steps based on sack count requirements.
+    
+    NEW logic (sack-based instead of depth-based):
+    - Calculate estimated sacks for each step
+    - When considering merge: sum sacks of plugs + sacks needed to fill gap between them
+    - If total ≤ sack_limit (50 for no tag, 150 with tag), merge is allowed
+    - If any plug in group has tag_required=True, merged plug inherits tag_required=True
     
     CRITICAL CONSTRAINT: Spot plugs and perf & squeeze plugs CANNOT be merged together.
     They represent fundamentally different mechanical operations:
     - Spot plugs: cement injected INSIDE casing only (below TOC)
     - Perf & squeeze plugs: perforate + squeeze behind pipe (above TOC)
     """
-    if not steps or threshold_ft <= 0:
+    if not steps or (threshold_ft is not None and threshold_ft <= 0):
         return steps
     # Work on a shallow copy to avoid mutating input
     src: List[Dict[str, Any]] = list(steps)
@@ -1334,9 +1471,10 @@ def _merge_adjacent_plugs(
                 if isinstance(c, str):
                     rb.append(c)
         out["regulatory_basis"] = sorted(list({r for r in rb if r}))
-        # Tag propagation
+        # Tag propagation: if ANY plug in merged group has tag_required, merged plug inherits it
         if preserve_tagging and any(x.get("tag_required") is True for x in buf):
             out["tag_required"] = True
+            logger.info(f"Merged plug inherits tag_required=True (one or more plugs in group required tagging)")
         # Record merged sources
         out.setdefault("details", {})["merged"] = True
         out["details"]["merged_steps"] = [
@@ -1371,7 +1509,7 @@ def _merge_adjacent_plugs(
         
         merged.append(out)
 
-    # Sweep and group when gaps ≤ threshold
+    # Sweep and group when sack count ≤ threshold
     prev: Dict[str, Any] | None = None
     for s in ordered:
         if prev is None:
@@ -1384,25 +1522,8 @@ def _merge_adjacent_plugs(
             # Represent intervals as [low, high] where low = deep, high = shallow
             p_low, p_high = min(p_top, p_bot), max(p_top, p_bot)
             s_low, s_high = min(s_top, s_bot), max(s_top, s_bot)
-            # Separation (<=0 means overlap). Merge when overlap or gap ≤ threshold
-            sep = s_low - p_high
             
-            # CRITICAL: Check plug_type compatibility
-            # Merge compatibility rules (with precedence/override behavior):
-            # 
-            # ALLOWED (can merge, with dominance):
-            # - spot + spot = spot (merge normally)
-            # - spot + dumbell = spot (spot overrides dumbell)
-            # - perf & squeeze + perf & squeeze = perf & squeeze (merge normally)
-            # - perf & squeeze + perf & circulate = perf & circulate (perf & circ prevails)
-            # - dumbell + dumbell = dumbell (merge normally)
-            #
-            # BLOCKED (incompatible operations):
-            # - spot + perf & squeeze (fundamentally different)
-            # - perf & squeeze + dumbell (incompatible)
-            # - spot + perf & circulate (spot/perf & circ conflict)
-            # - perf & circulate + dumbell (incompatible)
-            
+            # CRITICAL: Check plug_type compatibility FIRST
             prev_plug_type = prev.get("plug_type")
             s_plug_type = s.get("plug_type")
             
@@ -1429,12 +1550,49 @@ def _merge_adjacent_plugs(
                 prev = s
                 continue
             
-            if sep <= threshold_ft:
+            # NEW: Check if tag is required in buffer
+            has_tag_required = any(x.get("tag_required") is True for x in buf) or s.get("tag_required") is True
+            applicable_sack_limit = sack_limit_with_tag if has_tag_required else sack_limit_no_tag
+            
+            # Calculate sacks for current buffer + gap + new step
+            buf_total_sacks = sum(_estimate_sacks_for_step(x) or 0 for x in buf)
+            s_sacks = _estimate_sacks_for_step(s) or 0
+            
+            # Sacks needed to fill gap between deepest plug in buffer and this step
+            # Use first step in buffer for geometry (should be consistent for formation plugs)
+            gap_sacks = 0.0
+            if buf and p_high < s_low:  # There is a gap
+                gap_size = s_low - p_high
+                # Use geometry from first plug in buffer
+                first_in_buf = buf[0]
+                casing_id = first_in_buf.get("casing_id_in")
+                stinger_od = first_in_buf.get("stinger_od_in")
+                ann_excess = float(first_in_buf.get("annular_excess", 0.4) or 0.4)
+                recipe_dict = first_in_buf.get("recipe") or {}
+                yield_ft3_per_sk = float(recipe_dict.get("yield_ft3_per_sk", 1.18) or 1.18)
+                
+                gap_sacks = _estimate_sacks_for_merged_interval(
+                    s_low, p_high, casing_id, stinger_od, ann_excess, yield_ft3_per_sk
+                ) or 0.0
+            
+            total_merge_sacks = buf_total_sacks + gap_sacks + s_sacks
+            
+            logger.debug(
+                f"Merge decision: tag_required={has_tag_required}, limit={applicable_sack_limit}, "
+                f"buf={buf_total_sacks:.0f} + gap={gap_sacks:.0f} + new={s_sacks:.0f} = {total_merge_sacks:.0f} sacks"
+            )
+            
+            # Merge if total sacks ≤ applicable limit
+            if total_merge_sacks <= applicable_sack_limit:
                 buf.append(s)
                 prev = s
+                logger.debug(f"✅ Merged (total {total_merge_sacks:.0f} ≤ limit {applicable_sack_limit})")
                 continue
-        except Exception:
-            pass
+            else:
+                logger.debug(f"❌ Cannot merge (total {total_merge_sacks:.0f} > limit {applicable_sack_limit})")
+        except Exception as e:
+            logger.exception(f"Error in merge logic: {e}")
+        
         # Flush current group and start new
         _flush(buf)
         buf = [s]

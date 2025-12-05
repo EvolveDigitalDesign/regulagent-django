@@ -108,6 +108,13 @@ class W3AFromApiView(APIView):
         plugs_mode: str = req.validated_data.get("plugs_mode", "combined")
         input_mode: str = req.validated_data.get("input_mode", "extractions")
         merge_threshold_ft: float = float(req.validated_data.get("merge_threshold_ft", 500.0) or 500.0)
+        
+        # NEW: Sack-based merge limits (for combine mode)
+        # sack_limit_no_tag: max sacks to combine WITHOUT tag requirement (default 50)
+        # sack_limit_with_tag: max sacks to combine WITH tag requirement (default 150)
+        sack_limit_no_tag: float = float(req.validated_data.get("sack_limit_no_tag", 50.0) or 50.0)
+        sack_limit_with_tag: float = float(req.validated_data.get("sack_limit_with_tag", 150.0) or 150.0)
+        
         confirm_fact_updates: bool = bool(req.validated_data.get("confirm_fact_updates", False))
         allow_precision_upgrades_only: bool = bool(req.validated_data.get("allow_precision_upgrades_only", True))
         use_gau_override_if_invalid: bool = bool(req.validated_data.get("use_gau_override_if_invalid", False))
@@ -542,8 +549,8 @@ class W3AFromApiView(APIView):
             if uploaded_refs:
                 extraction_info["user_files"] = uploaded_refs
             if plugs_mode == "both":
-                combined = self._build_plan(api, merge_enabled=True, merge_threshold_ft=merge_threshold_ft)
-                isolated = self._build_plan(api, merge_enabled=False, merge_threshold_ft=merge_threshold_ft)
+                combined = self._build_plan(api, merge_enabled=True, merge_threshold_ft=merge_threshold_ft, sack_limit_no_tag=sack_limit_no_tag, sack_limit_with_tag=sack_limit_with_tag)
+                isolated = self._build_plan(api, merge_enabled=False, merge_threshold_ft=merge_threshold_ft, sack_limit_no_tag=sack_limit_no_tag, sack_limit_with_tag=sack_limit_with_tag)
                 out = {"variants": {"combined": combined, "isolated": isolated}, "extraction": extraction_info}
                 # Persist baseline snapshot (variants payload) if well available
                 try:
@@ -598,7 +605,7 @@ class W3AFromApiView(APIView):
                 return Response(out, status=status.HTTP_200_OK)
             else:
                 merge_enabled = (plugs_mode == "combined")
-                plan = self._build_plan(api, merge_enabled=merge_enabled, merge_threshold_ft=merge_threshold_ft)
+                plan = self._build_plan(api, merge_enabled=merge_enabled, merge_threshold_ft=merge_threshold_ft, sack_limit_no_tag=sack_limit_no_tag, sack_limit_with_tag=sack_limit_with_tag)
                 ser = W3APlanSerializer(data=plan)
                 ser.is_valid(raise_exception=False)
                 response_payload = {**plan, "extraction": extraction_info}
@@ -701,7 +708,15 @@ class W3AFromApiView(APIView):
         except Exception:
             return False
 
-    def _build_plan(self, api: str, *, merge_enabled: bool, merge_threshold_ft: float) -> Dict[str, Any]:
+    def _build_plan(
+        self,
+        api: str,
+        *,
+        merge_enabled: bool,
+        merge_threshold_ft: float,
+        sack_limit_no_tag: float = 50.0,
+        sack_limit_with_tag: float = 150.0,
+    ) -> Dict[str, Any]:
         # Mirror management command: assemble facts from latest W-2/W-15/GAU extractions, then run kernel
         def latest(doc_type: str) -> Optional[ExtractedDocument]:
             return (
@@ -1298,11 +1313,19 @@ class W3AFromApiView(APIView):
             "additives": [],
         })
         # Long-plug merge preference based on request
+        # NEW: Sack-based merging with tag-aware limits
         prefs.setdefault("long_plug_merge", {})
         prefs["long_plug_merge"]["enabled"] = bool(merge_enabled)
-        prefs["long_plug_merge"]["threshold_ft"] = float(merge_threshold_ft)
+        prefs["long_plug_merge"]["threshold_ft"] = float(merge_threshold_ft)  # Deprecated, kept for compat
+        prefs["long_plug_merge"]["sack_limit_no_tag"] = float(sack_limit_no_tag)  # Max sacks WITHOUT tag (default 50)
+        prefs["long_plug_merge"]["sack_limit_with_tag"] = float(sack_limit_with_tag)  # Max sacks WITH tag (default 150)
         prefs["long_plug_merge"].setdefault("types", ["formation_top_plug", "cement_plug", "uqw_isolation_plug"])
         prefs["long_plug_merge"].setdefault("preserve_tagging", True)
+        
+        logger.info(
+            f"🎯 Merge config: enabled={merge_enabled}, "
+            f"sack_limit_no_tag={sack_limit_no_tag}, sack_limit_with_tag={sack_limit_with_tag}"
+        )
 
         # Map OD to nominal ID for common casing sizes (inches)
         NOMINAL_ID = {
@@ -1447,15 +1470,63 @@ class W3AFromApiView(APIView):
             
             out_s = {
                 "type": s.get("type"),
+                "plug_type": s.get("plug_type"),  # Mechanical type (spot, perf & squeeze, etc.)
                 "top": top,  # Consistent field name for AI tools
                 "base": bottom,  # Consistent field name for AI tools
                 "top_ft": top,  # Keep legacy field for backward compat
                 "bottom_ft": bottom,  # Keep legacy field for backward compat
                 "sacks": ((s.get("materials") or {}).get("slurry") or {}).get("sacks") or s.get("sacks"),
+                "tag_required": s.get("tag_required"),  # Whether TAG (WOC) is required
                 "regulatory_basis": s.get("regulatory_basis"),
                 "special_instructions": s.get("special_instructions"),
                 "details": details,
             }
+            
+            # Build display_name with TAG suffix if required
+            step_type = s.get("type")
+            formation = s.get("formation", "")
+            purpose_name = step_type
+            
+            # Map step type to display name
+            if step_type == "formation_top_plug":
+                purpose_name = f"Formation isolation ({formation})" if formation else "Formation top isolation"
+            elif step_type == "uqw_isolation_plug":
+                purpose_name = "UQW isolation"
+            elif step_type == "intermediate_casing_shoe_plug":
+                purpose_name = "Intermediate shoe isolation"
+            elif step_type == "surface_casing_shoe_plug":
+                purpose_name = "Surface shoe isolation"
+            elif step_type == "perf_and_circulate_to_surface":
+                purpose_name = "Annulus circulation to surface"
+            elif step_type == "productive_horizon_isolation_plug":
+                purpose_name = "Productive horizon isolation"
+            elif step_type == "cibp_cap":
+                purpose_name = "CIBP cap"
+            elif step_type == "top_plug":
+                purpose_name = "Surface safety plug"
+            
+            # Get plug type for display
+            plug_type = s.get("plug_type")
+            plug_type_display = ""
+            if plug_type == "spot_plug":
+                plug_type_display = "Spot plug"
+            elif plug_type == "perf_and_squeeze_plug":
+                plug_type_display = "Perf & squeeze"
+            elif plug_type == "perf_and_circulate_plug":
+                plug_type_display = "Perf & circulate"
+            elif plug_type == "dumbell_plug":
+                plug_type_display = "Dumbell"
+            
+            # Build display name: "PlugType - Purpose" with TAG suffix if required
+            display_name = f"{plug_type_display} - {purpose_name}" if plug_type_display else purpose_name
+            
+            if s.get("tag_required") is True:
+                # Add WOC (Wait On Cement) and Tag requirement
+                woc_hours = ((s.get("details") or {}).get("verification") or {}).get("required_wait_hr", 4)
+                display_name += f" - WOC {int(woc_hours)} Hours and Tag"
+            
+            out_s["display_name"] = display_name
+            
             if s.get("type") == "cement_plug":
                 out_s["cement_class"] = s.get("cement_class")
                 out_s["depth_mid_ft"] = s.get("depth_mid_ft")
