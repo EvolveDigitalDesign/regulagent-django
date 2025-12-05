@@ -123,37 +123,46 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
             if not rows:
                 return {"status": "no_records", "api": api, "api_search": search_api, "files": []}
 
-            # Sort rows by date (chronological order for processing)
-            sorted_rows = sorted(rows, key=lambda r: parse_date(r.inner_text() or ""))
+            # Extract row data BEFORE sorting/navigating (to avoid stale element references)
+            # Store as tuples: (date_sort_key, link_href, row_text_for_debug)
+            row_data: List[tuple] = []
+            for row in rows:
+                try:
+                    link = row.query_selector("td:first-child a")
+                    if not link:
+                        continue
+                    href = link.get_attribute("href")
+                    if not href:
+                        continue
+                    row_text = row.inner_text() or ""
+                    sort_key = parse_date(row_text)
+                    row_data.append((sort_key, href, row_text))
+                except Exception as e:
+                    logger.debug(f"   Failed to extract row data: {e}")
+                    continue
+            
+            if not row_data:
+                return {"status": "no_records", "api": api, "api_search": search_api, "files": []}
+            
+            # Sort by date (chronological order for processing)
+            sorted_row_data = sorted(row_data, key=lambda x: x[0])
             
             files: List[DownloadRecord] = []
             seen_hrefs: set[str] = set()
             
-            logger.info(f"🔍 Processing {len(sorted_rows)} rows from RRC search results (in chronological order)")
+            logger.info(f"🔍 Processing {len(sorted_row_data)} rows from RRC search results (in chronological order)")
             
             # Process EACH row in the results (not just the latest)
-            for row_idx, row in enumerate(sorted_rows, 1):
-                logger.info(f"\n📋 Processing row {row_idx}/{len(sorted_rows)}")
-                row_text = row.inner_text() or ""
+            for row_idx, (sort_key, href, row_text) in enumerate(sorted_row_data, 1):
+                logger.info(f"\n📋 Processing row {row_idx}/{len(sorted_row_data)}")
                 logger.debug(f"   Row content: {row_text[:100]}...")
-                
-                link = row.query_selector("td:first-child a")
-                if not link:
-                    logger.warning(f"   ⚠️  No tracking link found in row {row_idx}, skipping")
-                    continue
 
                 try:
-                    link.click()
-                    page.wait_for_load_state("networkidle")
+                    # Navigate to detail page using the href we captured earlier
+                    page.goto(f"https://webapps.rrc.texas.gov{href}", wait_until="networkidle")
                     logger.info(f"   ✅ Opened detail page for row {row_idx}")
                 except Exception as e:
-                    logger.warning(f"   ⚠️  Failed to click link in row {row_idx}: {e}")
-                    # Try to go back to search results
-                    try:
-                        page.go_back()
-                        page.wait_for_load_state("networkidle")
-                    except Exception:
-                        pass
+                    logger.warning(f"   ⚠️  Failed to navigate to detail page for row {row_idx}: {e}")
                     continue
 
                 # Find the Form/Attachment table on this detail page
