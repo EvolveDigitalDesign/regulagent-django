@@ -16,13 +16,13 @@ from .models import (
 @admin.register(WellRegistry)
 class WellRegistryAdmin(admin.ModelAdmin):
     """Admin interface for well registry data."""
-    list_display = ('api14', 'state', 'county', 'field', 'operator_name', 'created_at')
+    list_display = ('api14', 'state', 'county', 'field_name', 'operator_name', 'created_at')
     list_filter = ('state', 'county', 'created_at')
-    search_fields = ('api14', 'field', 'operator_name', 'county')
+    search_fields = ('api14', 'field_name', 'operator_name', 'county')
     readonly_fields = ('created_at', 'updated_at')
     fieldsets = (
         ('Well Identity', {
-            'fields': ('api14', 'state', 'county', 'district', 'field', 'lease')
+            'fields': ('api14', 'state', 'county', 'district', 'field_name', 'lease_name', 'well_number')
         }),
         ('Location', {
             'fields': ('lat', 'lon')
@@ -195,26 +195,26 @@ class PublicFactsAdmin(admin.ModelAdmin):
 @admin.register(PublicArtifacts)
 class PublicArtifactsAdmin(admin.ModelAdmin):
     """Admin interface for public artifacts (files, reports, etc.)."""
-    list_display = ('well', 'kind', 'file_path', 'created_at')
+    list_display = ('well', 'kind', 'title', 'url', 'created_at')
     list_filter = ('kind', 'created_at')
-    search_fields = ('well__api14', 'file_path')
+    search_fields = ('well__api14', 'title', 'url')
     readonly_fields = ('created_at', 'updated_at')
 
 
 @admin.register(PublicCasingString)
 class PublicCasingStringAdmin(admin.ModelAdmin):
     """Admin interface for casing string records."""
-    list_display = ('well', 'string_type', 'size_in', 'shoe_depth_ft', 'created_at')
-    list_filter = ('string_type', 'created_at')
-    search_fields = ('well__api14',)
+    list_display = ('well', 'string_no', 'outside_dia_in', 'shoe_ft', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('well__api14', 'grade')
     readonly_fields = ('created_at', 'updated_at')
 
 
 @admin.register(PublicPerforation)
 class PublicPerforationAdmin(admin.ModelAdmin):
     """Admin interface for perforation records."""
-    list_display = ('well', 'interval_top_ft', 'interval_bottom_ft', 'formation', 'status', 'created_at')
-    list_filter = ('status', 'formation', 'created_at')
+    list_display = ('well', 'top_ft', 'bottom_ft', 'formation', 'created_at')
+    list_filter = ('formation', 'created_at')
     search_fields = ('well__api14', 'formation')
     readonly_fields = ('created_at', 'updated_at')
 
@@ -222,7 +222,7 @@ class PublicPerforationAdmin(admin.ModelAdmin):
 @admin.register(PublicWellDepths)
 class PublicWellDepthsAdmin(admin.ModelAdmin):
     """Admin interface for well depth information."""
-    list_display = ('well', 'td_ft', 'kb_ft', 'surface_casing_shoe_ft', 'created_at')
+    list_display = ('well', 'td_ft', 'kb_elev_ft', 'surf_shoe_ft', 'created_at')
     list_filter = ('created_at',)
     search_fields = ('well__api14',)
     readonly_fields = ('created_at', 'updated_at')
