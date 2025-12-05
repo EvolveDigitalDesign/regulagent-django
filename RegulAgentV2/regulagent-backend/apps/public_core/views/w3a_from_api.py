@@ -1303,32 +1303,25 @@ class W3AFromApiView(APIView):
         district_val = facts["district"]["value"]
         county_val = facts["county"]["value"] or None
         
+        print(f"🔍 GETTING POLICY: district={district_val}, county={county_val}, field={field_name}", flush=True)
         logger.critical(f"🔍 GETTING POLICY: district={district_val}, county={county_val}, field={field_name}")
-        policy_result = get_effective_policy(district=district_val, county=county_val, field=field_name)
         
-        # The policy loader returns a dict with 'effective' key containing the actual rules
-        # OR it might return the effective policy directly depending on how it's structured
-        effective_policy = policy_result.get("effective") or policy_result
+        # get_effective_policy already returns the correct structure with both top-level and nested keys
+        policy = get_effective_policy(district=district_val, county=county_val, field=field_name)
         
-        # DEBUG: Log what formation_tops are in the effective_policy
+        # DEBUG: Verify formation_tops are loaded
+        effective_policy = policy.get("effective") or {}
         dist_overrides = effective_policy.get("district_overrides") or {}
         formation_tops = dist_overrides.get("formation_tops") or []
-        logger.info(f"🔍 POLICY LOADED: district={district_val}, county={county_val}, field={field_name}")
-        logger.info(f"🔍 POLICY: Found {len(formation_tops)} formation tops in district_overrides")
-        if formation_tops:
-            logger.info(f"🔍 POLICY: Formations: {[ft.get('formation') for ft in formation_tops]}")
-        else:
-            logger.error(f"🔍 POLICY ERROR: No formation_tops found!")
-            logger.error(f"🔍 POLICY: dist_overrides keys: {list(dist_overrides.keys())}")
-            logger.error(f"🔍 POLICY: effective keys: {list(effective_policy.keys())}")
-            logger.error(f"🔍 POLICY: result keys: {list(policy_result.keys())}")
         
-        # CRITICAL: Wrap effective_policy in a policy dict with "effective" key for plan_from_facts
-        policy = {
-            "policy_id": "tx.w3a",
-            "complete": True,
-            "effective": effective_policy,  # plan_from_facts expects the effective policy under this key
-        }
+        if formation_tops:
+            logger.info(f"🔍 POLICY: Found {len(formation_tops)} formation tops: {[ft.get('formation') for ft in formation_tops]}")
+        else:
+            logger.error(f"🔍 POLICY ERROR: No formation_tops found for {county_val} / {field_name}")
+        
+        # Override policy metadata
+        policy["policy_id"] = "tx.w3a"
+        policy["complete"] = True
         prefs = policy.setdefault("preferences", {})
         prefs["rounding_policy"] = "nearest"
         prefs.setdefault("default_recipe", {
