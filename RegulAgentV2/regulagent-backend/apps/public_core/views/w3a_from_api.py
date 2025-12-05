@@ -1299,18 +1299,24 @@ class W3AFromApiView(APIView):
             facts["surface_casing_toc_ft"] = wrap(float(surface_casing_toc_ft))
             logger.info(f"🎯 Added surface_casing_toc_ft to facts: {surface_casing_toc_ft} ft")
 
-        effective_policy = get_effective_policy(district=facts["district"]["value"], county=facts["county"]["value"] or None, field=facts["field"]["value"] or None)
+        field_name = facts["field"]["value"] or None
+        district_val = facts["district"]["value"]
+        county_val = facts["county"]["value"] or None
+        
+        logger.critical(f"🔍 GETTING POLICY: district={district_val}, county={county_val}, field={field_name}")
+        effective_policy = get_effective_policy(district=district_val, county=county_val, field=field_name)
         
         # DEBUG: Log what formation_tops are in the effective_policy
         dist_overrides = effective_policy.get("district_overrides") or {}
         formation_tops = dist_overrides.get("formation_tops") or []
-        logger.info(f"🔍 POLICY LOADED: district={facts['district']['value']}, county={facts['county']['value']}, field={facts['field']['value']}")
+        logger.info(f"🔍 POLICY LOADED: district={district_val}, county={county_val}, field={field_name}")
         logger.info(f"🔍 POLICY: Found {len(formation_tops)} formation tops in district_overrides")
         if formation_tops:
             logger.info(f"🔍 POLICY: Formations: {[ft.get('formation') for ft in formation_tops]}")
         else:
-            logger.warning(f"🔍 POLICY: No formation_tops found! Checking policy structure...")
-            logger.warning(f"🔍 POLICY: district_overrides keys: {list(dist_overrides.keys())}")
+            logger.error(f"🔍 POLICY ERROR: No formation_tops found!")
+            logger.error(f"🔍 POLICY: district_overrides keys: {list(dist_overrides.keys())}")
+            logger.error(f"🔍 POLICY: Full effective_policy keys: {list(effective_policy.keys())}")
         
         # CRITICAL: Wrap effective_policy in a policy dict with "effective" key for plan_from_facts
         policy = {
