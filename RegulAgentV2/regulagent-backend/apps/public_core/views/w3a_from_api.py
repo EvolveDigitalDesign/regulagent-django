@@ -1300,6 +1300,19 @@ class W3AFromApiView(APIView):
             logger.info(f"🎯 Added surface_casing_toc_ft to facts: {surface_casing_toc_ft} ft")
 
         policy = get_effective_policy(district=facts["district"]["value"], county=facts["county"]["value"] or None, field=facts["field"]["value"] or None)
+        
+        # DEBUG: Log what formation_tops are in the policy
+        dist_overrides = policy.get("effective", {}).get("district_overrides") or {}
+        formation_tops = dist_overrides.get("formation_tops") or []
+        logger.info(f"🔍 POLICY LOADED: district={facts['district']['value']}, county={facts['county']['value']}, field={facts['field']['value']}")
+        logger.info(f"🔍 POLICY: Found {len(formation_tops)} formation tops in district_overrides")
+        if formation_tops:
+            logger.info(f"🔍 POLICY: Formations: {[ft.get('formation') for ft in formation_tops]}")
+        else:
+            logger.warning(f"🔍 POLICY: No formation_tops found! Checking policy structure...")
+            logger.warning(f"🔍 POLICY: effective keys: {list(policy.get('effective', {}).keys())}")
+            logger.warning(f"🔍 POLICY: district_overrides keys: {list(dist_overrides.keys())}")
+        
         policy["policy_id"] = "tx.w3a"
         policy["complete"] = True
         prefs = policy.setdefault("preferences", {})
