@@ -124,7 +124,6 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
                 return {"status": "no_records", "api": api, "api_search": search_api, "files": []}
 
             # Extract row data BEFORE sorting/navigating (to avoid stale element references)
-            # Store as tuples: (date_sort_key, link_href, row_text_for_debug)
             row_data: List[tuple] = []
             for row in rows:
                 try:
@@ -144,7 +143,6 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
             if not row_data:
                 return {"status": "no_records", "api": api, "api_search": search_api, "files": []}
             
-            # Sort by date (chronological order for processing)
             sorted_row_data = sorted(row_data, key=lambda x: x[0])
             
             files: List[DownloadRecord] = []
@@ -152,20 +150,17 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
             
             logger.info(f"🔍 Processing {len(sorted_row_data)} rows from RRC search results (in chronological order)")
             
-            # Process EACH row in the results (not just the latest)
             for row_idx, (sort_key, href, row_text) in enumerate(sorted_row_data, 1):
                 logger.info(f"\n📋 Processing row {row_idx}/{len(sorted_row_data)}")
                 logger.debug(f"   Row content: {row_text[:100]}...")
 
                 try:
-                    # Navigate to detail page using the href we captured earlier
                     page.goto(f"https://webapps.rrc.texas.gov{href}", wait_until="networkidle")
                     logger.info(f"   ✅ Opened detail page for row {row_idx}")
                 except Exception as e:
                     logger.warning(f"   ⚠️  Failed to navigate to detail page for row {row_idx}: {e}")
                     continue
 
-                # Find the Form/Attachment table on this detail page
                 documents_table = None
                 for tbl in page.query_selector_all("table"):
                     cells = tbl.query_selector_all("th, td")
@@ -176,61 +171,48 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
 
                 if not documents_table:
                     logger.warning(f"   ⚠️  No Form/Attachment table found in row {row_idx}, skipping")
-                    # Go back to search results to process next row
-                    try:
-                        page.go_back()
-                        page.wait_for_load_state("networkidle")
-                    except Exception as e:
-                        logger.warning(f"   ⚠️  Failed to go back: {e}")
                     continue
 
                 logger.info(f"   📄 Found Form/Attachment table, extracting documents...")
                 
-                # Extract ALL W-2 and W-15 documents from this detail page (not deduped by type)
-                for row in documents_table.query_selector_all("tr"):
-                    cols = row.query_selector_all("td, th")
+                for entry in documents_table.query_selector_all("tr"):
+                    cols = entry.query_selector_all("td, th")
                     if len(cols) < 3:
                         continue
                     form_text = cols[0].inner_text().strip()
-                    href = None
-                    for a in row.query_selector_all("a"):
+                    href_link = None
+                    for a in entry.query_selector_all("a"):
                         h = a.get_attribute("href")
                         if h and ("viewPdfReportFormAction.do" in h or "dpimages/r/" in h):
-                            href = h
+                            href_link = h
                             break
-                    if not href:
+                    if not href_link:
                         continue
                     
                     doc_type = form_text.split("\n")[0][:64]
-                    # Skip directional survey files per product guidance
                     if "directional survey" in doc_type.lower():
                         logger.debug(f"      Skipping directional survey: {doc_type}")
                         continue
                     
-                    # NOTE: We keep ALL instances (W-2 and W-15) - do NOT dedupe by type
-                    # Each submission may have multiple versions that we need to track
-                    if href in seen_hrefs:
+                    if href_link in seen_hrefs:
                         logger.debug(f"      Skipping duplicate href: {doc_type}")
                         continue
-                    seen_hrefs.add(href)
+                    seen_hrefs.add(href_link)
 
-                    if href.startswith("/"):
-                        url = f"https://webapps.rrc.texas.gov{href}"
-                    elif href.startswith("http"):
-                        url = href
-                    else:
-                        url = f"https://webapps.rrc.texas.gov/{href}"
+                    url = (
+                        f"https://webapps.rrc.texas.gov{href_link}"
+                        if href_link.startswith("/")
+                        else href_link
+                        if href_link.startswith("http")
+                        else f"https://webapps.rrc.texas.gov/{href_link}"
+                    )
 
-                    # Normalize document name from URL when possible (e.g., W-2 PDF endpoint)
-                    lower_href = (href or url).lower()
-                    # Determine a normalized kind for filtering
-                    # NOTE: Only W-2 and W-15 are fetched from RRC - GAU is NOT included
+                    lower_href = (href_link or url).lower()
                     kind = "other"
                     if "viewpdfreportformaction.do" in lower_href and "cmplw2formpdf" in lower_href:
-                        doc_type = "W-2"  # normalize label
+                        doc_type = "W-2"
                         kind = "w2"
                     elif "viewpdfreportformaction.do" in lower_href and "cmplw15formpdf" in lower_href:
-                        # Heuristic for W-15 endpoint (if present in URL patterns)
                         kind = "w15"
                     else:
                         dt_low = doc_type.lower()
@@ -238,17 +220,13 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
                             kind = "w2"
                         elif ("w-15" in dt_low) or ("w15" in dt_low) or ("cement" in dt_low):
                             kind = "w15"
-                        # Skip GAU documents - they are NOT fetched from RRC site
                         elif any(x in dt_low for x in ["gau", "groundwater", "l-1", "l1"]):
                             logger.debug(f"Skipping GAU document: {doc_type} (not fetched from RRC)")
                             continue
 
-                    # If allowlist provided, skip non-allowed kinds
                     if allowed_kinds and kind not in set(k.lower() for k in allowed_kinds):
                         continue
 
-                    # Create unique filename with timestamp to avoid collisions when downloading multiple versions
-                    # Format: W-2_42003001_20250109_120530.pdf or W-15_42003001_20250109_120530.pdf
                     import datetime as _dt
                     timestamp = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
                     safe_type = re.sub(r"[^A-Za-z0-9_.-]", "_", doc_type.replace(" ", "_"))[:32]
@@ -271,7 +249,6 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
                         logger.warning(f"      ⚠️  Failed to download {doc_type}: {e}")
                         continue
 
-                # Go back to search results to process next row
                 try:
                     logger.info(f"   ↩️  Returning to search results")
                     page.go_back()
