@@ -279,6 +279,17 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
                             if kl == lc or kl.startswith(lc) or lc in kl:
                                 cdata = v
                                 break
+                    if not cdata:
+                        # final fallback: normalize county keys (handles odd spacing/casing)
+                        try:
+                            c_base, c_with = _normalize_county_key(str(county))
+                            for k, v in counties.items():
+                                kb, kw = _normalize_county_key(str(k))
+                                if kb == c_base or kw == c_base or kb == c_with or kw == c_with:
+                                    cdata = v
+                                    break
+                        except Exception:
+                            pass
                     if cdata:
                         county_req = (cdata.get('requirements') or {})
                         county_overrides = (cdata.get('overrides') or {})
