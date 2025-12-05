@@ -1013,14 +1013,12 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]]) -> List[Dict[str, 
                                                step.get("details", {}).get("merged") is True)
                 
                 if is_perf_and_squeeze_merged:
-                    # Merged perf & squeeze plugs: treat as ONE continuous operation
-                    # BUT account for DIFFERENT ANNULI at different depths
-                    # Example: 5650→950 ft might be prod-inside-intermediate (5650→3864) + prod-inside-surface (3864→950)
+                    # Merged perf & squeeze plugs spanning multiple geometries
+                    # Segment by casing shoe boundaries and calculate each section separately
                     logger.info(f"📊 Computing materials for MERGED perf_and_squeeze_plug (depths {step.get('top_ft')}-{step.get('bottom_ft')} ft)")
                     
                     top_ft = float(step.get("top_ft", 0) or 0)
                     bottom_ft = float(step.get("bottom_ft", 0) or 0)
-                    interval_ft = abs(top_ft - bottom_ft)
                     
                     ex = float(step.get("annular_excess", 0.4))
                     squeeze_factor = float(step.get("squeeze_factor", 1.5) or 1.5)
@@ -1029,69 +1027,112 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]]) -> List[Dict[str, 
                     total_bbl = 0.0
                     segments_calc: List[Dict[str, Any]] = []
                     
-                    # Get casing strings info to determine correct annuli for squeeze
+                    # Get casing strings to identify shoe boundaries
+                    casing_strings = resolved_facts.get("casing_strings") or []
+                    prod_casing = next((c for c in casing_strings if c.get("string", "").lower().startswith("production")), None)
+                    inter_casing = next((c for c in casing_strings if c.get("string", "").lower().startswith("intermediate")), None)
+                    surf_casing = next((c for c in casing_strings if c.get("string", "").lower().startswith("surface")), None)
+                    
+                    prod_toc = prod_casing.get("cement_top_ft") if prod_casing else None
+                    inter_shoe = inter_casing.get("bottom_ft") if inter_casing else None
+                    surf_shoe = surf_casing.get("bottom_ft") if surf_casing else None
+                    
+                    logger.info(f"Well geometry: Prod TOC={prod_toc}, Inter shoe={inter_shoe}, Surf shoe={surf_shoe}")
+                    
+                    # Identify segment boundaries (shoes and TOC)
+                    boundaries = sorted(set([b for b in [prod_toc, inter_shoe, surf_shoe] if b is not None and bottom_ft < b < top_ft]))
+                    logger.info(f"Segment boundaries within interval: {boundaries}")
+                    
+                    # Build segment intervals
+                    seg_tops = [top_ft] + boundaries
+                    seg_bots = boundaries + [bottom_ft]
+                    
                     from .w3a_rules import _get_casing_strings_at_depth
                     
-                    # Check casing context at the deepest point
-                    casing_context = _get_casing_strings_at_depth(resolved_facts, bottom_ft)
-                    logger.info(f"Merged perf & squeeze context: {casing_context.get('context')} at {bottom_ft} ft")
-                    
-                    if casing_context.get("inner_string") and casing_context.get("outer_string"):
-                        # Two strings at depth (annulus squeeze)
-                        inner_id = casing_context["inner_string"].get("id_in")
-                        outer_id = casing_context["outer_string"].get("id_in")
+                    for seg_top, seg_bot in zip(seg_tops, seg_bots):
+                        if seg_top <= seg_bot:  # Skip if invalid
+                            continue
                         
-                        if inner_id is not None and outer_id is not None:
-                            ann_cap = annulus_capacity_bbl_per_ft(outer_id, inner_id)
+                        seg_len = seg_top - seg_bot
+                        if seg_len <= 0:
+                            continue
+                        
+                        # Determine casing context at this segment
+                        casing_context = _get_casing_strings_at_depth(resolved_facts, seg_bot)
+                        logger.info(f"Segment {seg_top}→{seg_bot} ft: {casing_context.get('context')}")
+                        
+                        seg_bbl = 0.0
+                        seg_info: Dict[str, Any] = {
+                            "top_ft": seg_top,
+                            "bottom_ft": seg_bot,
+                            "length_ft": seg_len,
+                        }
+                        
+                        if casing_context.get("context") == "annulus_squeeze":
+                            # Two strings: annulus squeeze (cement between casings)
+                            inner_str = casing_context.get("inner_string", {})
+                            outer_str = casing_context.get("outer_string", {})
+                            inner_id = inner_str.get("id_in")
+                            outer_id = outer_str.get("id_in")
                             
-                            # Annulus volume with excess and squeeze factor
-                            base_bbl = interval_ft * ann_cap
-                            squeeze_bbl = base_bbl * (1.0 + ex) * squeeze_factor
+                            if inner_id and outer_id:
+                                ann_cap = annulus_capacity_bbl_per_ft(outer_id, inner_id)
+                                base_bbl = seg_len * ann_cap
+                                seg_bbl = base_bbl * (1.0 + ex) * squeeze_factor
+                                
+                                depth_kft = int((seg_bot + 999.0) / 1000.0)
+                                texas_excess = 1.0 + (0.10 * depth_kft)
+                                seg_bbl *= texas_excess
+                                
+                                seg_info.update({
+                                    "context": "annulus_squeeze",
+                                    "inner_casing": inner_str.get("name"),
+                                    "inner_size_in": inner_str.get("size_in"),
+                                    "outer_casing": outer_str.get("name"),
+                                    "outer_size_in": outer_str.get("size_in"),
+                                    "annular_capacity_bbl_per_ft": ann_cap,
+                                    "base_bbl": base_bbl,
+                                    "squeeze_factor": squeeze_factor,
+                                    "texas_excess": texas_excess,
+                                    "segment_bbl": seg_bbl,
+                                })
+                        
+                        elif casing_context.get("context") == "open_hole_squeeze":
+                            # One string: open-hole squeeze (cement into formation around casing)
+                            inner_str = casing_context.get("inner_string", {})
+                            inner_od = inner_str.get("size_in")
                             
-                            # Depth-based excess (TAC §3.14(d)(11)): +10% per 1000 ft
-                            depth_kft = int((bottom_ft + 999.0) / 1000.0)
-                            texas_excess_factor = 1.0 + (0.10 * depth_kft)
-                            squeeze_bbl *= texas_excess_factor
+                            # Get hole size from casing record
+                            hole_size = prod_casing.get("hole_size_in") if prod_casing else None
                             
-                            total_bbl = squeeze_bbl
-                            
-                            segments_calc.append({
-                                "type": "merged_perf_and_squeeze_annulus",
-                                "top_ft": top_ft,
-                                "bottom_ft": bottom_ft,
-                                "total_length_ft": interval_ft,
-                                "inner_casing": casing_context["inner_string"].get("name"),
-                                "inner_size_in": casing_context["inner_string"].get("size_in"),
-                                "inner_id_in": inner_id,
-                                "outer_casing": casing_context["outer_string"].get("name"),
-                                "outer_id_in": outer_id,
-                                "annular_capacity_bbl_per_ft": ann_cap,
-                                "base_annulus_bbl": base_bbl,
-                                "annular_excess": ex,
-                                "squeeze_factor": squeeze_factor,
-                                "texas_excess_factor": texas_excess_factor,
-                                "total_bbl": squeeze_bbl,
-                                "merged_formations": [m.get("formation") for m in step.get("details", {}).get("merged_steps", [])],
-                            })
-                    else:
-                        # Fallback: use step-level geometry if available
-                        casing_id = step.get("casing_id_in")
-                        stinger_od = step.get("stinger_od_in")
-                        if casing_id is not None and stinger_od is not None:
-                            ann_cap = annulus_capacity_bbl_per_ft(float(casing_id), float(stinger_od))
-                            base_bbl = interval_ft * ann_cap
-                            squeeze_bbl = base_bbl * (1.0 + ex) * squeeze_factor
-                            depth_kft = int((bottom_ft + 999.0) / 1000.0)
-                            texas_excess_factor = 1.0 + (0.10 * depth_kft)
-                            squeeze_bbl *= texas_excess_factor
-                            total_bbl = squeeze_bbl
-                            
-                            segments_calc.append({
-                                "type": "merged_perf_and_squeeze_fallback",
-                                "top_ft": top_ft,
-                                "bottom_ft": bottom_ft,
-                                "note": "Using step-level geometry (not from casing analysis)",
-                            })
+                            if hole_size and inner_od:
+                                ann_cap = annulus_capacity_bbl_per_ft(float(hole_size), float(inner_od))
+                                base_bbl = seg_len * ann_cap
+                                seg_bbl = base_bbl * (1.0 + ex) * squeeze_factor
+                                
+                                depth_kft = int((seg_bot + 999.0) / 1000.0)
+                                texas_excess = 1.0 + (0.10 * depth_kft)
+                                seg_bbl *= texas_excess
+                                
+                                seg_info.update({
+                                    "context": "open_hole_squeeze",
+                                    "casing_name": inner_str.get("name"),
+                                    "casing_od_in": inner_od,
+                                    "hole_size_in": hole_size,
+                                    "annular_capacity_bbl_per_ft": ann_cap,
+                                    "base_bbl": base_bbl,
+                                    "squeeze_factor": squeeze_factor,
+                                    "texas_excess": texas_excess,
+                                    "segment_bbl": seg_bbl,
+                                })
+                        
+                        total_bbl += seg_bbl
+                        segments_calc.append(seg_info)
+                    
+                    # Add formation info to details
+                    segments_calc.append({
+                        "merged_formations": [m.get("formation") for m in step.get("details", {}).get("merged_steps", [])],
+                    })
                     
                     vb = compute_sacks(total_bbl, recipe, rounding=rounding_mode)
                     materials["slurry"] = {
@@ -1740,19 +1781,45 @@ def _merge_adjacent_plugs(
             
             total_merge_sacks = buf_total_sacks + gap_sacks + s_sacks
             
+            # NEW: Check max plug length (1250 ft) and max plugs per combination (3)
+            # Calculate merged interval if we were to merge
+            merged_buf_top = max(float(x.get("top_ft", 0)) for x in buf + [s])
+            merged_buf_bot = min(float(x.get("bottom_ft", 0)) for x in buf + [s])
+            merged_length = abs(merged_buf_top - merged_buf_bot)
+            merged_count = len(buf) + 1
+            
             logger.debug(
                 f"Merge decision: tag_required={has_tag_required}, limit={applicable_sack_limit}, "
-                f"buf={buf_total_sacks:.0f} + gap={gap_sacks:.0f} + new={s_sacks:.0f} = {total_merge_sacks:.0f} sacks"
+                f"buf={buf_total_sacks:.0f} + gap={gap_sacks:.0f} + new={s_sacks:.0f} = {total_merge_sacks:.0f} sacks, "
+                f"length={merged_length:.0f} ft, count={merged_count}"
             )
             
-            # Merge if total sacks ≤ applicable limit
-            if total_merge_sacks <= applicable_sack_limit:
+            # Check all merge constraints
+            merge_blocked = False
+            block_reason = ""
+            
+            # Constraint 1: Max sack limit
+            if total_merge_sacks > applicable_sack_limit:
+                merge_blocked = True
+                block_reason = f"sacks {total_merge_sacks:.0f} > limit {applicable_sack_limit}"
+            
+            # Constraint 2: Max plug length (1250 ft)
+            elif merged_length > 1250.0:
+                merge_blocked = True
+                block_reason = f"length {merged_length:.0f} ft > 1250 ft max"
+            
+            # Constraint 3: Max plugs per combination (3)
+            elif merged_count > 3:
+                merge_blocked = True
+                block_reason = f"count {merged_count} plugs > 3 max"
+            
+            if not merge_blocked:
                 buf.append(s)
                 prev = s
-                logger.debug(f"✅ Merged (total {total_merge_sacks:.0f} ≤ limit {applicable_sack_limit})")
+                logger.debug(f"✅ Merged (all constraints passed)")
                 continue
             else:
-                logger.debug(f"❌ Cannot merge (total {total_merge_sacks:.0f} > limit {applicable_sack_limit})")
+                logger.debug(f"❌ Cannot merge ({block_reason})")
         except Exception as e:
             logger.exception(f"Error in merge logic: {e}")
         
