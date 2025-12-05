@@ -149,6 +149,8 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
             seen_hrefs: set[str] = set()
             
             logger.info(f"🔍 Processing {len(sorted_row_data)} rows from RRC search results (in chronological order)")
+            for idx, (_sort_key, href, row_text) in enumerate(sorted_row_data, 1):
+                logger.info(f"   • row[{idx}] href={href} text_snippet={row_text[:60]}")
             
             for row_idx, (sort_key, href, row_text) in enumerate(sorted_row_data, 1):
                 logger.info(f"\n📋 Processing row {row_idx}/{len(sorted_row_data)}")
@@ -156,7 +158,7 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
 
                 try:
                     page.goto(f"https://webapps.rrc.texas.gov{href}", wait_until="networkidle")
-                    logger.info(f"   ✅ Opened detail page for row {row_idx}")
+                    logger.info(f"   ✅ Opened detail page for row {row_idx} (href={href})")
                 except Exception as e:
                     logger.warning(f"   ⚠️  Failed to navigate to detail page for row {row_idx}: {e}")
                     continue
@@ -170,7 +172,8 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
                         break
 
                 if not documents_table:
-                    logger.warning(f"   ⚠️  No Form/Attachment table found in row {row_idx}, skipping")
+                    logger.warning(f"   ⚠️  No Form/Attachment table found in row {row_idx}, page={page.url}")
+                    logger.debug(page.content()[:400])
                     continue
 
                 logger.info(f"   📄 Found Form/Attachment table, extracting documents...")
