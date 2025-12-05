@@ -171,12 +171,22 @@ class Command(BaseCommand):
         if len(digits) not in (8, 10, 14):
             return None
 
-        # If 8 digits, assume TX (42) + county (003) + well (01016) → 42-003-01016
+        # If 8 digits, assume TX (42) + need county + well → pad to 14
         if len(digits) == 8:
-            return f"42003{digits}"
+            # Assume format is CCWWWWWW (county 2 digits + well 6 digits)
+            # Need to add TX prefix (42): 42CCWWWWWW = 10 digits, need 4 more
+            # This is ambiguous, so just return as-is for last 8 matching
+            return digits
         elif len(digits) == 10:
-            # Assume missing leading 42 (TX)
-            return f"42{digits}"
+            # Format: CCWWWWWW (8) or 42WWNNNNN (10)
+            # Check if it starts with 42 (Texas)
+            if digits.startswith('42'):
+                # Already has TX prefix, just needs padding or is 10-digit format
+                # 42-003-01016 is 10 digits = SSCCWWWWWW where SS=state
+                return digits
+            else:
+                # Assume missing leading 42 (TX)
+                return f"42{digits}"
         else:
             # Already 14 digits
             return digits
@@ -259,8 +269,19 @@ class Command(BaseCommand):
                 "   - All W-3 forms and events\n"
             )
         )
-        response = input("Are you sure? (type 'yes' to confirm): ")
-        return response.lower() == 'yes'
+        self.stdout.write("\n   💡 TIP: Use --force flag to skip this confirmation")
+        try:
+            response = input("Are you sure? (type 'yes' to confirm): ")
+            return response.lower() == 'yes'
+        except EOFError:
+            # Running in non-interactive mode (Docker, CI/CD, etc.)
+            self.stdout.write(
+                self.style.ERROR(
+                    "\n❌ Cannot read input in non-interactive mode.\n"
+                    "   Use --force flag to proceed: --force"
+                )
+            )
+            return False
 
     @transaction.atomic
     def _delete_records(
