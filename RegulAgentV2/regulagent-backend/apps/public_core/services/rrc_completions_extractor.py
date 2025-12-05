@@ -170,32 +170,46 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
                         documents_table = tbl
                         break
 
+                fallback_links = []
                 if not documents_table:
                     logger.warning(f"   ⚠️  No Form/Attachment table found in row {row_idx}, page={page.url}")
                     logger.debug(page.content()[:400])
-                    continue
+                    fallback_links = page.query_selector_all(
+                        "a[href*='viewPdfReportFormAction.do'], a[href*='dpimages/r/']"
+                    )
+                    if fallback_links:
+                        logger.warning(f"   ⚠️  Falling back to anchor scan ({len(fallback_links)} links)")
+                    else:
+                        continue
+                else:
+                    logger.info(f"   📄 Found Form/Attachment table, extracting documents...")
 
-                logger.info(f"   📄 Found Form/Attachment table, extracting documents...")
-                
-                for entry in documents_table.query_selector_all("tr"):
-                    cols = entry.query_selector_all("td, th")
-                    if len(cols) < 3:
-                        continue
-                    form_text = cols[0].inner_text().strip()
-                    href_link = None
-                    for a in entry.query_selector_all("a"):
-                        h = a.get_attribute("href")
-                        if h and ("viewPdfReportFormAction.do" in h or "dpimages/r/" in h):
-                            href_link = h
-                            break
-                    if not href_link:
-                        continue
+                entries = documents_table.query_selector_all("tr") if documents_table else fallback_links
+
+                for entry in entries:
+                    if documents_table:
+                        cols = entry.query_selector_all("td, th")
+                        if len(cols) < 3:
+                            continue
+                        form_text = cols[0].inner_text().strip()
+                        href_candidate = None
+                        for a in entry.query_selector_all("a"):
+                            h = a.get_attribute("href")
+                            if h and ("viewPdfReportFormAction.do" in h or "dpimages/r/" in h):
+                                href_candidate = h
+                                break
+                        if not href_candidate:
+                            continue
+                    else:
+                        href_candidate = entry.get_attribute("href") or ""
+                        form_text = entry.inner_text().strip() or "document"
                     
                     doc_type = form_text.split("\n")[0][:64]
                     if "directional survey" in doc_type.lower():
                         logger.debug(f"      Skipping directional survey: {doc_type}")
                         continue
                     
+                    href_link = href_candidate
                     if href_link in seen_hrefs:
                         logger.debug(f"      Skipping duplicate href: {doc_type}")
                         continue
