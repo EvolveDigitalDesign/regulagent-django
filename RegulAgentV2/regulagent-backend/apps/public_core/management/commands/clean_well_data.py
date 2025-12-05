@@ -213,9 +213,7 @@ class Command(BaseCommand):
                 well=well, **tenant_filter
             ).count(),
             'document_vectors': DocumentVector.objects.filter(
-                document__well=well, document__uploaded_by_tenant=tenant_filter.get('uploaded_by_tenant')
-            ).count() if tenant_uuid else DocumentVector.objects.filter(
-                document__well=well
+                well=well
             ).count(),
             'plan_snapshots': PlanSnapshot.objects.filter(
                 well=well,
