@@ -1918,6 +1918,11 @@ def _apply_district_overrides(
     reqs = policy_effective.get("requirements") or {}
     out: List[Dict[str, Any]] = []
     formation_tops = overrides.get("formation_tops") or []
+    
+    logger.info(f"🔍 _apply_district_overrides: district={district}, county={county}")
+    logger.info(f"🔍 Found {len(formation_tops)} formation tops in district_overrides")
+    if formation_tops:
+        logger.info(f"🔍 Formation tops: {[ft.get('formation') for ft in formation_tops]}")
     for s in steps:
         s_out = dict(s)
         # District 08/08A: tag surface shoe in open hole when county override specifies
