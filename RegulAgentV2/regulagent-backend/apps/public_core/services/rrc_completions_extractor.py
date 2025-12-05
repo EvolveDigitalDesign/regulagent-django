@@ -165,9 +165,8 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
 
                 documents_table = None
                 for tbl in page.query_selector_all("table"):
-                    cells = tbl.query_selector_all("th, td")
-                    header = " ".join([c.inner_text().strip() for c in cells[:6]])
-                    if "Form/Attachment" in header and "View Form/Attachment" in header:
+                    headers = [th.inner_text().strip() for th in tbl.query_selector_all("th")]
+                    if any("Form/Attachment" in h for h in headers) and any("View Form/Attachment" in h for h in headers):
                         documents_table = tbl
                         break
 
