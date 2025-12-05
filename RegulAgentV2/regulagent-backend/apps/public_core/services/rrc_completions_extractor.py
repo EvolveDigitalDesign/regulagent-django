@@ -152,21 +152,38 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
             for idx, (_sort_key, href, row_text) in enumerate(sorted_row_data, 1):
                 logger.info(f"   • row[{idx}] href={href} text_snippet={row_text[:60]}")
             
+            # Base URL for the RRC completions action (needed for proper navigation)
+            RRC_CMPL_BASE = "https://webapps.rrc.texas.gov/CMPL/publicSearchAction.do"
+            
             for row_idx, (sort_key, href, row_text) in enumerate(sorted_row_data, 1):
                 logger.info(f"\n📋 Processing row {row_idx}/{len(sorted_row_data)}")
                 logger.debug(f"   Row content: {row_text[:100]}...")
 
                 try:
-                    page.goto(f"https://webapps.rrc.texas.gov{href}", wait_until="networkidle")
-                    logger.info(f"   ✅ Opened detail page for row {row_idx} (href={href})")
+                    # The href from search results is a query string like "?packetSummaryId=..."
+                    # We need to append it to the correct base path, not the root
+                    if href.startswith("?"):
+                        full_url = f"{RRC_CMPL_BASE}{href}"
+                    elif href.startswith("/"):
+                        full_url = f"https://webapps.rrc.texas.gov{href}"
+                    elif href.startswith("http"):
+                        full_url = href
+                    else:
+                        full_url = f"{RRC_CMPL_BASE}?{href}"
+                    
+                    logger.debug(f"   Navigating to: {full_url}")
+                    page.goto(full_url, wait_until="networkidle")
+                    logger.info(f"   ✅ Opened detail page for row {row_idx}")
                 except Exception as e:
                     logger.warning(f"   ⚠️  Failed to navigate to detail page for row {row_idx}: {e}")
                     continue
 
+                # Find the Form/Attachment table (using original working logic)
                 documents_table = None
                 for tbl in page.query_selector_all("table"):
-                    headers = [th.inner_text().strip() for th in tbl.query_selector_all("th")]
-                    if any("Form/Attachment" in h for h in headers) and any("View Form/Attachment" in h for h in headers):
+                    cells = tbl.query_selector_all("th, td")
+                    header = " ".join([c.inner_text().strip() for c in cells[:6]])
+                    if "Form/Attachment" in header and "View Form/Attachment" in header:
                         documents_table = tbl
                         break
 
