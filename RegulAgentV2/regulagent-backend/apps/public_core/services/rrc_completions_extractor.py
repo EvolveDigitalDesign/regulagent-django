@@ -167,24 +167,15 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
 
                 # Find the Form/Attachment table on this detail page
                 documents_table = None
-                try:
-                    for tbl in page.query_selector_all("table"):
-                        # Get table text content
-                        table_text = tbl.inner_text() or ""
-                        # Check if this table contains form/attachment info
-                        if "Form" in table_text or "Attachment" in table_text or "W-2" in table_text or "W-15" in table_text:
-                            # Verify it has document links
-                            links = tbl.query_selector_all("a")
-                            if any("viewPdfReportFormAction.do" in (l.get_attribute("href") or "") or "dpimages/r/" in (l.get_attribute("href") or "") for l in links):
-                                documents_table = tbl
-                                logger.debug(f"      Found documents table with {len(links)} document links")
-                                break
-                except Exception as e:
-                    logger.debug(f"      Error searching for documents table: {e}")
-                
+                for tbl in page.query_selector_all("table"):
+                    cells = tbl.query_selector_all("th, td")
+                    header = " ".join([c.inner_text().strip() for c in cells[:6]])
+                    if "Form/Attachment" in header and "View Form/Attachment" in header:
+                        documents_table = tbl
+                        break
+
                 if not documents_table:
                     logger.warning(f"   ⚠️  No Form/Attachment table found in row {row_idx}, skipping")
-                    logger.debug(f"      Page HTML preview: {page.content()[:500]}")
                     # Go back to search results to process next row
                     try:
                         page.go_back()
