@@ -1304,7 +1304,11 @@ class W3AFromApiView(APIView):
         county_val = facts["county"]["value"] or None
         
         logger.critical(f"🔍 GETTING POLICY: district={district_val}, county={county_val}, field={field_name}")
-        effective_policy = get_effective_policy(district=district_val, county=county_val, field=field_name)
+        policy_result = get_effective_policy(district=district_val, county=county_val, field=field_name)
+        
+        # The policy loader returns a dict with 'effective' key containing the actual rules
+        # OR it might return the effective policy directly depending on how it's structured
+        effective_policy = policy_result.get("effective") or policy_result
         
         # DEBUG: Log what formation_tops are in the effective_policy
         dist_overrides = effective_policy.get("district_overrides") or {}
@@ -1315,8 +1319,9 @@ class W3AFromApiView(APIView):
             logger.info(f"🔍 POLICY: Formations: {[ft.get('formation') for ft in formation_tops]}")
         else:
             logger.error(f"🔍 POLICY ERROR: No formation_tops found!")
-            logger.error(f"🔍 POLICY: district_overrides keys: {list(dist_overrides.keys())}")
-            logger.error(f"🔍 POLICY: Full effective_policy keys: {list(effective_policy.keys())}")
+            logger.error(f"🔍 POLICY: dist_overrides keys: {list(dist_overrides.keys())}")
+            logger.error(f"🔍 POLICY: effective keys: {list(effective_policy.keys())}")
+            logger.error(f"🔍 POLICY: result keys: {list(policy_result.keys())}")
         
         # CRITICAL: Wrap effective_policy in a policy dict with "effective" key for plan_from_facts
         policy = {
