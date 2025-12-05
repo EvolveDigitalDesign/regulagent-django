@@ -146,7 +146,7 @@ def _normalize_field_name(name: str) -> str:
     return s
 
 
-def _normalize_county_key(name: str) -> tuple[str, str]:
+def _normalize_county_key(name: str) -> Tuple[str, str]:
     """Return (base, with_suffix) normalized county keys for lookups.
     Collapses whitespace and strips a trailing 'county'."""
     s = str(name or '').lower().strip()
