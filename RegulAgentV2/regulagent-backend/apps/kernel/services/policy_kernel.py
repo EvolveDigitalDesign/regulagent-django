@@ -1248,6 +1248,11 @@ def _merge_adjacent_plugs(
 ) -> List[Dict[str, Any]]:
     """Merge adjacent cement-bearing steps of specified types when gaps ≤ threshold.
     v1 scope: operate only on cased-annulus formation plugs; do not cross operational steps.
+    
+    CRITICAL CONSTRAINT: Spot plugs and perf & squeeze plugs CANNOT be merged together.
+    They represent fundamentally different mechanical operations:
+    - Spot plugs: cement injected INSIDE casing only (below TOC)
+    - Perf & squeeze plugs: perforate + squeeze behind pipe (above TOC)
     """
     if not steps or threshold_ft <= 0:
         return steps
@@ -1289,10 +1294,32 @@ def _merge_adjacent_plugs(
         bots = [float(x.get("bottom_ft")) for x in buf]
         top_ft = max(tops)  # shallower top (smaller depth) is larger number if top>bottom; we keep numeric max
         bottom_ft = min(bots)
-        # Choose canonical merged type: prefer generic cement_plug to avoid losing materials path
+        # Choose canonical merged type and plug_type with precedence rules
         out: Dict[str, Any] = dict(buf[0])
         out_type = "cement_plug" if out.get("type") != "cement_plug" else out.get("type")
         out["type"] = out_type
+        
+        # Determine merged plug_type with dominance rules:
+        # Precedence order: perf_and_circulate > perf_and_squeeze > spot > dumbell
+        plug_types_in_buf = [x.get("plug_type") for x in buf]
+        merged_plug_type = None
+        
+        # Check for highest precedence first
+        if "perf_and_circulate_plug" in plug_types_in_buf:
+            merged_plug_type = "perf_and_circulate_plug"
+            logger.info("Merge: perf_and_circulate_plug takes precedence (reaches surface)")
+        elif "perf_and_squeeze_plug" in plug_types_in_buf:
+            merged_plug_type = "perf_and_squeeze_plug"
+            logger.info("Merge: perf_and_squeeze_plug takes precedence over spot/dumbell")
+        elif "spot_plug" in plug_types_in_buf:
+            merged_plug_type = "spot_plug"
+            logger.info("Merge: spot_plug takes precedence over dumbell")
+        elif "dumbell_plug" in plug_types_in_buf:
+            merged_plug_type = "dumbell_plug"
+            logger.info("Merge: all plugs are dumbell type")
+        
+        if merged_plug_type:
+            out["plug_type"] = merged_plug_type
         # If any member is a surface shoe or top plug, treat as surface-cased geometry for capacity
         ctx = "cased_production"
         if any(x.get("type") in ("surface_casing_shoe_plug", "top_plug") for x in buf):
@@ -1359,6 +1386,49 @@ def _merge_adjacent_plugs(
             s_low, s_high = min(s_top, s_bot), max(s_top, s_bot)
             # Separation (<=0 means overlap). Merge when overlap or gap ≤ threshold
             sep = s_low - p_high
+            
+            # CRITICAL: Check plug_type compatibility
+            # Merge compatibility rules (with precedence/override behavior):
+            # 
+            # ALLOWED (can merge, with dominance):
+            # - spot + spot = spot (merge normally)
+            # - spot + dumbell = spot (spot overrides dumbell)
+            # - perf & squeeze + perf & squeeze = perf & squeeze (merge normally)
+            # - perf & squeeze + perf & circulate = perf & circulate (perf & circ prevails)
+            # - dumbell + dumbell = dumbell (merge normally)
+            #
+            # BLOCKED (incompatible operations):
+            # - spot + perf & squeeze (fundamentally different)
+            # - perf & squeeze + dumbell (incompatible)
+            # - spot + perf & circulate (spot/perf & circ conflict)
+            # - perf & circulate + dumbell (incompatible)
+            
+            prev_plug_type = prev.get("plug_type")
+            s_plug_type = s.get("plug_type")
+            
+            # Define incompatible combinations (bidirectional)
+            incompatible_pairs = {
+                ("spot_plug", "perf_and_squeeze_plug"),
+                ("perf_and_squeeze_plug", "spot_plug"),
+                ("perf_and_squeeze_plug", "dumbell_plug"),
+                ("dumbell_plug", "perf_and_squeeze_plug"),
+                ("spot_plug", "perf_and_circulate_plug"),
+                ("perf_and_circulate_plug", "spot_plug"),
+                ("perf_and_circulate_plug", "dumbell_plug"),
+                ("dumbell_plug", "perf_and_circulate_plug"),
+            }
+            
+            # Check if combination is blocked
+            if (prev_plug_type, s_plug_type) in incompatible_pairs:
+                logger.warning(
+                    f"Cannot merge {prev_plug_type} and {s_plug_type} plugs - "
+                    f"incompatible mechanical operations. Flushing buffer and starting new group."
+                )
+                _flush(buf)
+                buf = [s]
+                prev = s
+                continue
+            
             if sep <= threshold_ft:
                 buf.append(s)
                 prev = s

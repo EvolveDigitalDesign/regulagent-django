@@ -840,6 +840,34 @@ class W3AFromApiView(APIView):
                         deepest_shoe_any_ft = cval
             except Exception:
                 pass
+        
+        # Extract TOC (Top of Cement) from casing record for plug type determination
+        production_casing_toc_ft = None
+        intermediate_casing_toc_ft = None
+        surface_casing_toc_ft = None
+        
+        for row in (w2.get("casing_record") or []):
+            kind = (row.get("string") or row.get("type_of_casing") or "").lower()
+            cement_top = row.get("cement_top_ft")
+            
+            if cement_top is not None:
+                try:
+                    cement_top_val = float(cement_top)
+                    
+                    if kind.startswith("production") and production_casing_toc_ft is None:
+                        production_casing_toc_ft = cement_top_val
+                        logger.info(f"📍 Production casing TOC extracted: {production_casing_toc_ft} ft")
+                    
+                    elif kind.startswith("intermediate") and intermediate_casing_toc_ft is None:
+                        intermediate_casing_toc_ft = cement_top_val
+                        logger.info(f"📍 Intermediate casing TOC extracted: {intermediate_casing_toc_ft} ft")
+                    
+                    elif kind.startswith("surface") and surface_casing_toc_ft is None:
+                        surface_casing_toc_ft = cement_top_val
+                        logger.info(f"📍 Surface casing TOC extracted: {surface_casing_toc_ft} ft")
+                except (ValueError, TypeError):
+                    pass
+        
         sizes = []
         for row in (w2.get("casing_record") or []):
             s = row.get("size_in") or row.get("casing_size_in")
@@ -1242,6 +1270,19 @@ class W3AFromApiView(APIView):
                 facts["production_shoe_ft"] = wrap(float(production_shoe_ft))
             except Exception:
                 pass
+        
+        # Add TOC (Top of Cement) for all strings for plug type determination
+        if production_casing_toc_ft is not None:
+            facts["production_casing_toc_ft"] = wrap(float(production_casing_toc_ft))
+            logger.info(f"🎯 Added production_casing_toc_ft to facts: {production_casing_toc_ft} ft")
+        
+        if intermediate_casing_toc_ft is not None:
+            facts["intermediate_casing_toc_ft"] = wrap(float(intermediate_casing_toc_ft))
+            logger.info(f"🎯 Added intermediate_casing_toc_ft to facts: {intermediate_casing_toc_ft} ft")
+        
+        if surface_casing_toc_ft is not None:
+            facts["surface_casing_toc_ft"] = wrap(float(surface_casing_toc_ft))
+            logger.info(f"🎯 Added surface_casing_toc_ft to facts: {surface_casing_toc_ft} ft")
 
         policy = get_effective_policy(district=facts["district"]["value"], county=facts["county"]["value"] or None, field=facts["field"]["value"] or None)
         policy["policy_id"] = "tx.w3a"
@@ -1523,9 +1564,17 @@ class W3AFromApiView(APIView):
                         "step_id": idx + 1,  # Match the step_id from steps array
                         "type": (
                             "CIBP" if (s.get("type") == "bridge_plug") else (
-                                "CIBP cap" if (s.get("type") in ("bridge_plug_cap", "cibp_cap")) else s.get("type")
+                                "Dumbell (CIBP cap)" if (s.get("plug_type") == "dumbell_plug") else (
+                                    "Spot plug" if (s.get("plug_type") == "spot_plug") else (
+                                        "Perf & squeeze" if (s.get("plug_type") == "perf_and_squeeze_plug") else (
+                                            "Perf & circulate" if (s.get("plug_type") == "perf_and_circulate_plug") else s.get("type")
+                                        )
+                                    )
+                                )
                             )
                         ),
+                        "mechanical_type": s.get("plug_type"),  # Include mechanical type for reference
+                        "regulatory_purpose": s.get("type"),  # Original purpose type for reference
                         "from_ft": (s.get("bottom_ft") if s.get("bottom_ft") is not None else s.get("depth_ft")),
                         "to_ft": (s.get("top_ft") if s.get("top_ft") is not None else s.get("depth_ft")),
                         "sacks": ((s.get("materials") or {}).get("slurry") or {}).get("sacks"),

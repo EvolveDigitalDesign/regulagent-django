@@ -6,6 +6,70 @@ logger = logging.getLogger(__name__)
 from .violations import VCodes, MAJOR, make_violation
 
 
+def _determine_plug_type(
+    step: Dict[str, Any],
+    production_toc_ft: Optional[float],
+    is_perf_and_circ: bool = False
+) -> str:
+    """
+    Determine the mechanical plug TYPE based on step depth vs production TOC.
+    
+    PLUG TYPES (4 types only):
+    - "spot_plug" - cement INSIDE casing ONLY (used when BELOW production TOC)
+    - "perf_and_squeeze_plug" - perforate & squeeze behind pipe (used when ABOVE production TOC)
+    - "perf_and_circulate_plug" - perf & squeeze to surface (TAKES PRECEDENCE over perf & squeeze)
+    - "dumbell_plug" - 3 sacks of cement on top of CIBP/retainer (special case)
+    
+    CONSTRAINT: Spot plugs and perf & squeeze plugs CANNOT be combined/merged.
+    
+    Args:
+        step: Step dict with 'top_ft', 'bottom_ft', 'type' (purpose), etc.
+        production_toc_ft: Production casing TOC depth (ft). If None, assumes perf & squeeze (conservative).
+        is_perf_and_circ: Force perf_and_circulate type (reaches surface)
+    
+    Returns:
+        Plug type string ("spot_plug", "perf_and_squeeze_plug", "perf_and_circulate_plug", "dumbell_plug")
+    """
+    # Perf and circulate takes absolute precedence (reaches surface, special operation)
+    if is_perf_and_circ or step.get("type") == "perf_and_circulate_to_surface":
+        logger.debug(f"Plug type: PERF_AND_CIRCULATE (reaches surface)")
+        return "perf_and_circulate_plug"
+    
+    # Dumbell plug is special (mechanical cap on CIBP/retainer, not independent)
+    if step.get("type") in ("cibp_cap", "bridge_plug_cap"):
+        logger.debug(f"Plug type: DUMBELL (mechanical cap on tool)")
+        return "dumbell_plug"
+    
+    # Spot plug at surface (top plug)
+    if step.get("type") == "top_plug":
+        logger.debug(f"Plug type: SPOT (surface safety plug)")
+        return "spot_plug"
+    
+    # If no production TOC available, assume perf & squeeze (conservative/safe)
+    if production_toc_ft is None:
+        logger.warning(f"⚠️  No production TOC available; assuming perf_and_squeeze for safety")
+        return "perf_and_squeeze_plug"
+    
+    # Determine by depth comparison to production TOC
+    step_depth = step.get("bottom_ft") or step.get("top_ft") or 0
+    try:
+        step_depth_ft = float(step_depth)
+        production_toc = float(production_toc_ft)
+        
+        # ABOVE TOC (shallower) = must perforate & squeeze behind pipe
+        # BELOW TOC (deeper) = spot plug (cement inside casing only)
+        if step_depth_ft < production_toc:
+            logger.debug(f"Plug at {step_depth_ft:.1f} ft is ABOVE TOC ({production_toc:.1f} ft) → perf_and_squeeze_plug")
+            return "perf_and_squeeze_plug"
+        else:
+            logger.debug(f"Plug at {step_depth_ft:.1f} ft is BELOW TOC ({production_toc:.1f} ft) → spot_plug")
+            return "spot_plug"
+    
+    except (ValueError, TypeError):
+        logger.warning(f"Could not parse depths for plug type determination; defaulting to perf_and_squeeze")
+        return "perf_and_squeeze_plug"  # Conservative fallback
+
+
 def _get_casing_strings_at_depth(facts: Dict[str, Any], target_depth_ft: float) -> Dict[str, Any]:
     """
     Determine what casing strings surround the target depth.
@@ -306,6 +370,16 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
     violations: List[Dict[str, Any]] = []
     steps: List[Dict[str, Any]] = []
 
+    # Extract production TOC for plug type determination (spot vs perf & squeeze)
+    prod_toc_val = facts.get('production_casing_toc_ft') or {}
+    production_toc_ft = prod_toc_val.get('value') if isinstance(prod_toc_val, dict) else prod_toc_val
+    try:
+        production_toc_ft = float(production_toc_ft) if production_toc_ft not in (None, "") else None
+    except (ValueError, TypeError):
+        production_toc_ft = None
+    
+    logger.info(f"🎯 GENERATE_STEPS: production_casing_toc_ft = {production_toc_ft} ft")
+
     req = (policy_effective or {}).get('requirements') or {}
 
     # Surface casing shoe plug step (from §3.14(e)(2))
@@ -321,16 +395,20 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
             "min_length_ft": float(shoe_min),
             "regulatory_basis": shoe_cites or ["tx.tac.16.3.14(e)(2)"],
             "geometry_context": "cased_production",
-            "placement_basis": "Surface casing shoe coverage ±50 ft",
+            "placement_basis": "Surface casing shoe coverage +50 ft shallower",
         }
         surf_shoe_val = (facts.get('surface_shoe_ft') or {})
         surf_shoe = surf_shoe_val.get('value') if isinstance(surf_shoe_val, dict) else surf_shoe_val
         try:
             if surf_shoe not in (None, ""):
                 c = float(surf_shoe)
-                half = float(shoe_min) / 2.0
-                shoe_step["top_ft"] = c + half
-                shoe_step["bottom_ft"] = c - half
+                plug_length = float(shoe_min)
+                # Placement: AT shoe (bottom_ft) and 50 ft shallower (top_ft)
+                shoe_step["bottom_ft"] = c  # At shoe depth
+                shoe_step["top_ft"] = c - plug_length  # Shallower (shoe - 50)
+                
+                # Determine plug type (spot vs perf & squeeze based on TOC)
+                shoe_step["plug_type"] = _determine_plug_type(shoe_step, production_toc_ft)
             else:
                 violations.append(make_violation(VCodes.SURFACE_SHOE_DEPTH_UNKNOWN, MAJOR, "surface_shoe_ft is required to place shoe plug"))
         except Exception:
@@ -388,13 +466,15 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
             # If present but short, top up only the remaining footage; else plan full requirement
             remaining = max(required_cap - (existing_cap_len_f if cap_present else 0.0), 0.0)
             if remaining > 0.0:
-                steps.append({
+                cibp_cap_step = {
                     "type": "cibp_cap",
                     "cap_length_ft": remaining,
                     "geometry_context": "cased_production",
                     "regulatory_basis": cibp_cites or ["tx.tac.16.3.14(g)(3)"],
-                })
-                logger.info("w3a: emit cibp_cap length=%s present=%s existing_len=%s", remaining, cap_present, existing_cap_len_f)
+                    "plug_type": "dumbell_plug",  # Dumbell is always 3 sacks on CIBP/retainer
+                }
+                steps.append(cibp_cap_step)
+                logger.info("w3a: emit cibp_cap (dumbell_plug) length=%s present=%s existing_len=%s", remaining, cap_present, existing_cap_len_f)
 
     # UQW isolation plug (from §3.14(g)(1))
     has_uqw = facts.get('has_uqw') or (facts.get('has_uqw') or {}).get('value') if isinstance(facts.get('has_uqw'), dict) else facts.get('has_uqw')
@@ -469,7 +549,7 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                                     top_ft, bottom_ft, uqw_base_ft, uqw_above, uqw_below
                                 )
                         
-                        steps.append({
+                        gau_step = {
                             "type": "cement_plug",
                             "geometry_context": "cased_production",
                             "top_ft": top_ft,
@@ -477,7 +557,9 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                             "annular_excess": 0.4,
                             "regulatory_basis": regulatory_basis,
                             "placement_basis": placement_basis,
-                        })
+                        }
+                        gau_step["plug_type"] = _determine_plug_type(gau_step, production_toc_ft)
+                        steps.append(gau_step)
                 except Exception:
                     continue
     except Exception:
@@ -500,6 +582,8 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                 step["bottom_ft"] = b - float(uqw_below)
         except Exception:
             pass
+        # Determine plug type (spot vs perf & squeeze based on TOC)
+        step["plug_type"] = _determine_plug_type(step, production_toc_ft)
         steps.append(step)
         logger.info("w3a: emit uqw base=%s above=%s below=%s top=%s bottom=%s", uqw_base_ft, uqw_above, uqw_below, step.get("top_ft"), step.get("bottom_ft"))
     
@@ -555,13 +639,15 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
         top_len = top_knob.get('value') if isinstance(top_knob, dict) else top_knob
         top_cites = top_knob.get('citation_keys') if isinstance(top_knob, dict) else []
         if top_len not in (None, ""):
-            steps.append({
+            top_plug_step = {
                 "type": "top_plug",
                 "length_ft": float(top_len),
                 "top_ft": 10.0,
                 "bottom_ft": 0.0,
                 "regulatory_basis": top_cites or ["tx.tac.16.3.14(d)(8)"],
-            })
+                "plug_type": "spot_plug",  # Surface safety plug at surface
+            }
+            steps.append(top_plug_step)
         cut_knob = req.get('casing_cut_below_surface_ft')
         cut_val = cut_knob.get('value') if isinstance(cut_knob, dict) else cut_knob
         cut_cites = cut_knob.get('citation_keys') if isinstance(cut_knob, dict) else []
@@ -615,9 +701,13 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                 }
                 if "tx.tac.16.3.14(g)(2)" not in step_dict["regulatory_basis"]:
                     step_dict["regulatory_basis"].append("tx.tac.16.3.14(g)(2)")
+                step_dict["plug_type"] = "perf_and_squeeze_plug"
                 logger.info(
                     f"Intermediate casing shoe plug at {inter_shoe} ft requires perforation: {perf_reason}"
                 )
+            else:
+                # No perforation required - determine plug type (spot vs perf & squeeze by TOC)
+                step_dict["plug_type"] = _determine_plug_type(step_dict, production_toc_ft)
             
             steps.append(step_dict)
     except Exception:
@@ -676,7 +766,7 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                     # This fills the surface-to-intermediate annulus from surface down
                     perforation_depth_ft = surface_shoe_ft + 50.0  # 50 ft below surface shoe
                     
-                    steps.append({
+                    perf_circ_step = {
                         "type": "perf_and_circulate_to_surface",
                         "name": "Cement Surface Plug (Perforate and Circulate)",
                         "perforation_depth_ft": perforation_depth_ft,
@@ -692,8 +782,10 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                             "target_annulus": "surface_to_intermediate",
                             "perforation_location": f"Below surface shoe at {surface_shoe_ft} ft",
                             "circulation_target": "Returns to surface",
-                        }
-                    })
+                        },
+                        "plug_type": "perf_and_circulate_plug",  # Reaches surface
+                    }
+                    steps.append(perf_circ_step)
                     logger.info(
                         f"Generated perf_and_circulate_to_surface: {perforation_depth_ft}→3 ft (perf below surface shoe at {surface_shoe_ft} ft, {reason})"
                     )
@@ -776,6 +868,7 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                     "regulatory_basis": ["tx.tac.16.3.14(k)", "tx.tac.16.3.14(g)(2)"],
                     "placement_basis": f"Perforate & squeeze above producing interval ({from_ft:.0f}-{to_ft:.0f} ft)",
                     "requires_perforation": True,
+                    "plug_type": "perf_and_squeeze_plug",
                     "details": {
                         "perforation_reason": perf_reason,
                         "perforation_interval": {
@@ -816,11 +909,13 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                     "regulatory_basis": ["tx.tac.16.3.14(k)"],
                     "placement_basis": f"Above producing interval ({from_ft:.0f}-{to_ft:.0f} ft)",
                 }
+                # Determine plug type (spot vs perf & squeeze by TOC)
+                plug_step["plug_type"] = _determine_plug_type(plug_step, production_toc_ft)
                 
                 logger.info(
                     "w3a: standard productive horizon plug placed at %.1f-%.1f ft "
-                    "(50 ft above producing interval top at %.1f ft)",
-                    plug_top, plug_bottom, top_of_interval
+                    "(50 ft above producing interval top at %.1f ft) - type: %s",
+                    plug_top, plug_bottom, top_of_interval, plug_step.get("plug_type")
                 )
             
             steps.append(plug_step)
@@ -916,6 +1011,7 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                         "placement_basis": f"Annular gap between {outer_string} and {inner_string} (schematic)",
                         "requires_perforation": True,
                         "requires_perforation_reason": perf_reason,
+                        "plug_type": "perf_and_squeeze_plug",
                         "details": {
                             "perforation_interval": {
                                 "top_ft": perf_interval_top,
@@ -956,9 +1052,11 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                             }
                         }
                     }
+                    # Determine plug type (spot vs perf & squeeze by TOC)
+                    step["plug_type"] = _determine_plug_type(step, production_toc_ft)
                     steps.append(step)
                     logger.critical(
-                        f"🚨 KERNEL: Gap #{idx} - ADDED CEMENT PLUG to steps! "
+                        f"🚨 KERNEL: Gap #{idx} - ADDED CEMENT PLUG ({step.get('plug_type')}) to steps! "
                         f"{outer_string}/{inner_string} gap ({gap_top}-{gap_bottom} ft)"
                     )
     except Exception:
