@@ -1309,9 +1309,12 @@ class W3AFromApiView(APIView):
         # get_effective_policy returns the effective policy directly (not wrapped)
         try:
             effective_policy_result = get_effective_policy(district=district_val, county=county_val, field=field_name)
+            print(f"✅ get_effective_policy returned successfully", flush=True)
+            print(f"🔍 DEBUG: Policy result keys: {list(effective_policy_result.keys())}", flush=True)
             logger.info(f"✅ get_effective_policy returned successfully")
             logger.info(f"🔍 DEBUG: Policy result keys: {list(effective_policy_result.keys())}")
         except Exception as e:
+            print(f"❌ EXCEPTION in get_effective_policy: {e}", flush=True)
             logger.exception(f"Failed to load policy: {e}")
             # Return empty policy with error
             effective_policy_result = {}
@@ -1319,16 +1322,21 @@ class W3AFromApiView(APIView):
         # DEBUG: Verify formation_tops are loaded from the raw result
         # The get_effective_policy may return nested structure, check both paths
         if "effective" in effective_policy_result:
+            print(f"🔍 DEBUG: Found 'effective' key in result, using nested structure", flush=True)
             logger.info(f"🔍 DEBUG: Found 'effective' key in result, using nested structure")
             actual_effective = effective_policy_result["effective"]
         else:
+            print(f"🔍 DEBUG: No 'effective' key, using result directly", flush=True)
             logger.info(f"🔍 DEBUG: No 'effective' key, using result directly")
             actual_effective = effective_policy_result
         
+        print(f"🔍 DEBUG: actual_effective keys: {list(actual_effective.keys())}", flush=True)
         logger.info(f"🔍 DEBUG: actual_effective keys: {list(actual_effective.keys())}")
         dist_overrides = actual_effective.get("district_overrides") or {}
+        print(f"🔍 DEBUG: dist_overrides keys: {list(dist_overrides.keys())}", flush=True)
         logger.info(f"🔍 DEBUG: dist_overrides keys: {list(dist_overrides.keys())}")
         formation_tops = dist_overrides.get("formation_tops") or []
+        print(f"🔍 DEBUG: formation_tops count: {len(formation_tops)}", flush=True)
         logger.info(f"🔍 DEBUG: formation_tops count: {len(formation_tops)}")
         
         if formation_tops:
