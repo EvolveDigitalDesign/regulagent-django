@@ -1306,17 +1306,24 @@ class W3AFromApiView(APIView):
         print(f"🔍 GETTING POLICY: district={district_val}, county={county_val}, field={field_name}", flush=True)
         logger.critical(f"🔍 GETTING POLICY: district={district_val}, county={county_val}, field={field_name}")
         
-        # get_effective_policy returns the effective policy directly (not wrapped)
+        # get_effective_policy returns a structure with BOTH top-level keys AND "effective" nested key
+        # Just like the management command, we modify it directly (don't double-wrap!)
         try:
-            effective_policy_result = get_effective_policy(district=district_val, county=county_val, field=field_name)
+            policy = get_effective_policy(district=district_val, county=county_val, field=field_name)
             logger.info(f"✅ get_effective_policy returned successfully")
         except Exception as e:
             logger.exception(f"Failed to load policy: {e}")
-            # Return empty policy with error
-            effective_policy_result = {}
+            # Return minimal policy structure on error
+            policy = {
+                "policy_id": "tx.w3a",
+                "complete": False,
+                "effective": {},
+                "preferences": {},
+            }
         
-        # DEBUG: Verify formation_tops are loaded from the raw result
-        dist_overrides = effective_policy_result.get("district_overrides") or {}
+        # DEBUG: Verify formation_tops are loaded (they're under policy["effective"]["district_overrides"])
+        effective = policy.get("effective") or {}
+        dist_overrides = effective.get("district_overrides") or {}
         formation_tops = dist_overrides.get("formation_tops") or []
         
         if formation_tops:
@@ -1324,17 +1331,12 @@ class W3AFromApiView(APIView):
         else:
             logger.warning(f"⚠️ POLICY: No formation_tops found for {county_val} / {field_name}")
         
-        # CRITICAL: Wrap effective_policy result in the structure expected by plan_from_facts
-        # The kernel expects policy["effective"]["district_overrides"], not policy["district_overrides"]
-        policy = {
-            "policy_id": "tx.w3a",
-            "complete": True,
-            "effective": effective_policy_result,  # <-- Nested under "effective"
-            "preferences": effective_policy_result.get("preferences", {}),  # <-- Also at top level for easy access
-        }
+        # Override policy metadata (same as management command)
+        policy["policy_id"] = "tx.w3a"
+        policy["complete"] = True
         
         # Override/augment preferences
-        prefs = policy["preferences"]
+        prefs = policy.setdefault("preferences", {})
         prefs["rounding_policy"] = "nearest"
         prefs.setdefault("default_recipe", {
             "id": "class_h_neat_15_8",
