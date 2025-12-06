@@ -436,6 +436,7 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
             policy.get("preferences") or {},
             district,
             policy.get("county"),
+            resolved_facts,  # CRITICAL FIX: Pass resolved_facts so formation plugs can determine plug_type
         )
         print(f"🔍 KERNEL MAIN: After _apply_district_overrides, got {len(plan_steps)} steps back", flush=True)
         # Apply explicit step overrides provided by caller/payload (cap length, squeeze intervals, etc.)
@@ -1922,6 +1923,7 @@ def _apply_district_overrides(
     preferences: Dict[str, Any],
     district: Any,
     county: Any,
+    resolved_facts: Dict[str, Any] = None,  # Added to access production_casing_toc_ft
 ) -> List[Dict[str, Any]]:
     print(f"🔍 KERNEL _apply_district_overrides: START", flush=True)
     print(f"🔍 KERNEL: policy_effective type={type(policy_effective)}, keys={list(policy_effective.keys())[:10]}", flush=True)
@@ -2026,12 +2028,14 @@ def _apply_district_overrides(
             # Determine plug_type based on depth vs production TOC
             # Import locally to avoid circular dependency
             from .w3a_rules import _determine_plug_type
-            prod_toc_val = resolved_facts.get('production_casing_toc_ft') or {}
-            production_toc_ft = prod_toc_val.get('value') if isinstance(prod_toc_val, dict) else prod_toc_val
-            try:
-                production_toc_ft = float(production_toc_ft) if production_toc_ft not in (None, "") else None
-            except (ValueError, TypeError):
-                production_toc_ft = None
+            production_toc_ft = None
+            if resolved_facts:
+                prod_toc_val = resolved_facts.get('production_casing_toc_ft') or {}
+                production_toc_ft = prod_toc_val.get('value') if isinstance(prod_toc_val, dict) else prod_toc_val
+                try:
+                    production_toc_ft = float(production_toc_ft) if production_toc_ft not in (None, "") else None
+                except (ValueError, TypeError):
+                    production_toc_ft = None
             
             step["plug_type"] = _determine_plug_type(step, production_toc_ft)
             
@@ -2063,8 +2067,12 @@ def _apply_district_overrides(
                 })
             except Exception:
                 pass
+            print(f"🔍 KERNEL: Appending formation plug for {formation}", flush=True)
             out.append(step)
-        except Exception:
+            print(f"🔍 KERNEL: Successfully added {formation} plug to out list (now {len(out)} steps)", flush=True)
+        except Exception as e:
+            print(f"🔍 KERNEL ERROR: Failed to create formation plug for {ft.get('formation')}: {type(e).__name__}: {e}", flush=True)
+            logger.exception(f"Failed to create formation plug for {ft.get('formation')}")
             continue
     return out
 
