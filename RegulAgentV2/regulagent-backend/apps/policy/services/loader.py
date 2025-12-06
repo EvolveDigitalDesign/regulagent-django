@@ -226,17 +226,26 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
         d_normalized = _normalize_district(district)
         combined_name = f"{d_normalized}__auto.yml"
         combined_path = os.path.join(ext_dir, combined_name)
+        print(f"🔍 LOADER: district={district} → normalized={d_normalized}", flush=True)
+        print(f"🔍 LOADER: combined_path={combined_path}", flush=True)
+        print(f"🔍 LOADER: file exists={os.path.exists(combined_path)}", flush=True)
         combined: Dict[str, Any] | None = None
         load_path = combined_path if os.path.exists(combined_path) else None
         if load_path:
             combined = _load_yaml(load_path)
+            print(f"🔍 LOADER: Loaded combined YAML, keys={list(combined.keys())}", flush=True)
+            print(f"🔍 LOADER: combined['overrides'] keys={list((combined.get('overrides') or {}).keys())}", flush=True)
             # merge district-level requirements/preferences/overrides from plugging book
             if isinstance(combined.get('requirements'), dict):
                 merged = _merge(merged, {'requirements': combined['requirements']})
+                print(f"🔍 LOADER: Merged requirements", flush=True)
             if isinstance(combined.get('preferences'), dict):
                 merged = _merge(merged, {'preferences': combined['preferences']})
+                print(f"🔍 LOADER: Merged preferences", flush=True)
             if isinstance(combined.get('overrides'), dict):
                 merged = _merge(merged, {'district_overrides': combined['overrides']})
+                print(f"🔍 LOADER: Merged overrides into district_overrides", flush=True)
+                print(f"🔍 LOADER: After merge, merged['district_overrides'] keys={list((merged.get('district_overrides') or {}).keys())}", flush=True)
         if county:
             # Normalize county name to file-safe
             safe_county = county.lower().replace(' ', '_')
@@ -261,15 +270,19 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
                 # Fallback: combined overlay file per district (e.g., 7c__auto.yml)
                 if combined:
                     counties = combined.get('counties') or {}
+                    print(f"🔍 LOADER: Looking up county={county} in combined YAML", flush=True)
+                    print(f"🔍 LOADER: Available counties={list(counties.keys())[:5]}", flush=True)  # First 5 to avoid spam
                     # lookup by multiple aliases
                     aliases = [
                         str(county),
                         f"{county} County" if not str(county).lower().endswith(" county") else str(county)[:-7],
                     ]
+                    print(f"🔍 LOADER: Trying aliases={aliases}", flush=True)
                     cdata = None
                     for alias in aliases:
                         cdata = counties.get(alias) or counties.get(str(alias).strip())
                         if cdata:
+                            print(f"🔍 LOADER: Found county data via alias={alias}", flush=True)
                             break
                     if not cdata:
                         # fallback: case-insensitive contains/equals
@@ -291,12 +304,16 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
                         except Exception:
                             pass
                     if cdata:
+                        print(f"🔍 LOADER: County data found, keys={list(cdata.keys())}", flush=True)
                         county_req = (cdata.get('requirements') or {})
                         county_overrides = (cdata.get('overrides') or {})
                         county_prefs = (cdata.get('preferences') or {})
                         county_proposal = (cdata.get('proposal') or {})
                         # combined overlay stores per-field specs commonly under overrides.fields
                         county_fields = (cdata.get('fields') or (cdata.get('overrides') or {}).get('fields') or {})
+                        print(f"🔍 LOADER: county_overrides keys={list(county_overrides.keys())}", flush=True)
+                        formation_tops_in_overrides = county_overrides.get('formation_tops') or []
+                        print(f"🔍 LOADER: formation_tops in county_overrides={len(formation_tops_in_overrides)}", flush=True)
             if county_req:
                 merged = _merge(merged, {'requirements': county_req})
             if county_overrides:
@@ -475,6 +492,13 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
                         merged.setdefault('district_overrides', {})
                         merged['district_overrides']['formation_tops'] = list(chosen_field_cfg['formation_tops'])
 
+    # FINAL DEBUG: Check what's in merged before returning
+    final_district_overrides = merged.get('district_overrides') or {}
+    final_formation_tops = final_district_overrides.get('formation_tops') or []
+    print(f"🔍 LOADER FINAL: merged['district_overrides'] has {len(final_formation_tops)} formation_tops", flush=True)
+    if final_formation_tops:
+        print(f"🔍 LOADER FINAL: Formation names={[ft.get('formation') for ft in final_formation_tops[:5]]}", flush=True)
+    
     out = {
         'policy_id': policy.get('policy_id'),
         'policy_version': policy.get('policy_version'),
@@ -491,4 +515,11 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
     if field_resolution.get('requested_field'):
         out['field_resolution'] = field_resolution
     out = _validate_minimal(out)
+    
+    # ONE MORE CHECK: After validation
+    validated_effective = out.get('effective') or {}
+    validated_overrides = validated_effective.get('district_overrides') or {}
+    validated_ftops = validated_overrides.get('formation_tops') or []
+    print(f"🔍 LOADER POST-VALIDATION: out['effective']['district_overrides'] has {len(validated_ftops)} formation_tops", flush=True)
+    
     return out
