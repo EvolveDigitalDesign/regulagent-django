@@ -1310,14 +1310,26 @@ class W3AFromApiView(APIView):
         try:
             effective_policy_result = get_effective_policy(district=district_val, county=county_val, field=field_name)
             logger.info(f"✅ get_effective_policy returned successfully")
+            logger.info(f"🔍 DEBUG: Policy result keys: {list(effective_policy_result.keys())}")
         except Exception as e:
             logger.exception(f"Failed to load policy: {e}")
             # Return empty policy with error
             effective_policy_result = {}
         
         # DEBUG: Verify formation_tops are loaded from the raw result
-        dist_overrides = effective_policy_result.get("district_overrides") or {}
+        # The get_effective_policy may return nested structure, check both paths
+        if "effective" in effective_policy_result:
+            logger.info(f"🔍 DEBUG: Found 'effective' key in result, using nested structure")
+            actual_effective = effective_policy_result["effective"]
+        else:
+            logger.info(f"🔍 DEBUG: No 'effective' key, using result directly")
+            actual_effective = effective_policy_result
+        
+        logger.info(f"🔍 DEBUG: actual_effective keys: {list(actual_effective.keys())}")
+        dist_overrides = actual_effective.get("district_overrides") or {}
+        logger.info(f"🔍 DEBUG: dist_overrides keys: {list(dist_overrides.keys())}")
         formation_tops = dist_overrides.get("formation_tops") or []
+        logger.info(f"🔍 DEBUG: formation_tops count: {len(formation_tops)}")
         
         if formation_tops:
             logger.info(f"✅ POLICY: Found {len(formation_tops)} formation tops: {[ft.get('formation') for ft in formation_tops]}")
@@ -1329,8 +1341,8 @@ class W3AFromApiView(APIView):
         policy = {
             "policy_id": "tx.w3a",
             "complete": True,
-            "effective": effective_policy_result,  # <-- Nested under "effective"
-            "preferences": effective_policy_result.get("preferences", {}),  # <-- Also at top level for easy access
+            "effective": actual_effective,  # <-- Nested under "effective"
+            "preferences": actual_effective.get("preferences", {}),  # <-- Also at top level for easy access
         }
         
         # Override/augment preferences
