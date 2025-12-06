@@ -37,6 +37,9 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
     logger.info("kernel.plan_from_facts: start policy_id=%s district=%s", policy.get("policy_id"), district)
     logger.info("Policy ID: %s, Version: %s", policy.get("policy_id"), policy.get("policy_version"))
     logger.info("Applying policy with the following effective preferences: %s", policy.get("preferences"))
+    print(f"🔍 KERNEL MAIN: policy keys={list(policy.keys())}", flush=True)
+    print(f"🔍 KERNEL MAIN: policy['complete']={policy.get('complete')}", flush=True)
+    
     constraints = _collect_constraints(policy)
     is_complete = policy.get("complete", False)
 
@@ -58,8 +61,11 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
 
     # Early return when policy is incomplete
     if not is_complete:
+        print(f"🔍 KERNEL MAIN: EARLY RETURN - policy incomplete!", flush=True)
         logger.warning("kernel.plan_from_facts: policy incomplete; constraints=%s", constraints)
         return plan
+    
+    print(f"🔍 KERNEL MAIN: Policy is complete, proceeding to generate steps", flush=True)
 
     # Deterministic step generation (scaffold for W-3A)
     if is_complete and policy.get("policy_id") == "tx.w3a":
@@ -421,6 +427,9 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
         # Apply default geometry/recipe from preferences when present
         plan_steps = _apply_step_defaults(steps, policy.get("preferences") if isinstance(policy.get("preferences"), dict) else {}, resolved_facts)
         # Apply district/county overrides (e.g., 08A tagging; 7C operational instructions)
+        print(f"🔍 KERNEL MAIN: About to call _apply_district_overrides with {len(plan_steps)} steps", flush=True)
+        print(f"🔍 KERNEL MAIN: policy.get('effective') type={type(policy.get('effective'))}", flush=True)
+        print(f"🔍 KERNEL MAIN: district={district}, county={policy.get('county')}", flush=True)
         plan_steps = _apply_district_overrides(
             plan_steps,
             policy.get("effective") or {},
@@ -428,6 +437,7 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
             district,
             policy.get("county"),
         )
+        print(f"🔍 KERNEL MAIN: After _apply_district_overrides, got {len(plan_steps)} steps back", flush=True)
         # Apply explicit step overrides provided by caller/payload (cap length, squeeze intervals, etc.)
         plan_steps = _apply_steps_overrides(
             plan_steps,
