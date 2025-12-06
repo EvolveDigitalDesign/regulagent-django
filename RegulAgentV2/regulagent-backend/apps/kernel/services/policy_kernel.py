@@ -1913,11 +1913,20 @@ def _apply_district_overrides(
     district: Any,
     county: Any,
 ) -> List[Dict[str, Any]]:
+    print(f"🔍 KERNEL _apply_district_overrides: START", flush=True)
+    print(f"🔍 KERNEL: policy_effective type={type(policy_effective)}, keys={list(policy_effective.keys())[:10]}", flush=True)
+    
     overrides = policy_effective.get("district_overrides") or {}
+    print(f"🔍 KERNEL: overrides type={type(overrides)}, keys={list(overrides.keys())}", flush=True)
+    
     # use preferences provided by caller (policy.preferences with W-2 geometry), not from effective
     reqs = policy_effective.get("requirements") or {}
     out: List[Dict[str, Any]] = []
     formation_tops = overrides.get("formation_tops") or []
+    
+    print(f"🔍 KERNEL: formation_tops count={len(formation_tops)}", flush=True)
+    if formation_tops:
+        print(f"🔍 KERNEL: Formation names={[ft.get('formation') for ft in formation_tops]}", flush=True)
     
     logger.info(f"🔍 _apply_district_overrides: district={district}, county={county}")
     logger.info(f"🔍 Found {len(formation_tops)} formation tops in district_overrides")
@@ -1974,12 +1983,16 @@ def _apply_district_overrides(
         # We only add once at the end; defer adding here by collecting later
         out.append(s_out)
     # Append formation-top plug steps after base steps
+    print(f"🔍 KERNEL: About to iterate {len(formation_tops)} formation tops", flush=True)
     for ft in formation_tops:
         try:
             formation = ft.get("formation")
             center_ft = float(ft.get("top_ft"))
+            plug_required_raw = ft.get("plug_required")
             plug_required = ft.get("plug_required") is True
+            print(f"🔍 KERNEL: Formation={formation}, plug_required_raw={plug_required_raw} (type={type(plug_required_raw)}), plug_required={plug_required}", flush=True)
             if not plug_required or formation is None:
+                print(f"🔍 KERNEL: SKIPPING {formation} - plug_required={plug_required}, formation={formation}", flush=True)
                 continue
             # Use symmetric interval around the formation top based on required min length
             min_len = float(reqs.get("surface_casing_shoe_plug_min_ft", {}).get("value", 50)) if isinstance(reqs.get("surface_casing_shoe_plug_min_ft"), dict) else 50.0
