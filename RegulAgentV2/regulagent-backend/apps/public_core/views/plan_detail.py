@@ -8,7 +8,7 @@ This is the primary endpoint users interact with to:
 """
 
 import logging
-from typing import Optional
+from typing import Optional, Any, Dict, List
 
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -22,6 +22,50 @@ from apps.public_core.models import PlanSnapshot, ExtractedDocument
 logger = logging.getLogger(__name__)
 
 
+def _extract_historic_cement_jobs(api14: str) -> List[Dict[str, Any]]:
+    """
+    Extract all historic cement jobs from W-15 document.
+    Store all cement jobs without filtering to preserve complete historical data.
+    """
+    historic_cement_jobs: List[Dict[str, Any]] = []
+    try:
+        w15_doc = ExtractedDocument.objects.filter(
+            api_number=api14,
+            document_type='w15'
+        ).order_by('-created_at').first()
+        
+        if w15_doc and isinstance(w15_doc.json_data, dict):
+            w15 = w15_doc.json_data
+            cementing_data = w15.get("cementing_data") or []
+            
+            if isinstance(cementing_data, list):
+                for cement_job in cementing_data:
+                    if isinstance(cement_job, dict):
+                        try:
+                            # Include all available fields from the cement job
+                            job_entry: Dict[str, Any] = {
+                                "job_type": cement_job.get("job"),
+                                "interval_top_ft": cement_job.get("interval_top_ft"),
+                                "interval_bottom_ft": cement_job.get("interval_bottom_ft"),
+                                "cement_top_ft": cement_job.get("cement_top_ft"),
+                                "sacks": cement_job.get("sacks"),
+                                "slurry_density_ppg": cement_job.get("slurry_density_ppg"),
+                                "additives": cement_job.get("additives"),
+                                "yield_ft3_per_sk": cement_job.get("yield_ft3_per_sk"),
+                            }
+                            # Store all cement jobs as-is, preserving complete historical data
+                            historic_cement_jobs.append(job_entry)
+                        except Exception:
+                            pass
+            
+            if historic_cement_jobs:
+                logger.info(f"Extracted {len(historic_cement_jobs)} historic cement jobs from W-15 for API {api14}")
+    except Exception as e:
+        logger.warning(f"Failed to extract historic cement jobs from W-15 for API {api14}: {e}")
+    
+    return historic_cement_jobs
+
+
 def _build_well_geometry(api14: str) -> dict:
     """
     Extract well geometry from ExtractedDocuments for a given API.
@@ -33,6 +77,7 @@ def _build_well_geometry(api14: str) -> dict:
         "perforations": [],
         "tubing": [],
         "liner": [],
+        "historic_cement_jobs": [],
     }
     
     # Get W-2 document for casing and formation data
@@ -78,6 +123,9 @@ def _build_well_geometry(api14: str) -> dict:
         formation_tops = w15.json_data.get('formation_tops', [])
         if formation_tops and not geometry['formation_tops']:
             geometry['formation_tops'] = formation_tops
+    
+    # Extract historic cement jobs from W-15
+    geometry['historic_cement_jobs'] = _extract_historic_cement_jobs(api14)
     
     return geometry
 
@@ -133,6 +181,11 @@ def get_plan_detail(request, plan_id):
     # Fetch well geometry from extracted documents
     well_geometry = _build_well_geometry(snapshot.well.api14)
     
+    # Inject historic_cement_jobs into payload if available
+    payload = snapshot.payload.copy() if isinstance(snapshot.payload, dict) else snapshot.payload
+    if isinstance(payload, dict) and well_geometry.get("historic_cement_jobs"):
+        payload["historic_cement_jobs"] = well_geometry["historic_cement_jobs"]
+    
     # Build response with full plan data
     response_data = {
         # Plan metadata
@@ -169,7 +222,7 @@ def get_plan_detail(request, plan_id):
         "created_at": snapshot.created_at,
         
         # THE ACTUAL PLAN - This is what the user sees and modifies
-        "payload": snapshot.payload,
+        "payload": payload,
     }
     
     logger.info(f"Retrieved plan {plan_id} (status: {snapshot.status}) for user {request.user.email}")
