@@ -646,7 +646,7 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
             logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
             
             logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
-            plan["steps"] = _compute_materials_for_steps(plan["steps"])  # type: ignore
+            plan["steps"] = _compute_materials_for_steps(plan["steps"], resolved_facts=resolved_facts)  # type: ignore
             
             # Final validation and cleanup pass
             logger.debug("kernel.plan_from_facts: running final validation")
@@ -954,7 +954,7 @@ def _estimate_sacks_for_merged_interval(
         return None
 
 
-def _compute_materials_for_steps(steps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Dict[str, Any] = None) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     for step in steps:
         step_type = step.get("type")
@@ -1038,8 +1038,12 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]]) -> List[Dict[str, 
                     total_bbl = 0.0
                     segments_calc: List[Dict[str, Any]] = []
                     
-                    # Get casing strings to identify shoe boundaries
-                    casing_strings = resolved_facts.get("casing_strings") or []
+                    # Get casing strings to identify shoe boundaries (if available)
+                    if resolved_facts is None:
+                        logger.warning(f"⚠️  resolved_facts is None for merged perf_and_squeeze_plug; cannot segment by casing. Using whole interval.")
+                        casing_strings = []
+                    else:
+                        casing_strings = resolved_facts.get("casing_strings") or []
                     prod_casing = next((c for c in casing_strings if c.get("string", "").lower().startswith("production")), None)
                     inter_casing = next((c for c in casing_strings if c.get("string", "").lower().startswith("intermediate")), None)
                     surf_casing = next((c for c in casing_strings if c.get("string", "").lower().startswith("surface")), None)
@@ -1068,8 +1072,11 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]]) -> List[Dict[str, 
                         if seg_len <= 0:
                             continue
                         
-                        # Determine casing context at this segment
-                        casing_context = _get_casing_strings_at_depth(resolved_facts, seg_bot)
+                        # Determine casing context at this segment (with fallback if resolved_facts unavailable)
+                        if resolved_facts is None:
+                            casing_context = {"context": "unknown"}
+                        else:
+                            casing_context = _get_casing_strings_at_depth(resolved_facts, seg_bot)
                         logger.info(f"Segment {seg_top}→{seg_bot} ft: {casing_context.get('context')}")
                         
                         seg_bbl = 0.0
@@ -1720,6 +1727,11 @@ def _merge_adjacent_plugs(
             for x in buf:
                 if x.get("recipe") is not None:
                     out["recipe"] = x.get("recipe")
+                    break
+        if "squeeze_factor" not in out or out.get("squeeze_factor") is None:
+            for x in buf:
+                if x.get("squeeze_factor") is not None:
+                    out["squeeze_factor"] = x.get("squeeze_factor")
                     break
         
         merged.append(out)
