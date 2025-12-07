@@ -1023,6 +1023,9 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                 is_perf_and_squeeze_merged = (plug_type == "perf_and_squeeze_plug" and 
                                                step.get("details", {}).get("merged") is True)
                 
+                # Pre-define ann_excess_default for use in all paths (merged and non-merged)
+                ann_excess_default = _infer_annular_excess(step) if not is_perf_and_squeeze_merged else 0.4
+                
                 if is_perf_and_squeeze_merged:
                     # Merged perf & squeeze plugs spanning multiple geometries
                     # Segment by casing shoe boundaries and calculate each section separately
@@ -1168,7 +1171,6 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                     context = (step.get("geometry_context") or "").lower()
                     top_ft = float(step.get("top_ft", 0) or 0)
                     bottom_ft = float(step.get("bottom_ft", 0) or 0)
-                    ann_excess_default = _infer_annular_excess(step)
                     segments_calc: List[Dict[str, Any]] = []
                     total_bbl = 0.0
                     # Rounding policy: nearest by default unless overridden in step.recipe.rounding or policy
