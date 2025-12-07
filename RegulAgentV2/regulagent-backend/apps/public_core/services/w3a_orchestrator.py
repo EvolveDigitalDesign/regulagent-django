@@ -1018,63 +1018,39 @@ def extract_well_geometry_from_w3a(api: str) -> Dict[str, Any]:
         logger.warning(f"Failed to extract W-2 data: {e}")
     
     # Get latest W-15 for historic cement jobs
+    # Store all cement jobs without filtering to preserve complete historical data
     try:
-        logger.debug(f"   🔍 Searching for W-15 document with api_number='{api}', document_type='w15'")
         w15_doc = ExtractedDocument.objects.filter(api_number=api, document_type="w15").order_by("-created_at").first()
-        
-        if not w15_doc:
-            logger.warning(f"   ⚠️  No W-15 document found for API {api}. Checking available documents...")
-            all_w15s = ExtractedDocument.objects.filter(document_type="w15")
-            logger.debug(f"   📋 Total W-15 documents in DB: {all_w15s.count()}")
-            for doc in all_w15s[:5]:  # Show first 5
-                logger.debug(f"      - API: {doc.api_number}, Created: {doc.created_at}")
-            well_geometry["historic_cement_jobs"] = []
-        elif isinstance(w15_doc.json_data, dict):
+        if w15_doc and isinstance(w15_doc.json_data, dict):
             w15 = w15_doc.json_data
-            logger.debug(f"   ✅ Found W-15 document created at {w15_doc.created_at}")
             
             historic_cement_jobs = []
             cementing_data = w15.get("cementing_data") or []
-            logger.debug(f"   📊 Processing {len(cementing_data)} cement jobs from W-15")
-            
             if isinstance(cementing_data, list):
-                for idx, cement_job in enumerate(cementing_data):
+                for cement_job in cementing_data:
                     if isinstance(cement_job, dict):
                         try:
-                            raw_job_type = cement_job.get("job")
-                            raw_sacks = cement_job.get("sacks")
-                            raw_cement_top = cement_job.get("cement_top_ft")
-                            
-                            logger.debug(f"      Job {idx}: job_type={raw_job_type}, sacks={raw_sacks}, cement_top_ft={raw_cement_top}")
-                            
+                            # Include all available fields from the cement job
                             job_entry = {
-                                "job_type": raw_job_type,
+                                "job_type": cement_job.get("job"),
                                 "interval_top_ft": cement_job.get("interval_top_ft"),
                                 "interval_bottom_ft": cement_job.get("interval_bottom_ft"),
-                                "cement_top_ft": raw_cement_top,
-                                "sacks": raw_sacks,
+                                "cement_top_ft": cement_job.get("cement_top_ft"),
+                                "sacks": cement_job.get("sacks"),
                                 "slurry_density_ppg": cement_job.get("slurry_density_ppg"),
+                                "additives": cement_job.get("additives"),
+                                "yield_ft3_per_sk": cement_job.get("yield_ft3_per_sk"),
                             }
-                            
-                            # Only add if we have meaningful data
-                            if job_entry.get("job_type") or job_entry.get("sacks"):
-                                # Filter out None values
-                                job_entry_filtered = {k: v for k, v in job_entry.items() if v is not None}
-                                logger.debug(f"         → Included (after None filtering): {job_entry_filtered}")
-                                historic_cement_jobs.append(job_entry_filtered)
-                            else:
-                                logger.debug(f"         → Skipped (no job_type or sacks)")
-                        except Exception as e:
-                            logger.error(f"      Error processing cement job {idx}: {e}")
+                            # Store all cement jobs as-is, preserving complete historical data
+                            historic_cement_jobs.append(job_entry)
+                        except Exception:
+                            pass
             
             well_geometry["historic_cement_jobs"] = historic_cement_jobs
-            logger.info(f"   ✅ Extracted {len(historic_cement_jobs)} historic cement jobs from W-15")
-        else:
-            logger.warning(f"   ⚠️  W-15 document found but json_data is not a dict: {type(w15_doc.json_data)}")
-            well_geometry["historic_cement_jobs"] = []
+            if historic_cement_jobs:
+                logger.info(f"   ✅ Extracted {len(historic_cement_jobs)} historic cement jobs from W-15")
     except Exception as e:
-        logger.exception(f"Failed to extract W-15 data: {e}")
-        well_geometry["historic_cement_jobs"] = []
+        logger.warning(f"Failed to extract W-15 data: {e}")
     
     logger.info("   ✅ Well geometry extraction complete")
     return well_geometry

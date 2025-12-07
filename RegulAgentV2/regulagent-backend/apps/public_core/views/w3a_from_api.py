@@ -975,40 +975,30 @@ class W3AFromApiView(APIView):
             prod_iv = None
 
         # Extract historic cement jobs from W-15 cementing data
+        # Store all cement jobs without filtering to preserve complete historical data
         historic_cement_jobs: List[Dict[str, Any]] = []
         try:
             cementing_data = w15.get("cementing_data") or []
-            logger.debug(f"🧱 Processing {len(cementing_data)} cement jobs from W-15 for API {api}")
-            
             if isinstance(cementing_data, list):
-                for idx, cement_job in enumerate(cementing_data):
+                for cement_job in cementing_data:
                     if isinstance(cement_job, dict):
                         try:
-                            raw_job_type = cement_job.get("job")
-                            raw_sacks = cement_job.get("sacks")
-                            raw_cement_top = cement_job.get("cement_top_ft")
-                            
-                            logger.debug(f"  Job {idx}: job_type={raw_job_type}, sacks={raw_sacks}, cement_top_ft={raw_cement_top}")
-                            
+                            # Include all available fields from the cement job
                             job_entry: Dict[str, Any] = {
-                                "job_type": raw_job_type,
+                                "job_type": cement_job.get("job"),  # surface|intermediate|production|plug|squeeze
                                 "interval_top_ft": cement_job.get("interval_top_ft"),
                                 "interval_bottom_ft": cement_job.get("interval_bottom_ft"),
-                                "cement_top_ft": raw_cement_top,
-                                "sacks": raw_sacks,
+                                "cement_top_ft": cement_job.get("cement_top_ft"),
+                                "sacks": cement_job.get("sacks"),
                                 "slurry_density_ppg": cement_job.get("slurry_density_ppg"),
+                                "additives": cement_job.get("additives"),
+                                "yield_ft3_per_sk": cement_job.get("yield_ft3_per_sk"),
                             }
-                            # Only add if we have meaningful data
-                            if job_entry.get("job_type") or job_entry.get("sacks"):
-                                # Filter out None values to keep output clean
-                                job_entry_filtered = {k: v for k, v in job_entry.items() if v is not None}
-                                logger.debug(f"    → Included: {job_entry_filtered}")
-                                historic_cement_jobs.append(job_entry_filtered)
-                            else:
-                                logger.debug(f"    → Skipped (no job_type or sacks)")
-                        except Exception as e:
-                            logger.error(f"  Error processing cement job {idx}: {e}")
-            logger.info(f"✅ Extracted {len(historic_cement_jobs)} historic cement jobs from W-15")
+                            # Store all cement jobs as-is, preserving complete historical data
+                            historic_cement_jobs.append(job_entry)
+                        except Exception:
+                            pass
+            logger.info(f"Extracted {len(historic_cement_jobs)} historic cement jobs from W-15")
         except Exception:
             logger.exception("Failed to extract historic cement jobs from W-15")
             historic_cement_jobs = []
