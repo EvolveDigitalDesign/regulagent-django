@@ -1614,8 +1614,8 @@ def _merge_adjacent_plugs(
     mergeable: List[Dict[str, Any]] = []
     fixed: List[Dict[str, Any]] = []
     for s in src:
-        # Treat surface shoe and top plug as mergeable when cross-type enabled
-        merge_ok = s.get("type") in types or s.get("type") in ("surface_casing_shoe_plug", "top_plug")
+        # Treat casing shoe plugs and top plug as mergeable when cross-type enabled
+        merge_ok = s.get("type") in types or s.get("type") in ("surface_casing_shoe_plug", "intermediate_casing_shoe_plug", "top_plug")
         if merge_ok and (s.get("top_ft") is not None) and (s.get("bottom_ft") is not None):
             mergeable.append(s)
         else:
