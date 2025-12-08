@@ -8,6 +8,7 @@ This is the primary endpoint users interact with to:
 """
 
 import logging
+import re
 from typing import Optional, Any, Dict, List
 
 from rest_framework import status
@@ -121,6 +122,7 @@ def _build_well_geometry(api14: str) -> dict:
         "liner": [],
         "historic_cement_jobs": [],
         "mechanical_equipment": [],
+        "existing_tools": [],
     }
     
     # Get W-2 document for casing and formation data
@@ -163,6 +165,123 @@ def _build_well_geometry(api14: str) -> dict:
                     }
                     production_perfs.append(perf_entry)
             geometry['production_perforations'] = production_perfs
+        
+        # Extract existing tools (CIBP, bridge plugs, packers, DV tools, retainers) from multiple sources
+        existing_tools = []
+        
+        # 1. From acid_fracture_operations (mechanical_plug, retainer, bridge plug)
+        afo_record = w2.json_data.get('acid_fracture_operations', [])
+        if afo_record:
+            for operation in afo_record:
+                if isinstance(operation, dict):
+                    op_type = operation.get("operation_type", "").lower()
+                    # Filter for mechanical plugs and barriers
+                    if "mechanical" in op_type or "cibp" in op_type or "bridge" in op_type or "retainer" in op_type:
+                        tool_entry = {
+                            "source": "acid_fracture_operations",
+                            "tool_type": operation.get("operation_type"),
+                            "material_description": operation.get("amount_and_kind_of_material_used"),
+                            "top_ft": operation.get("from_ft"),
+                            "bottom_ft": operation.get("to_ft"),
+                            "open_hole": operation.get("open_hole", False),
+                            "notes": operation.get("notes"),
+                        }
+                        existing_tools.append(tool_entry)
+        
+        # 2. From remarks - extract CIBP, Packer, DV Tool, Retainer depths using regex
+        try:
+            remarks_txt = str(w2.json_data.get("remarks") or "")
+            rrc_remarks_obj = w2.json_data.get("rrc_remarks") or {}
+            rrc_remarks_txt = ""
+            if isinstance(rrc_remarks_obj, dict):
+                for key, val in rrc_remarks_obj.items():
+                    if val:
+                        rrc_remarks_txt += f" {val}"
+            elif isinstance(rrc_remarks_obj, str):
+                rrc_remarks_txt = rrc_remarks_obj
+            
+            combined_remarks = f"{remarks_txt} {rrc_remarks_txt}"
+            
+            # Extract CIBP depth
+            for pattern in [r"CIBP\s*(?:at|@)?\s*(\d{3,5})", r"cast\s*iron\s*bridge\s*plug\s*(?:at|@)?\s*(\d{3,5})", r"\bBP\b\s*(?:at|@)?\s*(\d{3,5})"]:
+                match = re.search(pattern, combined_remarks, flags=re.IGNORECASE)
+                if match:
+                    try:
+                        depth = float(match.group(1))
+                        # Check if already in existing_tools (from acid_fracture_operations)
+                        if not any(t.get("tool_type", "").lower() == "cibp" and t.get("top_ft") == depth for t in existing_tools):
+                            existing_tools.append({
+                                "source": "remarks",
+                                "tool_type": "CIBP",
+                                "depth_ft": depth,
+                            })
+                        break
+                    except Exception:
+                        pass
+            
+            # Extract Packer depth
+            packer_match = re.search(r"packer\s*(?:at|@|set\s+at)?\s*(\d{3,5})", combined_remarks, flags=re.IGNORECASE)
+            if packer_match:
+                try:
+                    depth = float(packer_match.group(1))
+                    if not any(t.get("tool_type", "").lower() == "packer" and t.get("depth_ft") == depth for t in existing_tools):
+                        existing_tools.append({
+                            "source": "remarks",
+                            "tool_type": "Packer",
+                            "depth_ft": depth,
+                        })
+                except Exception:
+                    pass
+            
+            # Extract DV Tool depth
+            for pattern in [r"DV[- ]?(?:stage)?\s*tool\s*(?:at|@)?\s*(\d{3,5})", r"DV[- ]?tool\s*(?:at|@)?\s*(\d{3,5})"]:
+                dv_match = re.search(pattern, combined_remarks, flags=re.IGNORECASE)
+                if dv_match:
+                    try:
+                        depth = float(dv_match.group(1))
+                        if not any(t.get("tool_type", "").lower() == "dv_tool" and t.get("depth_ft") == depth for t in existing_tools):
+                            existing_tools.append({
+                                "source": "remarks",
+                                "tool_type": "DV_Tool",
+                                "depth_ft": depth,
+                            })
+                        break
+                    except Exception:
+                        pass
+            
+            # Extract Retainer depth
+            for pattern in [r"retainer\s*(?:at|@)?\s*(\d{3,5})", r"retainer\s+(?:packer\s+)?(?:at|@)?\s*(\d{3,5})"]:
+                retainer_matches = re.finditer(pattern, combined_remarks, flags=re.IGNORECASE)
+                for match in retainer_matches:
+                    try:
+                        depth = float(match.group(1))
+                        if not any(t.get("tool_type", "").lower() == "retainer" and t.get("depth_ft") == depth for t in existing_tools):
+                            existing_tools.append({
+                                "source": "remarks",
+                                "tool_type": "Retainer",
+                                "depth_ft": depth,
+                            })
+                    except Exception:
+                        pass
+            
+            # Extract Straddle Packer depth
+            for pattern in [r"straddle\s*(?:packer\s+)?(?:at|@)?\s*(\d{3,5})", r"straddle\s*(?:at|@)?\s*(\d{3,5})"]:
+                straddle_matches = re.finditer(pattern, combined_remarks, flags=re.IGNORECASE)
+                for match in straddle_matches:
+                    try:
+                        depth = float(match.group(1))
+                        if not any(t.get("tool_type", "").lower() == "straddle_packer" and t.get("depth_ft") == depth for t in existing_tools):
+                            existing_tools.append({
+                                "source": "remarks",
+                                "tool_type": "Straddle_Packer",
+                                "depth_ft": depth,
+                            })
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        
+        geometry['existing_tools'] = existing_tools
     
     # Get W-15 document for additional formation tops or perforations
     w15 = ExtractedDocument.objects.filter(
@@ -250,6 +369,8 @@ def get_plan_detail(request, plan_id):
             payload["production_perforations"] = well_geometry["production_perforations"]
         if well_geometry.get("mechanical_equipment"):
             payload["mechanical_equipment"] = well_geometry["mechanical_equipment"]
+        if well_geometry.get("existing_tools"):
+            payload["existing_tools"] = well_geometry["existing_tools"]
     
     # Build response with full plan data
     response_data = {
