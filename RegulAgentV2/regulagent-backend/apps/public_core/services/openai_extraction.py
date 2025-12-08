@@ -264,33 +264,7 @@ def _load_prompt(prompt_key: str) -> str:
             "liner_record:[{size_in, top_ft, bottom_ft, cement_top_ft}]; "
             "tubing_record:[{size_in, top_ft, bottom_ft}]; "
             "producing_injection_disposal_interval:[{from_ft, to_ft, open_hole:true|false}] (CRITICAL: Find table titled 'PRODUCING/INJECTION/DISPOSAL INTERVAL' with rows of From/To depths. Extract ALL rows as array. If table not found set to null. Each row should extract From and To depths as numbers, and whether open_hole=true if marked 'Open hole? Yes'); "
-            "acid_fracture_operations: Extract all rows from the table titled 
-            'ACID, FRACTURE, CEMENT SQUEEZE, CAST IRON BRIDGE PLUG, RETAINER, ETC.' 
-            Return an array of objects with: 
-            {operation_type, amount_and_kind_of_material_used, from_ft, to_ft, open_hole, notes}. 
-
-            operation_type: classify based on text in the row: 
-            - 'CIBP', 'CAST IRON BRIDGE PLUG', 'RETAINER' → 'mechanical_plug' 
-            - rows containing 'HCL', 'acid', 'acidize' → 'acid' 
-            - rows containing 'squeeze' → 'cement_squeeze' 
-            - rows containing sand + water volumes characteristic of frac → 'fracture' 
-            - otherwise return raw text in lowercase as fallback. 
-
-            amount_and_kind_of_material_used: 
-            - extract the full raw string describing fluids, acids, water, sand, cement, etc. 
-            - do NOT summarize or normalize. Preserve capitalization and units. 
-
-            from_ft / to_ft: numeric depths defining the interval. 
-            - Remove all non-numeric characters. 
-            - If only one depth appears, set both from_ft and to_ft to that value. 
-
-            open_hole: true if the interval corresponds to an “open hole” completion (match row labels or nearby context); otherwise false. 
-
-            notes: 
-            - include any descriptive text not captured above (e.g. '20’ cmt on top', 'NO TREATMENT', 'set CIBP @ 10490’'). 
-            - If no additional notes exist, set to null. 
-
-            If the table is missing or blank, return an empty array []."
+            "acid_fracture_operations:[{operation_type, amount_and_kind_of_material_used, from_ft, to_ft, open_hole, notes}] (Extract all rows from the table titled 'ACID, FRACTURE, CEMENT SQUEEZE, CAST IRON BRIDGE PLUG, RETAINER, ETC.' Return array of objects. operation_type: classify as 'mechanical_plug'(CIBP/BRIDGE PLUG/RETAINER), 'acid'(HCL/acid), 'cement_squeeze'(squeeze), 'fracture'(sand+water), or raw text. amount_and_kind_of_material_used: extract full raw string preserving capitalization/units. from_ft/to_ft: numeric depths; if single depth set both equal. open_hole: true if marked open hole. notes: any descriptive text not captured (e.g. 'set CIBP @ 10490'), null if none. If table missing/blank, return empty array []); "
             "kop:{kop_md_ft,kop_tvd_ft} (Kick-Off Point - look in remarks section for 'KOP' followed by MD and TV/TVD depths); "
             "commingling_and_h2s; remarks; rrc_remarks; operator_certification; "
             "revisions:{revising_tracking_number, revision_reason, other_changes}. "
