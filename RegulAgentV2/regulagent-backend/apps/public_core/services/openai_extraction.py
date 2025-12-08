@@ -264,7 +264,33 @@ def _load_prompt(prompt_key: str) -> str:
             "liner_record:[{size_in, top_ft, bottom_ft, cement_top_ft}]; "
             "tubing_record:[{size_in, top_ft, bottom_ft}]; "
             "producing_injection_disposal_interval:[{from_ft, to_ft, open_hole:true|false}] (CRITICAL: Find table titled 'PRODUCING/INJECTION/DISPOSAL INTERVAL' with rows of From/To depths. Extract ALL rows as array. If table not found set to null. Each row should extract From and To depths as numbers, and whether open_hole=true if marked 'Open hole? Yes'); "
-            "acid_fracture_operations; formation_record:[{formation, top_ft, base_ft}]; "
+            "acid_fracture_operations: Extract all rows from the table titled 
+            'ACID, FRACTURE, CEMENT SQUEEZE, CAST IRON BRIDGE PLUG, RETAINER, ETC.' 
+            Return an array of objects with: 
+            {operation_type, amount_and_kind_of_material_used, from_ft, to_ft, open_hole, notes}. 
+
+            operation_type: classify based on text in the row: 
+            - 'CIBP', 'CAST IRON BRIDGE PLUG', 'RETAINER' → 'mechanical_plug' 
+            - rows containing 'HCL', 'acid', 'acidize' → 'acid' 
+            - rows containing 'squeeze' → 'cement_squeeze' 
+            - rows containing sand + water volumes characteristic of frac → 'fracture' 
+            - otherwise return raw text in lowercase as fallback. 
+
+            amount_and_kind_of_material_used: 
+            - extract the full raw string describing fluids, acids, water, sand, cement, etc. 
+            - do NOT summarize or normalize. Preserve capitalization and units. 
+
+            from_ft / to_ft: numeric depths defining the interval. 
+            - Remove all non-numeric characters. 
+            - If only one depth appears, set both from_ft and to_ft to that value. 
+
+            open_hole: true if the interval corresponds to an “open hole” completion (match row labels or nearby context); otherwise false. 
+
+            notes: 
+            - include any descriptive text not captured above (e.g. '20’ cmt on top', 'NO TREATMENT', 'set CIBP @ 10490’'). 
+            - If no additional notes exist, set to null. 
+
+            If the table is missing or blank, return an empty array []."
             "kop:{kop_md_ft,kop_tvd_ft} (Kick-Off Point - look in remarks section for 'KOP' followed by MD and TV/TVD depths); "
             "commingling_and_h2s; remarks; rrc_remarks; operator_certification; "
             "revisions:{revising_tracking_number, revision_reason, other_changes}. "
@@ -290,12 +316,15 @@ def _load_prompt(prompt_key: str) -> str:
             "header; operator_info{name,address,operator_number}; well_info{api,district,county,field,lease,well_no,location{lat,lon}}; "
             "cementing_data:[{job:'surface|intermediate|production|plug|squeeze', interval_top_ft, interval_bottom_ft, cement_top_ft, "
             "slurry_density_ppg, yield_ft3_per_sk, sacks, additives:[] }]; "
+            "mechanical_equipment:[{equipment_type:'CIBP|bridge_plug|packer', size_in, depth_ft, sacks, notes}]; "
             "cement_tops_per_string:[{string:'surface|intermediate|production', cement_top_ft, cement_returns:'full|partial|none'}]; "
             "cementing_to_squeeze:[{top_ft,bottom_ft,method}]; certifications; instructions_section. "
             "Cement tops: Extract cement_top_ft for each cementing job - the depth where cement circulated to or stopped. "
             "Also extract cement_tops_per_string for each casing string showing final cement top depth after all jobs. "
             "Look for 'cement returns', 'cement to surface', 'cement circulated to X ft', 'cement left at X ft'. "
             "If returns to surface, set cement_top_ft to 0. If no returns or unknown, set to null. "
+            "Mechanical equipment: Extract CIBPs (Casing In Basement Pipe), bridge plugs, and packers from rows 24-25 of form (Size of hole/pipe plugged, Depth to bottom). "
+            "Look for entries like 'set CIBP 5-1/2 at 10490' or 'Bridge Plug 5.5 in'. Include cement sacks and any notes. "
             "Operator name: Extract the full operator/company name from the operator_info section, header, or certification area. "
             "Coordinates: If latitude/longitude are present anywhere (maps, headers, footers, or body), output decimal degrees in well_info.location.lat and .lon. "
             "Accept both decimal and DMS formats (e.g., 32°45'30\" N, 102°00'00\" W) and convert to signed decimal (N/E positive, S/W negative). "

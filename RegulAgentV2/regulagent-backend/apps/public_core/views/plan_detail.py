@@ -66,10 +66,51 @@ def _extract_historic_cement_jobs(api14: str) -> List[Dict[str, Any]]:
     return historic_cement_jobs
 
 
+def _extract_mechanical_equipment(api14: str) -> List[Dict[str, Any]]:
+    """
+    Extract mechanical equipment (CIBPs, bridge plugs, packers) from W-15 document.
+    Store all equipment with complete specifications.
+    """
+    mechanical_equipment: List[Dict[str, Any]] = []
+    try:
+        w15_doc = ExtractedDocument.objects.filter(
+            api_number=api14,
+            document_type='w15'
+        ).order_by('-created_at').first()
+        
+        if w15_doc and isinstance(w15_doc.json_data, dict):
+            w15 = w15_doc.json_data
+            equipment_data = w15.get("mechanical_equipment") or []
+            
+            if isinstance(equipment_data, list):
+                for equipment in equipment_data:
+                    if isinstance(equipment, dict):
+                        try:
+                            # Include all available fields from the equipment entry
+                            equipment_entry: Dict[str, Any] = {
+                                "equipment_type": equipment.get("equipment_type"),  # CIBP|bridge_plug|packer
+                                "size_in": equipment.get("size_in"),
+                                "depth_ft": equipment.get("depth_ft"),
+                                "sacks": equipment.get("sacks"),
+                                "notes": equipment.get("notes"),
+                            }
+                            # Store all equipment as-is, preserving complete specifications
+                            mechanical_equipment.append(equipment_entry)
+                        except Exception:
+                            pass
+            
+            if mechanical_equipment:
+                logger.info(f"Extracted {len(mechanical_equipment)} mechanical equipment items from W-15 for API {api14}")
+    except Exception as e:
+        logger.warning(f"Failed to extract mechanical equipment from W-15 for API {api14}: {e}")
+    
+    return mechanical_equipment
+
+
 def _build_well_geometry(api14: str) -> dict:
     """
     Extract well geometry from ExtractedDocuments for a given API.
-    Returns casing strings, formation tops, perforations, production intervals, and tubing.
+    Returns casing strings, formation tops, perforations, production intervals, mechanical equipment, and tubing.
     """
     geometry = {
         "casing_strings": [],
@@ -79,6 +120,7 @@ def _build_well_geometry(api14: str) -> dict:
         "tubing": [],
         "liner": [],
         "historic_cement_jobs": [],
+        "mechanical_equipment": [],
     }
     
     # Get W-2 document for casing and formation data
@@ -142,6 +184,9 @@ def _build_well_geometry(api14: str) -> dict:
     # Extract historic cement jobs from W-15
     geometry['historic_cement_jobs'] = _extract_historic_cement_jobs(api14)
     
+    # Extract mechanical equipment from W-15
+    geometry['mechanical_equipment'] = _extract_mechanical_equipment(api14)
+    
     return geometry
 
 
@@ -203,6 +248,8 @@ def get_plan_detail(request, plan_id):
             payload["historic_cement_jobs"] = well_geometry["historic_cement_jobs"]
         if well_geometry.get("production_perforations"):
             payload["production_perforations"] = well_geometry["production_perforations"]
+        if well_geometry.get("mechanical_equipment"):
+            payload["mechanical_equipment"] = well_geometry["mechanical_equipment"]
     
     # Build response with full plan data
     response_data = {
