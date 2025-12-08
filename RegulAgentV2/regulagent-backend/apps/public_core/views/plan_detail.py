@@ -69,12 +69,13 @@ def _extract_historic_cement_jobs(api14: str) -> List[Dict[str, Any]]:
 def _build_well_geometry(api14: str) -> dict:
     """
     Extract well geometry from ExtractedDocuments for a given API.
-    Returns casing strings, formation tops, and perforations.
+    Returns casing strings, formation tops, perforations, production intervals, and tubing.
     """
     geometry = {
         "casing_strings": [],
         "formation_tops": [],
         "perforations": [],
+        "production_perforations": [],
         "tubing": [],
         "liner": [],
         "historic_cement_jobs": [],
@@ -106,6 +107,20 @@ def _build_well_geometry(api14: str) -> dict:
         liner_record = w2.json_data.get('liner_record', [])
         if liner_record:
             geometry['liner'] = liner_record
+        
+        # Extract production/injection/disposal intervals as production perforations
+        pidi_record = w2.json_data.get('producing_injection_disposal_interval', [])
+        if pidi_record:
+            production_perfs = []
+            for interval in pidi_record:
+                if isinstance(interval, dict):
+                    perf_entry = {
+                        "top_ft": interval.get("from_ft"),
+                        "bottom_ft": interval.get("to_ft"),
+                        "open_hole": interval.get("open_hole", False),
+                    }
+                    production_perfs.append(perf_entry)
+            geometry['production_perforations'] = production_perfs
     
     # Get W-15 document for additional formation tops or perforations
     w15 = ExtractedDocument.objects.filter(
@@ -181,10 +196,13 @@ def get_plan_detail(request, plan_id):
     # Fetch well geometry from extracted documents
     well_geometry = _build_well_geometry(snapshot.well.api14)
     
-    # Inject historic_cement_jobs into payload if available
+    # Inject well geometry data into payload if available
     payload = snapshot.payload.copy() if isinstance(snapshot.payload, dict) else snapshot.payload
-    if isinstance(payload, dict) and well_geometry.get("historic_cement_jobs"):
-        payload["historic_cement_jobs"] = well_geometry["historic_cement_jobs"]
+    if isinstance(payload, dict):
+        if well_geometry.get("historic_cement_jobs"):
+            payload["historic_cement_jobs"] = well_geometry["historic_cement_jobs"]
+        if well_geometry.get("production_perforations"):
+            payload["production_perforations"] = well_geometry["production_perforations"]
     
     # Build response with full plan data
     response_data = {
