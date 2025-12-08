@@ -1681,7 +1681,7 @@ class W3AFromApiView(APIView):
                             )
                         ),
                         "mechanical_type": s.get("plug_type"),  # Include mechanical type for reference
-                        "regulatory_purpose": s.get("type"),  # Original purpose type for reference
+                        "regulatory_purpose": s.get("plug_purpose") or s.get("type"),  # Original regulatory purpose (formation_top_plug, bridge_plug, etc.)
                         "from_ft": (s.get("bottom_ft") if s.get("bottom_ft") is not None else s.get("depth_ft")),
                         "to_ft": (s.get("top_ft") if s.get("top_ft") is not None else s.get("depth_ft")),
                         "sacks": ((s.get("materials") or {}).get("slurry") or {}).get("sacks"),
