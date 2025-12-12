@@ -553,6 +553,7 @@ class W3AFromApiView(APIView):
                 isolated = self._build_plan(api, merge_enabled=False, merge_threshold_ft=merge_threshold_ft, sack_limit_no_tag=sack_limit_no_tag, sack_limit_with_tag=sack_limit_with_tag)
                 out = {"variants": {"combined": combined, "isolated": isolated}, "extraction": extraction_info}
                 # Persist baseline snapshot (variants payload) if well available
+                plan_id = f"{api}:combined"  # Default to combined variant for navigation
                 try:
                     well_for_snapshot = well or WellRegistry.objects.filter(api14__icontains=str(api)[-8:]).first()
                     if well_for_snapshot is not None:
@@ -570,6 +571,8 @@ class W3AFromApiView(APIView):
                             tenant_id=request.user.tenants.first().id if (request.user.is_authenticated and request.user.tenants.exists()) else None,
                             status=PlanSnapshot.STATUS_DRAFT,  # Initial plan starts as draft
                         )
+                        # Use combined variant plan_id for frontend navigation
+                        plan_id = f"{api}:combined"
                         try:
                             # Link any artifacts created during this request to the snapshot
                             ed_ids = [c.get("extracted_document_id") for c in created if c.get("extracted_document_id")]
@@ -602,6 +605,8 @@ class W3AFromApiView(APIView):
                 ser.is_valid(raise_exception=False)
                 if proposed_changes and not confirm_fact_updates:
                     out["facts_update_preview"] = proposed_changes
+                # Add plan_id to response for frontend navigation
+                out["plan_id"] = plan_id
                 return Response(out, status=status.HTTP_200_OK)
             else:
                 merge_enabled = (plugs_mode == "combined")
@@ -612,13 +617,14 @@ class W3AFromApiView(APIView):
                 if proposed_changes and not confirm_fact_updates:
                     response_payload["facts_update_preview"] = proposed_changes
                 # Persist baseline snapshot (single variant) if well available
+                variant_label = "combined" if merge_enabled else "isolated"
+                plan_id = f"{api}:{variant_label}"
                 try:
                     well_for_snapshot = well or WellRegistry.objects.filter(api14__icontains=str(api)[-8:]).first()
                     if well_for_snapshot is not None:
-                        variant_label = "combined" if merge_enabled else "isolated"
                         snapshot = PlanSnapshot.objects.create(
                             well=well_for_snapshot,
-                            plan_id=f"{api}:{variant_label}",
+                            plan_id=plan_id,
                             kind=PlanSnapshot.KIND_BASELINE,
                             payload=response_payload,
                             kernel_version=str((plan or {}).get("kernel_version") or ""),
@@ -658,6 +664,8 @@ class W3AFromApiView(APIView):
                             logger.exception("Failed to track well engagement (single)")
                 except Exception:
                     logger.exception("W3AFromApiView: failed to persist baseline snapshot (single)")
+                # Add plan_id to response for frontend navigation
+                response_payload["plan_id"] = plan_id
                 return Response(response_payload, status=status.HTTP_200_OK)
 
         except ValueError as ve:
@@ -1299,6 +1307,11 @@ class W3AFromApiView(APIView):
         if surface_casing_toc_ft is not None:
             facts["surface_casing_toc_ft"] = wrap(float(surface_casing_toc_ft))
             logger.info(f"🎯 Added surface_casing_toc_ft to facts: {surface_casing_toc_ft} ft")
+        
+        # Add full casing_record for cement-aware annuli calculations
+        if w2.get("casing_record"):
+            facts["casing_record"] = w2.get("casing_record")
+            logger.info(f"📊 Added casing_record to facts for cement-aware calculations: {len(w2.get('casing_record', []))} casings")
 
         field_name = facts["field"]["value"] or None
         district_val = facts["district"]["value"]
@@ -1340,10 +1353,10 @@ class W3AFromApiView(APIView):
         prefs = policy.setdefault("preferences", {})
         prefs["rounding_policy"] = "nearest"
         prefs.setdefault("default_recipe", {
-            "id": "class_h_neat_15_8",
-            "class": "H",
-            "density_ppg": 15.8,
-            "yield_ft3_per_sk": 1.18,
+            "id": "class_c_neat_15_6",
+            "class": "C",
+            "density_ppg": 15.6,
+            "yield_ft3_per_sk": 1.32,
             "water_gal_per_sk": 5.2,
             "additives": [],
         })
@@ -1550,8 +1563,8 @@ class W3AFromApiView(APIView):
                 plug_type_display = "Perf & squeeze"
             elif plug_type == "perf_and_circulate_plug":
                 plug_type_display = "Perf & circulate"
-            elif plug_type == "dumbell_plug":
-                plug_type_display = "Dumbell"
+            elif plug_type == "dumpbail_plug":
+                plug_type_display = "Dumpbail"
             
             # Build display name: "PlugType - Purpose" with TAG suffix if required
             display_name = f"{plug_type_display} - {purpose_name}" if plug_type_display else purpose_name
@@ -1671,7 +1684,7 @@ class W3AFromApiView(APIView):
                         "step_id": idx + 1,  # Match the step_id from steps array
                         "type": (
                             "CIBP" if (s.get("type") == "bridge_plug") else (
-                                "Dumbell (CIBP cap)" if (s.get("plug_type") == "dumbell_plug") else (
+                                "Dumpbail (CIBP cap)" if (s.get("plug_type") == "dumpbail_plug") else (
                                     "Spot plug" if (s.get("plug_type") == "spot_plug") else (
                                         "Perf & squeeze" if (s.get("plug_type") == "perf_and_squeeze_plug") else (
                                             "Perf & circulate" if (s.get("plug_type") == "perf_and_circulate_plug") else s.get("type")

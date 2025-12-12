@@ -10,6 +10,29 @@ KERNEL_VERSION = "0.1.0"
 from .w3a_rules import generate_steps as generate_w3a_steps
 
 
+def get_cement_yield(cement_class: str) -> float:
+    """
+    Get standard cement yield in ft³/sack based on cement class.
+    
+    Standard yields (API RP 65 / capacity_calculator.py):
+    - Class C: 1.32 ft³/sack (standard for most plugging operations)
+    - Class H: 1.06 ft³/sack (high-temperature wells, thixotropic)
+    
+    Args:
+        cement_class: Cement class ("C", "H", etc.)
+    
+    Returns:
+        float: Yield in ft³/sack
+    """
+    yields = {
+        "C": 1.32,
+        "H": 1.06,
+        "A": 1.15,
+        "G": 1.15,
+    }
+    return yields.get(cement_class.upper(), 1.32)  # Default to Class C
+
+
 def _collect_constraints(policy: Dict[str, Any]) -> List[Dict[str, Any]]:
     constraints: List[Dict[str, Any]] = []
     if not policy.get("complete"):
@@ -645,6 +668,16 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
         if plan["steps"]:
             logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
             
+            # Update recipe yields based on cement class annotations (must happen AFTER class annotation, BEFORE materials)
+            for s in plan["steps"]:
+                if isinstance(s.get("recipe"), dict):
+                    cement_class = s.get("details", {}).get("cement_class")
+                    if cement_class:
+                        correct_yield = get_cement_yield(cement_class)
+                        s["recipe"]["yield_ft3_per_sk"] = correct_yield
+                        s["recipe"]["class"] = cement_class
+                        logger.debug(f"Updated recipe for {s.get('type')} at depth {s.get('details', {}).get('depth_mid_ft')} ft: class={cement_class}, yield={correct_yield} ft³/sk")
+            
             logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
             plan["steps"] = _compute_materials_for_steps(plan["steps"], resolved_facts=resolved_facts)  # type: ignore
             
@@ -694,7 +727,7 @@ def _assign_plug_types_and_purposes(steps: List[Dict[str, Any]], production_toc_
     """
     Assign plug_type (mechanical) and plug_purpose (regulatory) to all steps.
     
-    plug_type: One of "spot_plug", "perf_and_squeeze_plug", "perf_and_circulate_plug", "dumbell_plug"
+    plug_type: One of "spot_plug", "perf_and_squeeze_plug", "perf_and_circulate_plug", "dumpbail_plug"
     plug_purpose: Original step type (formation_top_plug, bridge_plug, cement_plug, etc.)
     
     For cement_plug and bridge_plug steps that result from merging, calculate plug_type
@@ -721,8 +754,8 @@ def _assign_plug_types_and_purposes(steps: List[Dict[str, Any]], production_toc_
                 # Bridge plugs are static - just set to None or spot_plug (not a cement type)
                 step["plug_type"] = None  # Bridge plugs don't map to cement types
             elif step_type in ("cibp_cap", "bridge_plug_cap"):
-                # These are dumbells (3 sacks on tool)
-                step["plug_type"] = "dumbell_plug"
+                # These are dumpbails (3 sacks on tool)
+                step["plug_type"] = "dumpbail_plug"
             elif step_type == "cut_casing_below_surface":
                 # Not a plug type
                 step["plug_type"] = None
@@ -864,9 +897,9 @@ def _estimate_sacks_for_step(step: Dict[str, Any]) -> Optional[float]:
         
         interval_ft = abs(float(bottom_ft) - float(top_ft))
         
-        # Get recipe (default to Class H 15.8 ppg)
+        # Get recipe (default to Class C 15.6 ppg)
         recipe_dict = step.get("recipe") or {}
-        yield_ft3_per_sk = float(recipe_dict.get("yield_ft3_per_sk", 1.18) or 1.18)
+        yield_ft3_per_sk = float(recipe_dict.get("yield_ft3_per_sk", 1.32) or 1.32)
         
         if step_type in ("spot_plug", "cement_plug", "formation_top_plug", "uqw_isolation_plug", "intermediate_casing_shoe_plug"):
             # Cased-hole plug: estimate annular volume
@@ -924,7 +957,7 @@ def _estimate_sacks_for_merged_interval(
     casing_id_in: Optional[float],
     stinger_od_in: Optional[float],
     ann_excess: float = 0.4,
-    yield_ft3_per_sk: float = 1.18,
+    yield_ft3_per_sk: float = 1.32,
 ) -> Optional[float]:
     """
     Estimate sack count for a merged interval (bottom_ft to top_ft).
@@ -1099,11 +1132,12 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                             if inner_id and outer_id:
                                 ann_cap = annulus_capacity_bbl_per_ft(outer_id, inner_id)
                                 base_bbl = seg_len * ann_cap
-                                seg_bbl = base_bbl * (1.0 + ex) * squeeze_factor
                                 
-                                depth_kft = int((seg_bot + 999.0) / 1000.0)
+                                # Texas depth excess ONLY (no squeeze factor or annular excess for perf & squeeze)
+                                # Texas depth excess: exact depth in kft (not rounded)
+                                depth_kft = seg_bot / 1000.0
                                 texas_excess = 1.0 + (0.10 * depth_kft)
-                                seg_bbl *= texas_excess
+                                seg_bbl = base_bbl * texas_excess
                                 
                                 seg_info.update({
                                     "context": "annulus_squeeze",
@@ -1113,7 +1147,6 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                                     "outer_size_in": outer_str.get("size_in"),
                                     "annular_capacity_bbl_per_ft": ann_cap,
                                     "base_bbl": base_bbl,
-                                    "squeeze_factor": squeeze_factor,
                                     "texas_excess": texas_excess,
                                     "segment_bbl": seg_bbl,
                                 })
@@ -1129,11 +1162,12 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                             if hole_size and inner_od:
                                 ann_cap = annulus_capacity_bbl_per_ft(float(hole_size), float(inner_od))
                                 base_bbl = seg_len * ann_cap
-                                seg_bbl = base_bbl * (1.0 + ex) * squeeze_factor
                                 
-                                depth_kft = int((seg_bot + 999.0) / 1000.0)
+                                # Texas depth excess ONLY (no squeeze factor or annular excess for perf & squeeze)
+                                # Texas depth excess: exact depth in kft (not rounded)
+                                depth_kft = seg_bot / 1000.0
                                 texas_excess = 1.0 + (0.10 * depth_kft)
-                                seg_bbl *= texas_excess
+                                seg_bbl = base_bbl * texas_excess
                                 
                                 seg_info.update({
                                     "context": "open_hole_squeeze",
@@ -1142,7 +1176,6 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                                     "hole_size_in": hole_size,
                                     "annular_capacity_bbl_per_ft": ann_cap,
                                     "base_bbl": base_bbl,
-                                    "squeeze_factor": squeeze_factor,
                                     "texas_excess": texas_excess,
                                     "segment_bbl": seg_bbl,
                                 })
@@ -1262,6 +1295,60 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                     pass
                 if segments_calc:
                     materials["segments"] = segments_calc
+                    
+                    # Comprehensive logging for spot/cement plugs
+                    geometry_context = (step.get("geometry_context") or "").lower()
+                    print("="*80)
+                    print(f"✅ PLUG CALCULATION COMPLETE: {step_type.upper()}")
+                    print(f"   Type: SPOT PLUG (cement inside casing)")
+                    print(f"   Depth: {top_ft:.0f}-{bottom_ft:.0f} ft")
+                    print(f"   Fill method: Spot cement {'in open hole' if 'open_hole' in geometry_context else 'inside casing'}")
+                    print(f"")
+                    if len(segments_calc) > 1:
+                        print(f"   MULTI-SEGMENT CALCULATION ({len(segments_calc)} segments):")
+                        for idx, seg in enumerate(segments_calc, 1):
+                            if seg.get("length_ft"):
+                                top_ft = seg.get('top_ft')
+                                bottom_ft = seg.get('bottom_ft')
+                                if top_ft is not None and bottom_ft is not None:
+                                    print(f"      Segment {idx}: {top_ft:.0f}-{bottom_ft:.0f} ft")
+                                else:
+                                    print(f"      Segment {idx}: {top_ft}-{bottom_ft} ft")
+                                outer_in = seg.get('outer_in')
+                                inner_in = seg.get('inner_in')
+                                cap_bbl_per_ft = seg.get('cap_bbl_per_ft')
+                                bbl = seg.get('bbl')
+                                if outer_in is not None and inner_in is not None:
+                                    print(f"         Outer: {outer_in:.3f}\" | Inner: {inner_in:.3f}\"")
+                                else:
+                                    print(f"         Outer: {outer_in} | Inner: {inner_in}")
+                                if cap_bbl_per_ft is not None:
+                                    print(f"         Capacity: {cap_bbl_per_ft:.6f} bbl/ft")
+                                if bbl is not None:
+                                    print(f"         Volume: {bbl:.2f} bbl")
+                    else:
+                        print(f"   SINGLE FILL SPACE:")
+                        if segments_calc:
+                            seg = segments_calc[0]
+                            outer_in = seg.get('outer_in')
+                            inner_in = seg.get('inner_in')
+                            cap_bbl_per_ft = seg.get('cap_bbl_per_ft')
+                            if outer_in is not None and inner_in is not None:
+                                print(f"      Outer: {outer_in:.3f}\" | Inner: {inner_in:.3f}\"")
+                            else:
+                                print(f"      Outer: {outer_in} | Inner: {inner_in}")
+                            if cap_bbl_per_ft is not None:
+                                print(f"      Capacity: {cap_bbl_per_ft:.6f} bbl/ft")
+                            length_ft = seg.get('length_ft')
+                            bbl = seg.get('bbl')
+                            if length_ft is not None:
+                                print(f"      Length: {length_ft:.0f} ft")
+                            if bbl is not None:
+                                print(f"      Volume: {bbl:.2f} bbl")
+                    print(f"")
+                    print(f"   ✓ TOTAL VOLUME: {total_bbl:.2f} bbl")
+                    print(f"   ✓ SACKS REQUIRED: {int(vb.sacks)} sacks")
+                    print("="*80)
             elif step_type in ("perforate_and_squeeze_plug",):
                 # Two-part compound plug: squeeze behind casing + cement cap inside casing
                 # Calculate materials for both components
@@ -1289,10 +1376,10 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                                 logger.warning(f"Failed to get casing context: {e}")
                                 casing_context = {"context": "unknown", "count": 0}
                             
-                            # Texas TAC §3.14(d)(11): 1 + 10% per 1000 ft of depth
-                            # At 5000 ft: 1 + (10% × 5) = 1.5x
-                            # At 10,000 ft: 1 + (10% × 10) = 2.0x
-                            depth_kft = int((perf_bot + 999.0) / 1000.0)  # Round up to next kft
+                            # Texas TAC §3.14(d)(11): 1 + 10% per 1000 ft of depth (exact, not rounded)
+                            # At 5000 ft: 1 + (10% × 5.0) = 1.5x
+                            # At 10,000 ft: 1 + (10% × 10.0) = 2.0x
+                            depth_kft = perf_bot / 1000.0  # Exact depth in kft
                             texas_excess_factor = 1.0 + (0.10 * depth_kft)
                             
                             # Store context in details for transparency
@@ -1412,55 +1499,141 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                     except Exception:
                         pass
             elif step_type in ("surface_casing_shoe_plug", "intermediate_casing_shoe_plug", "uqw_isolation_plug", "formation_top_plug", "productive_horizon_isolation_plug"):
-                # Treat as cased-hole interval calculation using casing ID vs stinger OD
+                # Check if this is a perf & squeeze plug with incomplete cement (cement-aware calculation)
+                plug_type = step.get("plug_type")
                 top_ft = step.get("top_ft")
                 bottom_ft = step.get("bottom_ft")
-                casing_id = step.get("casing_id_in")
-                stinger_od = step.get("stinger_od_in")
-                if top_ft is not None and bottom_ft is not None and casing_id is not None and stinger_od is not None:
-                    t = float(top_ft)
-                    b = float(bottom_ft)
-                    interval_ft = abs(b - t)
-                    # For these special cased steps, default to cased excess (0.4) unless explicitly provided
-                    ex = float(step.get("annular_excess", 0.4))
-                    cap = annulus_capacity_bbl_per_ft(float(casing_id), float(stinger_od))
-                    base_volume_bbl = interval_ft * cap * (1.0 + ex)
+                cement_aware_success = False  # Track if cement-aware calculation succeeded
+                
+                if (plug_type == "perf_and_squeeze_plug" and 
+                    top_ft is not None and bottom_ft is not None and 
+                    resolved_facts is not None):
+                    # Use NEW cement-aware calculation
+                    from .w3a_rules import _calculate_perf_squeeze_volume, _get_perforation_casings
                     
-                    # TAC §3.14(d)(11): +10% per 1000 ft of DEPTH (not length!)
-                    # Use bottom depth (deeper point) for calculating the depth-based excess
-                    depth_kft = int((b + 999.0) / 1000.0)
-                    texas_excess_factor = 1.0 + (0.10 * depth_kft)
-                    total_bbl = base_volume_bbl * texas_excess_factor
-                    rounding_mode = (step.get("recipe", {}) or {}).get("rounding") or "nearest"
-                    vb = compute_sacks(total_bbl, recipe, rounding=rounding_mode)
-                    materials["slurry"] = {
-                        "total_bbl": total_bbl,
-                        "ft3": vb.ft3,
-                        "sacks": vb.sacks,
-                        "water_bbl": vb.water_bbl,
-                        "additives": vb.additives,
-                        "explain": vb.explain,
-                    }
-                    # surface sacks at top-level for convenience
-                    try:
-                        step["sacks"] = int(vb.sacks)
-                    except Exception:
-                        pass
-                    step.setdefault("explain", {}).update({
-                        "path": "cased_annulus",
-                        "cap_bbl_per_ft": cap,
-                        "interval_ft": interval_ft,
-                        "excess_used": ex,
-                        "texas_excess_factor": texas_excess_factor,
-                        "depth_kft": depth_kft,
-                        "rounding": rounding_mode,
-                    })
-                    # annotate geometry used
-                    step.setdefault("details", {})["geometry_used"] = {
-                        "annulus": "production_casing_id_vs_stinger_od",
-                        "casing_id_in": float(casing_id),
-                        "stinger_od_in": float(stinger_od),
-                    }
+                    interval_length_ft = abs(float(bottom_ft) - float(top_ft))
+                    total_bbl, annuli_breakdown = _calculate_perf_squeeze_volume(
+                        resolved_facts,
+                        float(bottom_ft),  # Use bottom depth for calculations
+                        interval_length_ft
+                    )
+                    
+                    if total_bbl > 0 and annuli_breakdown:
+                        # Successfully calculated from uncmented annuli
+                        perf_casings = _get_perforation_casings(resolved_facts, float(bottom_ft))
+                        rounding_mode = (step.get("recipe", {}) or {}).get("rounding") or "nearest"
+                        vb = compute_sacks(total_bbl, recipe, rounding=rounding_mode)
+                        
+                        materials["slurry"] = {
+                            "total_bbl": total_bbl,
+                            "ft3": vb.ft3,
+                            "sacks": vb.sacks,
+                            "water_bbl": vb.water_bbl,
+                            "additives": vb.additives,
+                            "explain": vb.explain,
+                        }
+                        
+                        try:
+                            step["sacks"] = int(vb.sacks)
+                        except Exception:
+                            pass
+                        
+                        step.setdefault("details", {}).update({
+                            "cement_aware_calculation": True,
+                            "uncmented_annuli_count": len(annuli_breakdown),
+                            "annuli": annuli_breakdown,
+                            "perforation_casings": perf_casings,
+                        })
+                        
+                        print("="*80)
+                        print(f"✅ PLUG CALCULATION COMPLETE: {step_type.upper()}")
+                        print(f"   Type: PERF & SQUEEZE PLUG (cement-aware)")
+                        print(f"   Depth: {top_ft}-{bottom_ft} ft")
+                        print(f"   Fill method: Perforate casing and squeeze into annuli")
+                        print(f"   Perforate through: {', '.join(perf_casings)}")
+                        print(f"   Filling: {len(annuli_breakdown)} annuli (uncmented)")
+                        for ann in annuli_breakdown:
+                            print(f"      • {ann['inner']} to {ann['outer']}: {ann['base_volume_bbl']:.2f} bbl")
+                        print(f"   Total volume: {total_bbl:.2f} bbl")
+                        print(f"   ✓ SACKS REQUIRED: {int(vb.sacks)} sacks")
+                        print("="*80)
+                        
+                        # Mark success to skip standard calculation
+                        cement_aware_success = True
+                    else:
+                        # Fall through to standard calculation if cement-aware fails
+                        logger.warning(f"⚠️  Cement-aware calculation returned 0 volume; falling back to standard")
+                        # Fall through to standard cased-hole calculation below
+                
+                # Standard cased-hole calculation (fallback or for non-perf-squeeze plugs)
+                # Only run if cement-aware calculation didn't succeed
+                if not cement_aware_success:
+                    casing_id = step.get("casing_id_in")
+                    stinger_od = step.get("stinger_od_in")
+                    if top_ft is not None and bottom_ft is not None and casing_id is not None and stinger_od is not None:
+                        t = float(top_ft)
+                        b = float(bottom_ft)
+                        interval_ft = abs(b - t)
+                        # For these special cased steps, default to cased excess (0.4) unless explicitly provided
+                        ex = float(step.get("annular_excess", 0.4))
+                        cap = annulus_capacity_bbl_per_ft(float(casing_id), float(stinger_od))
+                        base_volume_bbl = interval_ft * cap * (1.0 + ex)
+                        
+                        # TAC §3.14(d)(11): +10% per 1000 ft of DEPTH (exact, not rounded)
+                        # Use bottom depth (deeper point) for calculating the depth-based excess
+                        depth_kft = b / 1000.0
+                        texas_excess_factor = 1.0 + (0.10 * depth_kft)
+                        total_bbl = base_volume_bbl * texas_excess_factor
+                        rounding_mode = (step.get("recipe", {}) or {}).get("rounding") or "nearest"
+                        vb = compute_sacks(total_bbl, recipe, rounding=rounding_mode)
+                        materials["slurry"] = {
+                            "total_bbl": total_bbl,
+                            "ft3": vb.ft3,
+                            "sacks": vb.sacks,
+                            "water_bbl": vb.water_bbl,
+                            "additives": vb.additives,
+                            "explain": vb.explain,
+                        }
+                        # surface sacks at top-level for convenience
+                        try:
+                            step["sacks"] = int(vb.sacks)
+                        except Exception:
+                            pass
+                        step.setdefault("explain", {}).update({
+                            "path": "cased_annulus",
+                            "cap_bbl_per_ft": cap,
+                            "interval_ft": interval_ft,
+                            "excess_used": ex,
+                            "texas_excess_factor": texas_excess_factor,
+                            "depth_kft": depth_kft,
+                            "rounding": rounding_mode,
+                        })
+                        # annotate geometry used
+                        step.setdefault("details", {})["geometry_used"] = {
+                            "annulus": "production_casing_id_vs_stinger_od",
+                            "casing_id_in": float(casing_id),
+                            "stinger_od_in": float(stinger_od),
+                        }
+                        
+                        # Comprehensive logging
+                        print("="*80)
+                        print(f"✅ PLUG CALCULATION COMPLETE: {step_type.upper()}")
+                        print(f"   Type: {plug_type.upper() if plug_type else 'SPOT PLUG'}")
+                        print(f"   Depth: {t:.0f}-{b:.0f} ft (length: {interval_ft:.0f} ft)")
+                        print(f"   Fill method: Spot cement inside casing (annular)")
+                        print(f"")
+                        print(f"   ANNULAR SPACE CALCULATION:")
+                        print(f"      Casing ID: {float(casing_id):.3f}\"")
+                        print(f"      Stinger OD: {float(stinger_od):.3f}\"")
+                        print(f"      Capacity: {cap:.6f} bbl/ft")
+                        print(f"      Length: {interval_ft:.0f} ft")
+                        print(f"      Base volume: {interval_ft * cap:.2f} bbl")
+                        print(f"      × Annular excess: {(1.0 + ex):.2f}x (+{ex*100:.0f}%) → {base_volume_bbl:.2f} bbl")
+                        print(f"      × Texas excess: {texas_excess_factor:.4f}x (+{(texas_excess_factor-1)*100:.1f}% @ {depth_kft:.2f} kft) → {total_bbl:.2f} bbl")
+                        print(f"")
+                        print(f"   ✓ TOTAL VOLUME: {total_bbl:.2f} bbl")
+                        print(f"   ✓ SACKS REQUIRED: {int(vb.sacks)} sacks")
+                        print("="*80)
             elif step_type == "perf_and_circulate_to_surface":
                 # Perforate inner string, circulate cement up outer annulus to surface
                 # Geometry: outer casing ID vs inner casing OD
@@ -1477,8 +1650,8 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                     # Annulus capacity between outer ID and inner OD
                     ann_cap = annulus_capacity_bbl_per_ft(float(outer_id), float(inner_od))
                     
-                    # Texas depth excess using bottom depth (shoe)
-                    depth_kft = int((b + 999.0) / 1000.0)
+                    # Texas depth excess using bottom depth (shoe) - exact, not rounded
+                    depth_kft = b / 1000.0
                     texas_excess_factor = 1.0 + (0.10 * depth_kft)
                     
                     # Operational top-off for circulation to ensure surface returns
@@ -1661,7 +1834,7 @@ def _merge_adjacent_plugs(
         out["type"] = out_type
         
         # Determine merged plug_type with dominance rules:
-        # Precedence order: perf_and_circulate > perf_and_squeeze > spot > dumbell
+        # Precedence order: perf_and_circulate > perf_and_squeeze > spot > dumpbail
         plug_types_in_buf = [x.get("plug_type") for x in buf]
         merged_plug_type = None
         
@@ -1671,13 +1844,13 @@ def _merge_adjacent_plugs(
             logger.info("Merge: perf_and_circulate_plug takes precedence (reaches surface)")
         elif "perf_and_squeeze_plug" in plug_types_in_buf:
             merged_plug_type = "perf_and_squeeze_plug"
-            logger.info("Merge: perf_and_squeeze_plug takes precedence over spot/dumbell")
+            logger.info("Merge: perf_and_squeeze_plug takes precedence over spot/dumpbail")
         elif "spot_plug" in plug_types_in_buf:
             merged_plug_type = "spot_plug"
-            logger.info("Merge: spot_plug takes precedence over dumbell")
-        elif "dumbell_plug" in plug_types_in_buf:
-            merged_plug_type = "dumbell_plug"
-            logger.info("Merge: all plugs are dumbell type")
+            logger.info("Merge: spot_plug takes precedence over dumpbail")
+        elif "dumpbail_plug" in plug_types_in_buf:
+            merged_plug_type = "dumpbail_plug"
+            logger.info("Merge: all plugs are dumpbail type")
         
         if merged_plug_type:
             out["plug_type"] = merged_plug_type
@@ -1760,12 +1933,12 @@ def _merge_adjacent_plugs(
             incompatible_pairs = {
                 ("spot_plug", "perf_and_squeeze_plug"),
                 ("perf_and_squeeze_plug", "spot_plug"),
-                ("perf_and_squeeze_plug", "dumbell_plug"),
-                ("dumbell_plug", "perf_and_squeeze_plug"),
+                ("perf_and_squeeze_plug", "dumpbail_plug"),
+                ("dumpbail_plug", "perf_and_squeeze_plug"),
                 ("spot_plug", "perf_and_circulate_plug"),
                 ("perf_and_circulate_plug", "spot_plug"),
-                ("perf_and_circulate_plug", "dumbell_plug"),
-                ("dumbell_plug", "perf_and_circulate_plug"),
+                ("perf_and_circulate_plug", "dumpbail_plug"),
+                ("dumpbail_plug", "perf_and_circulate_plug"),
             }
             
             # Check if combination is blocked
@@ -1798,7 +1971,7 @@ def _merge_adjacent_plugs(
                 stinger_od = first_in_buf.get("stinger_od_in")
                 ann_excess = float(first_in_buf.get("annular_excess", 0.4) or 0.4)
                 recipe_dict = first_in_buf.get("recipe") or {}
-                yield_ft3_per_sk = float(recipe_dict.get("yield_ft3_per_sk", 1.18) or 1.18)
+                yield_ft3_per_sk = float(recipe_dict.get("yield_ft3_per_sk", 1.32) or 1.32)
                 
                 gap_sacks = _estimate_sacks_for_merged_interval(
                     s_low, p_high, casing_id, stinger_od, ann_excess, yield_ft3_per_sk
@@ -1882,10 +2055,10 @@ def _apply_step_defaults(steps: List[Dict[str, Any]], preferences: Dict[str, Any
     geometry_defaults: Dict[str, Dict[str, Any]] = preferences.get("geometry_defaults", {}) if isinstance(preferences, dict) else {}
     default_recipe: Dict[str, Any] = preferences.get("default_recipe", {}) if isinstance(preferences, dict) else {}
     FALLBACK_RECIPE: Dict[str, Any] = {
-        "id": "class_h_neat_15_8",
-        "class": "H",
-        "density_ppg": 15.8,
-        "yield_ft3_per_sk": 1.18,
+        "id": "class_c_neat_15_6",
+        "class": "C",
+        "density_ppg": 15.6,
+        "yield_ft3_per_sk": 1.32,
         "water_gal_per_sk": 5.2,
         "additives": [],
     }
@@ -1922,6 +2095,7 @@ def _apply_step_defaults(steps: List[Dict[str, Any]], preferences: Dict[str, Any
                     "severity": "major",
                     "message": "No step.recipe and no preferences.default_recipe; applied fallback recipe",
                 })
+        
         # propagate rounding preference onto step.recipe if missing
         rounding_pref = (preferences.get("rounding_policy") or "nearest") if isinstance(preferences, dict) else "nearest"
         if isinstance(s.get("recipe"), dict) and "rounding" not in s["recipe"]:
@@ -2020,11 +2194,11 @@ def _apply_district_overrides(
             if not plug_required or formation is None:
                 print(f"🔍 KERNEL: SKIPPING {formation} - plug_required={plug_required}, formation={formation}", flush=True)
                 continue
-            # Use symmetric interval around the formation top based on required min length
-            min_len = float(reqs.get("surface_casing_shoe_plug_min_ft", {}).get("value", 50)) if isinstance(reqs.get("surface_casing_shoe_plug_min_ft"), dict) else 50.0
-            half = max(min_len / 2.0, 0.0)
-            s_top = center_ft + half
-            s_bot = center_ft - half
+            # Formation top plugs: set at formation top, extend 100 ft below (not ±50 ft)
+            # Per regulatory best practices: plug top = formation top, plug bottom = 100 ft below top
+            s_top = center_ft  # At the formation top
+            s_bot = center_ft - 100.0  # 100 ft below formation top
+            min_len = 100.0  # 100 ft minimum
             step = {
                 "type": "formation_top_plug",
                 "plug_purpose": "formation_top_plug",  # NEW: Preserve original purpose
@@ -2035,7 +2209,7 @@ def _apply_district_overrides(
                 "regulatory_basis": [
                     f"rrc.district.{str(district).lower()}.{str(county).lower() if county else 'unknown'}:formation_top:{formation}"
                 ],
-                "placement_basis": f"Formation transition: {formation} (±{int(half)} ft)",
+                "placement_basis": f"Formation isolation: {formation} at {center_ft:.0f} ft, -100 ft",
                 "details": {"center_ft": center_ft},
             }
             

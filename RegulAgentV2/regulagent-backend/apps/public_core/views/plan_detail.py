@@ -23,6 +23,81 @@ from apps.public_core.models import PlanSnapshot, ExtractedDocument
 logger = logging.getLogger(__name__)
 
 
+def _extract_formations_from_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Extract formation tops from plan payload.
+    
+    The payload contains:
+    - formation_tops_detected: list of formation names ["Spraberry", "Dean", "Clearfork"]
+    - steps: list of plug steps with top_ft depth and regulatory_basis
+    
+    We combine these to create formation_tops with name and depth.
+    
+    Returns list like:
+    [
+        {"formation": "Spraberry", "top_ft": 6750},
+        {"formation": "Dean", "top_ft": 6750},
+        {"formation": "Clearfork", "top_ft": 5650},
+        ...
+    ]
+    """
+    formation_tops: List[Dict[str, Any]] = []
+    
+    try:
+        # Get list of detected formations
+        formations_detected = payload.get('formation_tops_detected', [])
+        if not formations_detected:
+            formations_detected = payload.get('formations_targeted', [])
+        
+        # If we have formations, extract their depths from steps
+        if formations_detected and isinstance(formations_detected, list):
+            steps = payload.get('steps', [])
+            
+            # Build a map of formation name to depths from regulatory_basis codes
+            formation_depths: Dict[str, float] = {}
+            
+            if isinstance(steps, list):
+                for step in steps:
+                    if isinstance(step, dict):
+                        top_ft = step.get('top_ft')
+                        regulatory_basis = step.get('regulatory_basis', [])
+                        
+                        # Parse regulatory_basis to find formation names
+                        # Format: "rrc.district.XX.county:formation_top:FormationName"
+                        if isinstance(regulatory_basis, list):
+                            for basis in regulatory_basis:
+                                if isinstance(basis, str) and 'formation_top:' in basis:
+                                    try:
+                                        # Extract formation name after "formation_top:"
+                                        formation_name = basis.split('formation_top:')[-1].strip()
+                                        if formation_name and top_ft is not None:
+                                            formation_depths[formation_name] = float(top_ft)
+                                    except Exception:
+                                        pass
+            
+            # Create formation_tops list from detected formations with their depths
+            for formation_name in formations_detected:
+                if formation_name in formation_depths:
+                    formation_tops.append({
+                        "formation": formation_name,
+                        "top_ft": formation_depths[formation_name],
+                    })
+                else:
+                    # Include even if depth not found (may be in W-2 later)
+                    formation_tops.append({
+                        "formation": formation_name,
+                        "top_ft": None,
+                    })
+        
+        if formation_tops:
+            logger.info(f"Extracted {len(formation_tops)} formation tops from payload")
+    
+    except Exception as e:
+        logger.warning(f"Failed to extract formations from payload: {e}")
+    
+    return formation_tops
+
+
 def _extract_historic_cement_jobs(api14: str) -> List[Dict[str, Any]]:
     """
     Extract all historic cement jobs from W-15 document.
@@ -108,10 +183,14 @@ def _extract_mechanical_equipment(api14: str) -> List[Dict[str, Any]]:
     return mechanical_equipment
 
 
-def _build_well_geometry(api14: str) -> dict:
+def _build_well_geometry(api14: str, payload: Optional[Dict[str, Any]] = None) -> dict:
     """
     Extract well geometry from ExtractedDocuments for a given API.
     Returns casing strings, formation tops, perforations, production intervals, mechanical equipment, and tubing.
+    
+    Args:
+        api14: The API number
+        payload: Optional plan payload containing formation_tops_detected and steps
     """
     geometry = {
         "casing_strings": [],
@@ -125,6 +204,13 @@ def _build_well_geometry(api14: str) -> dict:
         "existing_tools": [],
     }
     
+    # First, try to extract formations from payload if provided
+    # This includes formation names and depths from the plan
+    if payload and isinstance(payload, dict):
+        formation_tops_from_payload = _extract_formations_from_payload(payload)
+        if formation_tops_from_payload:
+            geometry['formation_tops'] = formation_tops_from_payload
+    
     # Get W-2 document for casing and formation data
     w2 = ExtractedDocument.objects.filter(
         api_number=api14,
@@ -137,10 +223,11 @@ def _build_well_geometry(api14: str) -> dict:
         if casing_record:
             geometry['casing_strings'] = casing_record
         
-        # Extract formation tops
-        formation_record = w2.json_data.get('formation_record', [])
-        if formation_record:
-            geometry['formation_tops'] = formation_record
+        # Extract formation tops from W-2 (fallback if not in payload)
+        if not geometry['formation_tops']:
+            formation_record = w2.json_data.get('formation_record', [])
+            if formation_record:
+                geometry['formation_tops'] = formation_record
         
         # Extract tubing if available
         tubing_record = w2.json_data.get('tubing_record', [])
@@ -318,6 +405,10 @@ def get_plan_detail(request, plan_id):
     
     GET /api/plans/{plan_id}/
     
+    Accepts either:
+    - plan_id string (e.g., "4230132998:isolated") - returns latest snapshot with that plan_id
+    - snapshot ID (e.g., "145") - returns that specific snapshot
+    
     Returns:
         - Full plan JSON (steps, violations, materials, etc.)
         - Workflow status
@@ -326,9 +417,6 @@ def get_plan_detail(request, plan_id):
     
     This is the primary plan view that users interact with before
     making modifications via chat or manual edits.
-    
-    If multiple snapshots exist with the same plan_id, returns the latest one
-    for the authenticated tenant.
     """
     user_tenant = request.user.tenants.first()
     if not user_tenant:
@@ -337,19 +425,37 @@ def get_plan_detail(request, plan_id):
             status=status.HTTP_403_FORBIDDEN
         )
     
-    # Get the latest snapshot for this plan_id and tenant
-    # Filter by tenant_id to ensure tenant isolation
+    # Try to get snapshot by ID first (if plan_id is a database ID)
     try:
-        snapshot = (
-            PlanSnapshot.objects
-            .select_related('well')
-            .filter(plan_id=plan_id, tenant_id=user_tenant.id)
-            .order_by('-created_at')
-            .first()
-        )
-        
-        if not snapshot:
-            raise PlanSnapshot.DoesNotExist
+        # Check if plan_id is a numeric ID
+        if plan_id.isdigit():
+            snapshot = (
+                PlanSnapshot.objects
+                .select_related('well')
+                .filter(id=int(plan_id), tenant_id=user_tenant.id)
+                .first()
+            )
+            if snapshot:
+                logger.info(f"Found snapshot by database ID: {plan_id}")
+            else:
+                return Response(
+                    {"error": f"Plan snapshot {plan_id} not found for your tenant"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            # Otherwise treat as plan_id string and get the latest
+            snapshot = (
+                PlanSnapshot.objects
+                .select_related('well')
+                .filter(plan_id=plan_id, tenant_id=user_tenant.id)
+                .order_by('-created_at')
+                .first()
+            )
+            
+            if not snapshot:
+                raise PlanSnapshot.DoesNotExist
+            
+            logger.info(f"Found snapshot by plan_id string: {plan_id}")
             
     except PlanSnapshot.DoesNotExist:
         return Response(
@@ -357,11 +463,11 @@ def get_plan_detail(request, plan_id):
             status=status.HTTP_404_NOT_FOUND
         )
     
-    # Fetch well geometry from extracted documents
-    well_geometry = _build_well_geometry(snapshot.well.api14)
-    
-    # Inject well geometry data into payload if available
+    # Get payload first (needed for formation extraction)
     payload = snapshot.payload.copy() if isinstance(snapshot.payload, dict) else snapshot.payload
+    
+    # Fetch well geometry from extracted documents (pass payload for formation extraction)
+    well_geometry = _build_well_geometry(snapshot.well.api14, payload)
     if isinstance(payload, dict):
         if well_geometry.get("historic_cement_jobs"):
             payload["historic_cement_jobs"] = well_geometry["historic_cement_jobs"]

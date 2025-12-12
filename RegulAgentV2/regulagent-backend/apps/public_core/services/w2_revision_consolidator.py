@@ -420,3 +420,5 @@ def consolidate_w2_extractions(w2_extractions: List[Dict[str, Any]]) -> Dict[str
     consolidator = W2RevisionConsolidator(w2_extractions)
     return consolidator.consolidate()
 
+
+

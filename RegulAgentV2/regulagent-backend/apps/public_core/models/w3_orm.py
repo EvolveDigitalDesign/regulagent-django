@@ -15,6 +15,7 @@ from __future__ import annotations
 from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
+from simple_history.models import HistoricalRecords
 
 from .well_registry import WellRegistry
 
@@ -315,6 +316,9 @@ class W3FormORM(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Django simple-history for audit trail (tracks who/when for all status changes)
+    history = HistoricalRecords()
     
     class Meta:
         ordering = ['-created_at']

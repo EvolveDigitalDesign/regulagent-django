@@ -21,6 +21,7 @@ from apps.public_core.services.openai_config import (
     DEFAULT_CHAT_MODEL,
     TEMPERATURE_LOW,
     log_openai_usage,
+    check_rate_limit,
 )
 
 logger = logging.getLogger(__name__)
@@ -282,6 +283,9 @@ def process_chat_with_openai(
     
     while tool_iterations < max_tool_calls:
         try:
+            # Check rate limit before making request (prevents 429 errors)
+            check_rate_limit(estimated_tokens=15000)
+            
             # Call OpenAI with optimized settings
             response = client.chat.completions.create(
                 model=DEFAULT_CHAT_MODEL,  # Configurable via env (default: gpt-4o)
@@ -294,7 +298,7 @@ def process_chat_with_openai(
             
             message = response.choices[0].message
             
-            # Log usage for cost tracking
+            # Log usage for cost tracking and rate limit updates
             log_openai_usage(response, f"chat_thread_{thread.id}")
             
             # If no tool calls, we're done

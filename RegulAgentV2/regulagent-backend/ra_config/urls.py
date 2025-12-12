@@ -50,7 +50,12 @@ from apps.public_core.views.plan_status import (
     get_plan_status,
 )
 from apps.public_core.views.w3_from_pna import BuildW3FromPNAView, W3HealthCheckView
-from apps.tenants.views import TenantInfoView
+from apps.public_core.views.well_filings import WellFilingsView
+from apps.public_core.views.all_filings import AllFilingsView
+from apps.public_core.views.filing_metrics import FilingMetricsView
+from apps.public_core.views.filing_breakdown import FilingBreakdownView
+from apps.public_core.views.filing_breakdown_timeline import FilingBreakdownTimelineView
+from apps.tenants.views import TenantInfoView, UserProfileView, ChangePasswordView
 from apps.tenant_overlay.views.tenant_wells import (
     get_well_by_api,
     bulk_get_wells,
@@ -90,6 +95,13 @@ urlpatterns = [
     path('api/w3/health/', W3HealthCheckView.as_view(), name='w3-health'),
     path('api/w3/build-from-pna/', BuildW3FromPNAView.as_view(), name='w3-build-from-pna'),
     
+    # Well Filings Unified Endpoints
+    path('api/filings/', AllFilingsView.as_view(), name='all-filings'),
+    path('api/filings/metrics/', FilingMetricsView.as_view(), name='filing-metrics'),
+    path('api/filings/breakdown/', FilingBreakdownView.as_view(), name='filing-breakdown'),
+    path('api/filings/breakdown-timeline/', FilingBreakdownTimelineView.as_view(), name='filing-breakdown-timeline'),
+    path('api/wells/<str:api14>/filings/', WellFilingsView.as_view(), name='well-filings'),
+    
     path('api/plans/<str:api>/history', PlanHistoryView.as_view()),
     path('api/plans/<str:api>/artifacts', PlanArtifactsView.as_view()),
     path('api/artifacts/<uuid:artifact_id>/download', ArtifactDownloadView.as_view()),
@@ -110,6 +122,10 @@ urlpatterns = [
     
     # Tenant info endpoint
     path('api/tenant/', TenantInfoView.as_view(), name='tenant_info'),
+    
+    # User profile endpoints
+    path('api/user/profile/', UserProfileView.as_view(), name='user_profile'),
+    path('api/user/change-password/', ChangePasswordView.as_view(), name='change_password'),
     
     # Tenant wells endpoints (specific routes first, then generic)
     path('api/tenant/wells/history/', get_tenant_well_history, name='tenant_well_history'),

@@ -291,6 +291,58 @@ class BuildW3FromPNAView(APIView):
                 request=request
             )
             
+            # Save W-3 form to database if generation was successful
+            if result.get("success"):
+                try:
+                    logger.info("\n" + "=" * 80)
+                    logger.info("💾 SAVING W-3 FORM TO DATABASE")
+                    logger.info("=" * 80)
+                    
+                    from apps.public_core.models import W3FormORM, WellRegistry
+                    
+                    # Get or create well registry entry
+                    api_number = validated_data.get("api_number", "")
+                    well, created = WellRegistry.objects.get_or_create(
+                        api14=api_number,
+                        defaults={
+                            "state": "TX",  # Default - should be determined from data
+                            "county": "UNKNOWN",  # Default
+                            "operator_name": "UNKNOWN",  # Default
+                            "lease_name": validated_data.get("well_name", ""),
+                            "well_number": "",
+                        }
+                    )
+                    
+                    logger.info(f"   Well: {well.api14} ({'created' if created else 'existing'})")
+                    
+                    # Create W3FormORM from generated form
+                    w3_form_data = result.get("w3_form", {})
+                    
+                    w3_form = W3FormORM.objects.create(
+                        well=well,
+                        api_number=api_number,
+                        status="draft",  # Initial status
+                        w3_json=w3_form_data,  # Store full W-3 JSON
+                        submitted_by=str(request.user) if request.user else "API",
+                        submitted_at=None,  # Not submitted yet
+                        rrc_confirmation_number=None,
+                    )
+                    
+                    logger.info(f"   ✅ W3FormORM created: ID={w3_form.id}")
+                    logger.info(f"   Status: draft")
+                    logger.info(f"   Plugs: {len(w3_form_data.get('plugs', []))}")
+                    
+                    # Store the form ID in result for reference
+                    result["w3_form_id"] = str(w3_form.id)
+                    result["w3_form_api"] = w3_form.api_number
+                    
+                    logger.info("=" * 80)
+                    
+                except Exception as e:
+                    logger.error(f"   ❌ Failed to save W3FormORM: {e}", exc_info=True)
+                    logger.warning(f"   Continuing anyway - form data still in response but not persisted")
+                    # Don't fail the entire request, just warn
+            
             # Validate response structure
             response_serializer = BuildW3FromPNAResponseSerializer(data=result)
             

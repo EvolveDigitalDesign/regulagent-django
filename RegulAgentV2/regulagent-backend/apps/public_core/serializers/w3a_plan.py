@@ -80,6 +80,7 @@ class W3AFromApiRequestSerializer(serializers.Serializer):
 
 
 class W3APlanSerializer(serializers.Serializer):
+    plan_id = serializers.CharField(required=False, allow_null=True, help_text="Plan identifier for frontend navigation (e.g., '4230132998:combined')")
     api = serializers.CharField()
     jurisdiction = serializers.CharField(required=False, allow_null=True)
     district = serializers.CharField(required=False, allow_null=True)
