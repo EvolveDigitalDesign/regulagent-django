@@ -23,6 +23,25 @@ except ImportError:
         raise ImportError("capacity_calculator not available")
 
 
+def casing_capacity_bbl_per_ft(casing_id_in: float) -> float:
+    """
+    Calculate casing capacity (full bore) in barrels per foot.
+    Used when tubing is removed and cement fills the entire casing bore.
+    
+    Formula: (casing_id^2 / 1029.4)
+    where 1029.4 is a conversion constant (contains π and unit conversions)
+    """
+    if casing_id_in is None:
+        return 0.0
+    try:
+        casing_id = float(casing_id_in)
+        if casing_id <= 0:
+            return 0.0
+        return (casing_id ** 2) / 1029.4
+    except (ValueError, TypeError):
+        return 0.0
+
+
 def annulus_capacity_bbl_per_ft(outer_id_in: float, inner_id_in: float) -> float:
     """
     Calculate annular capacity in barrels per foot.
@@ -227,12 +246,14 @@ def _get_uncmented_annuli(facts: Dict[str, Any], target_depth_ft: float) -> List
                 # Last casing: outer boundary is openhole
                 outer_casing = None
             
-            # Check if annulus is uncmented
-            inner_uncmented = inner_casing.get("cement_status") in ("uncmented",)
-            outer_uncmented = (outer_casing is None) or (outer_casing.get("cement_status") in ("uncmented",))
+            # CRITICAL: Annulus cement status is determined by the INNER casing only
+            # Cement is pumped down the casing and up the annulus during cementing
+            # If the inner casing is cemented, the annulus is cemented (cement can't flow through cemented annuli)
+            inner_status = inner_casing.get("cement_status")
+            annulus_is_cemented = inner_status in ("cemented", "fully_cemented")
             
-            # Add annulus if either side is uncmented
-            if inner_uncmented or outer_uncmented:
+            # Only include UNcemented annuli (where cement can flow)
+            if not annulus_is_cemented:
                 if outer_casing:
                     annulus = {
                         "inner_casing": inner_casing.get("name"),
@@ -240,7 +261,7 @@ def _get_uncmented_annuli(facts: Dict[str, Any], target_depth_ft: float) -> List
                         "inner_id_in": inner_casing.get("id_in"),        # Keep ID for reference
                         "outer_casing": outer_casing.get("name"),
                         "outer_id_in": outer_casing.get("id_in"),        # Outer casing ID is correct
-                        "inner_cement_status": inner_casing.get("cement_status"),
+                        "inner_cement_status": inner_status,
                         "outer_cement_status": outer_casing.get("cement_status"),
                     }
                 else:
@@ -252,12 +273,16 @@ def _get_uncmented_annuli(facts: Dict[str, Any], target_depth_ft: float) -> List
                         "inner_id_in": inner_casing.get("id_in"),        # Keep ID for reference
                         "outer_casing": "openhole",
                         "outer_id_in": hole_size_in,                     # Hole size is correct
-                        "inner_cement_status": inner_casing.get("cement_status"),
+                        "inner_cement_status": inner_status,
                         "outer_cement_status": "none",
                     }
                 
                 uncmented_annuli.append(annulus)
                 logger.info(f"   Uncmented annulus: {annulus['inner_casing']} ({annulus['inner_od_in']}\" OD) to {annulus['outer_casing']} ({annulus['outer_id_in']}\" ID/Hole)")
+            else:
+                # Skip cemented annuli (cement cannot flow through existing cement)
+                outer_name = outer_casing.get('name') if outer_casing else 'openhole'
+                logger.info(f"   Skipping cemented annulus: {inner_casing.get('name')} to {outer_name} (inner casing is {inner_status})")
         
         logger.info(f"🔧 Found {len(uncmented_annuli)} uncmented annuli at {target_depth_ft} ft")
         return uncmented_annuli
@@ -1041,10 +1066,11 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
             top_plug_step = {
                 "type": "top_plug",
                 "length_ft": float(top_len),
-                "top_ft": 10.0,
-                "bottom_ft": 0.0,
+                "top_ft": 0.0,  # At surface (shallowest)
+                "bottom_ft": float(top_len),  # N ft below surface (deepest)
                 "regulatory_basis": top_cites or ["tx.tac.16.3.14(d)(8)"],
                 "plug_type": "spot_plug",  # Surface safety plug at surface
+                "geometry_context": "cased_production",  # Triggers cement calculation in kernel
             }
             steps.append(top_plug_step)
         cut_knob = req.get('casing_cut_below_surface_ft')

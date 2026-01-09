@@ -23,6 +23,7 @@ django-celery-beat>=2.5
 django-storages>=1.14
 boto3>=1.34
 pillow>=10.0
+PyPDF2>=3.0  # PDF manipulation and merging for document verification
 
 # Config and server
 python-dotenv>=1.0

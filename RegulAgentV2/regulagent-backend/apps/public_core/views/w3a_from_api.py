@@ -798,6 +798,19 @@ class W3AFromApiView(APIView):
         well_no = wi.get("well_no") or ""
         rrc = (wi.get("district") or wi.get("rrc_district") or "").strip()
         district = "08A" if (rrc in ("08", "8") and ("andrews" in str(county).lower())) else (rrc or "08A")
+        
+        # Extract lat/lon from W-2 well_info location (for geographic zone evaluation)
+        loc = wi.get("location") or {}
+        lat_from_w2 = loc.get("lat") or loc.get("latitude") or None
+        lon_from_w2 = loc.get("lon") or loc.get("longitude") or None
+        
+        # Fallback to GAU coordinates if W-2 missing/empty
+        if (lat_from_w2 is None or lon_from_w2 is None) and gau:
+            gau_loc = (gau.get("well_info") or {}).get("location") or {}
+            if lat_from_w2 is None:
+                lat_from_w2 = gau_loc.get("lat") or gau_loc.get("latitude") or None
+            if lon_from_w2 is None:
+                lon_from_w2 = gau_loc.get("lon") or gau_loc.get("longitude") or None
 
         # GAU base depth if not older than 5 years
         uqw_depth = None
@@ -869,9 +882,12 @@ class W3AFromApiView(APIView):
         intermediate_casing_toc_ft = None
         surface_casing_toc_ft = None
         
-        for row in (w2.get("casing_record") or []):
+        logger.info(f"🔍 TOC EXTRACTION: Processing {len(w2.get('casing_record', []))} casing records")
+        for idx, row in enumerate(w2.get("casing_record") or []):
             kind = (row.get("string") or row.get("type_of_casing") or "").lower()
             cement_top = row.get("cement_top_ft")
+            shoe_depth = row.get("shoe_depth_ft") or row.get("setting_depth_ft") or row.get("bottom_ft")
+            logger.info(f"🔍 TOC EXTRACTION [{idx}]: kind='{kind}', cement_top_ft={cement_top}, shoe_depth_ft={shoe_depth}")
             
             if cement_top is not None:
                 try:
@@ -879,17 +895,20 @@ class W3AFromApiView(APIView):
                     
                     if kind.startswith("production") and production_casing_toc_ft is None:
                         production_casing_toc_ft = cement_top_val
-                        logger.info(f"📍 Production casing TOC extracted: {production_casing_toc_ft} ft")
+                        logger.info(f"📍✅ Production casing TOC extracted: {production_casing_toc_ft} ft")
                     
                     elif kind.startswith("intermediate") and intermediate_casing_toc_ft is None:
                         intermediate_casing_toc_ft = cement_top_val
-                        logger.info(f"📍 Intermediate casing TOC extracted: {intermediate_casing_toc_ft} ft")
+                        logger.info(f"📍✅ Intermediate casing TOC extracted: {intermediate_casing_toc_ft} ft")
                     
                     elif kind.startswith("surface") and surface_casing_toc_ft is None:
                         surface_casing_toc_ft = cement_top_val
-                        logger.info(f"📍 Surface casing TOC extracted: {surface_casing_toc_ft} ft")
+                        logger.info(f"📍✅ Surface casing TOC extracted: {surface_casing_toc_ft} ft")
                 except (ValueError, TypeError):
+                    logger.warning(f"⚠️ TOC EXTRACTION [{idx}]: Failed to parse cement_top_ft={cement_top}")
                     pass
+        
+        logger.info(f"🎯 TOC EXTRACTION COMPLETE: production={production_casing_toc_ft}, intermediate={intermediate_casing_toc_ft}, surface={surface_casing_toc_ft}")
         
         sizes = []
         for row in (w2.get("casing_record") or []):
@@ -1209,6 +1228,8 @@ class W3AFromApiView(APIView):
             "uqw_base_ft": wrap(uqw_depth),
             "use_cibp": wrap(False),
             "surface_shoe_ft": wrap(surface_shoe_ft),
+            "lat": float(lat_from_w2) if lat_from_w2 else None,
+            "lon": float(lon_from_w2) if lon_from_w2 else None,
         }
         
         # Add existing mechanical barriers if found
@@ -1495,8 +1516,9 @@ class W3AFromApiView(APIView):
         # Summarize output similar to management command
         def _step_summary(s: Dict[str, Any]) -> Dict[str, Any]:
             # Normalize depth field names for consistency
-            top = s.get("top_ft") or s.get("top") or s.get("depth_ft")
-            bottom = s.get("bottom_ft") or s.get("base_ft") or s.get("base") or s.get("depth_ft")
+            # CRITICAL: Use 'is not None' checks because 0.0 is falsy and would be skipped by 'or' chain
+            top = s.get("top_ft") if s.get("top_ft") is not None else (s.get("top") if s.get("top") is not None else s.get("depth_ft"))
+            bottom = s.get("bottom_ft") if s.get("bottom_ft") is not None else (s.get("base_ft") if s.get("base_ft") is not None else (s.get("base") if s.get("base") is not None else s.get("depth_ft")))
             
             # For merged plugs, extract min/max from merged_steps if top-level depths are missing
             details = s.get("details") or {}

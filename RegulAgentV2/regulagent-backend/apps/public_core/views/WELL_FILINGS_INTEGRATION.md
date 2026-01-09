@@ -202,3 +202,6 @@ const filtered = await fetchWellFilings("42-003-01016", {
 The WellDetail page automatically uses this when rendering the filing history table.
 
 
+
+
+

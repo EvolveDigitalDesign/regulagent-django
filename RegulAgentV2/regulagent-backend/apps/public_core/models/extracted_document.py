@@ -90,6 +90,8 @@ class ExtractedDocument(models.Model):
             models.Index(fields=["created_at"]),
             models.Index(fields=["uploaded_by_tenant", "source_type"]),
             models.Index(fields=["is_validated", "document_type"]),
+            # Index for checking existing extractions (reuse optimization)
+            models.Index(fields=["api_number", "source_path", "document_type", "status"]),
         ]
 
     def __str__(self) -> str:  # pragma: no cover

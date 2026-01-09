@@ -34,6 +34,16 @@ from apps.policy_ingest import urls as policy_urls
 from apps.kernel.views.advisory import AdvisorySanityCheckView
 from apps.public_core.views.rrc_extractions import RRCCompletionsExtractView
 from apps.public_core.views.w3a_from_api import W3AFromApiView
+from apps.public_core.views.w3a_segmented import (
+    W3AInitialView,
+    W3ACombinedPDFView,
+    W3AConfirmDocsView,
+    W3AConfirmExtractionsView,
+    W3AGeometryView,
+    W3AConfirmGeometryView,
+    W3AApplyEditsView,
+    W3ABrowseEditsView,
+)
 from apps.public_core.views.plan_history import PlanHistoryView
 from apps.public_core.views.plan_artifacts import PlanArtifactsView
 from apps.public_core.views.artifact_download import ArtifactDownloadView
@@ -90,6 +100,16 @@ urlpatterns = [
     path('api/advisory/sanity-check', AdvisorySanityCheckView.as_view()),
     path('api/rrc/extractions/completions', RRCCompletionsExtractView.as_view()),
     path('api/plans/w3a/from-api', W3AFromApiView.as_view()),
+    
+    # Segmented W3A flow (multi-stage with user verification)
+    path('api/w3a/initial', W3AInitialView.as_view(), name='w3a-initial'),
+    path('api/w3a/<str:temp_plan_id>/combined.pdf', W3ACombinedPDFView.as_view(), name='w3a-combined-pdf'),
+    path('api/w3a/<str:temp_plan_id>/confirm-docs', W3AConfirmDocsView.as_view(), name='w3a-confirm-docs'),
+    path('api/w3a/<str:temp_plan_id>/extractions', W3AConfirmExtractionsView.as_view(), name='w3a-confirm-extractions'),
+    path('api/w3a/<str:temp_plan_id>/geometry', W3AGeometryView.as_view(), name='w3a-geometry'),
+    path('api/w3a/<str:temp_plan_id>/confirm-geometry', W3AConfirmGeometryView.as_view(), name='w3a-confirm-geometry'),
+    path('api/w3a/<str:plan_id>/apply-edits', W3AApplyEditsView.as_view(), name='w3a-apply-edits'),
+    path('api/w3a/edits', W3ABrowseEditsView.as_view(), name='w3a-browse-edits'),
     
     # W-3 Form Generation from pnaexchange
     path('api/w3/health/', W3HealthCheckView.as_view(), name='w3-health'),

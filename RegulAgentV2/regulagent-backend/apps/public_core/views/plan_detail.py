@@ -387,11 +387,34 @@ def _build_well_geometry(api14: str, payload: Optional[Dict[str, Any]] = None) -
         if formation_tops and not geometry['formation_tops']:
             geometry['formation_tops'] = formation_tops
     
-    # Extract historic cement jobs from W-15
-    geometry['historic_cement_jobs'] = _extract_historic_cement_jobs(api14)
+    # Extract historic cement jobs from W-15 (or payload if available)
+    if payload and isinstance(payload, dict) and payload.get('historic_cement_jobs'):
+        geometry['historic_cement_jobs'] = payload['historic_cement_jobs']
+        logger.info(f"Using historic_cement_jobs from payload for API {api14}")
+    else:
+        geometry['historic_cement_jobs'] = _extract_historic_cement_jobs(api14)
     
-    # Extract mechanical equipment from W-15
-    geometry['mechanical_equipment'] = _extract_mechanical_equipment(api14)
+    # Extract mechanical equipment from payload (user-added tools) or W-15
+    if payload and isinstance(payload, dict) and payload.get('mechanical_equipment'):
+        geometry['mechanical_equipment'] = payload['mechanical_equipment']
+        logger.info(f"Using mechanical_equipment from payload for API {api14} ({len(payload['mechanical_equipment'])} tools)")
+    else:
+        geometry['mechanical_equipment'] = _extract_mechanical_equipment(api14)
+    
+    # Also add existing_tools alias if present in payload
+    if payload and isinstance(payload, dict) and payload.get('existing_tools'):
+        geometry['existing_tools'].extend([
+            tool for tool in payload['existing_tools']
+            if tool not in geometry['existing_tools']
+        ])
+        logger.info(f"Added {len(payload['existing_tools'])} existing_tools from payload for API {api14}")
+    
+    # Extract production perforations from payload if available
+    if payload and isinstance(payload, dict) and payload.get('production_perforations'):
+        # Only override if payload has perforations and we don't have them from W-2
+        if not geometry['production_perforations']:
+            geometry['production_perforations'] = payload['production_perforations']
+            logger.info(f"Using production_perforations from payload for API {api14}")
     
     return geometry
 
