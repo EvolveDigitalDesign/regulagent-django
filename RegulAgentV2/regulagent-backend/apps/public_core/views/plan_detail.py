@@ -499,6 +499,13 @@ def get_plan_detail(request, plan_id):
     # Get payload first (needed for formation extraction)
     payload = snapshot.payload.copy() if isinstance(snapshot.payload, dict) else snapshot.payload
     
+    # 🔍 DEBUG: Log what's in the retrieved payload
+    logger.error(f"❌ RETRIEVED SNAPSHOT PAYLOAD: casing_strings count = {len(payload.get('casing_strings', []))}")
+    if payload.get('casing_strings'):
+        logger.error(f"❌ RETRIEVED: First casing = {payload['casing_strings'][0]}")
+    else:
+        logger.error(f"❌❌❌ RETRIEVED: casing_strings is EMPTY in payload!")
+    
     # Fetch well geometry from extracted documents (pass payload for formation extraction)
     well_geometry = _build_well_geometry(snapshot.well.api14, payload)
     if isinstance(payload, dict):
@@ -549,6 +556,13 @@ def get_plan_detail(request, plan_id):
         # THE ACTUAL PLAN - This is what the user sees and modifies
         "payload": payload,
     }
+    
+    # 🔍 DEBUG: Log what's in the final response being sent to frontend
+    logger.error(f"❌ FINAL RESPONSE: well_geometry.casing_strings count = {len(response_data['well_geometry'].get('casing_strings', []))}")
+    if response_data['well_geometry'].get('casing_strings'):
+        logger.error(f"❌ FINAL RESPONSE: First casing = {response_data['well_geometry']['casing_strings'][0]}")
+    else:
+        logger.error(f"❌❌❌ FINAL RESPONSE: casing_strings is EMPTY in well_geometry!")
     
     logger.info(f"Retrieved plan {plan_id} (status: {snapshot.status}) for user {request.user.email}")
     

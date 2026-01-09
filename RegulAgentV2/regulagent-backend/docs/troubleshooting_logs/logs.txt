@@ -1,613 +1,401 @@
-ubuntu@ip-10-0-7-116:/opt/regulagent/src/RegulAgentV2/regulagent-backend/docker$ grep -n "DERIVED GEOMETRY" /opt/regulagent/src/RegulAgentV2/regulagent-backend/apps/public_core/views/w3a_segmented.py
-grep -n "GEOMETRY BEFORE EDITS" /opt/regulagent/src/RegulAgentV2/regulagent-backend/apps/public_core/views/w3a_segmented.py
-674:            logger.info(f"🔍 DERIVED GEOMETRY: casing_strings={len(geometry.get('casing_strings', []))} items")
-675:            logger.info(f"🔍 DERIVED GEOMETRY: perforations={len(geometry.get('perforations', []))} items")
-676:            logger.info(f"🔍 DERIVED GEOMETRY: formation_tops={len(geometry.get('formation_tops', []))} items")
-678:                logger.info(f"🔍 DERIVED GEOMETRY: First casing string={geometry['casing_strings'][0]}")
-895:            logger.info(f"🔍 GEOMETRY BEFORE EDITS: casing_strings={len(geometry.get('casing_strings', []))} items")
-896:            logger.info(f"🔍 GEOMETRY BEFORE EDITS: perforations={len(geometry.get('perforations', []))} items")
-897:            logger.info(f"🔍 GEOMETRY BEFORE EDITS: formation_tops={len(geometry.get('formation_tops', []))} items")
-898:            logger.info(f"🔍 GEOMETRY BEFORE EDITS: mechanical_barriers={len(geometry.get('mechanical_barriers', []))} items")
-ubuntu@ip-10-0-7-116:/opt/regulagent/src/RegulAgentV2/regulagent-backend/docker$ # Nuclear option - clear everything
-docker system prune -a --volumes --force
-
-# Rebuild with no cache
-docker compose -f compose.prod.yml build --no-cache --pull
-
-# Force recreate containers
-docker compose -f compose.prod.yml up -d --force-recreate
-
-# Watch the logs
-docker compose -f compose.prod.yml logs -f web
-Deleted Images:
-deleted: sha256:0ee6458ca026dce1642ee81e5140a8035e2bc0dfe6765b63bb461f2c94310895
-deleted: sha256:7e7678bc0e87c83da7d6166a5f0fccaabf6a029df65924b027c1dbbeaab8b86c
-deleted: sha256:c8867653e95e30ac5aa696f9c8925a7ddd3e17bf1ed3c3f03a6e411a5a83976f
-deleted: sha256:f20b5e9a4321a56accf84de8118af4dc8070d998740d722a6abba71e83d6b1fe
-deleted: sha256:b0c8a28057d6baa3a0fd0e8cf8b8c87f13acc802bfc747e7213d234fda4baa87
-deleted: sha256:c50ef528b892f2dbbc3b4150fb6a9e3d7079b093b7cc539320b63a94591ad563
-deleted: sha256:3e7f933f45259c587865da7936a8cddefa1968329ddf23d0321ce34084932592
-deleted: sha256:14e0bf87ead88cf503763303b34246cb17af0fab6f7ff6c14a4f2187ad810bd8
-deleted: sha256:f5bdc3aab735b84eb40def437ec73117a8aa4b2700b6cdc609569659330ff84a
-deleted: sha256:39fdb74b1993256e3fc55e7d44ac0423e7a4f44cb755e503a329fd64d7be01b5
-deleted: sha256:1f00c3c20e6a290c616dd8242b49187c4f1f583b5ed010f9a623b887ae1cc2eb
-deleted: sha256:02e8270a81e4ac12752d422257272adb9e1b9a5a3b2e0dee2178fac62fbe98f8
-deleted: sha256:06a2f23927b55857ee65e19cbe4bc2c73b36a4b2612f21fd53f8005fb32a1500
-deleted: sha256:b4fec181dad25693f3a331a373b7b410d0a9bd69e6215d5cb87def846d7a4800
-deleted: sha256:f86cf8627bb67b24b5b237e5a19361463f6fde72795eafe55ac59a28047f6754
-deleted: sha256:d298b00349b1df56ed2f432d630f26863d246d8c2f7d20b11234b5bb02629a21
-deleted: sha256:0f97da111f4340c36621848ea4001f88c46ae19d5b87fbb287489ad651fdbb48
-deleted: sha256:8f0b022fe0237dd6434adc91758a8b849437dee72b7b52c3390e7fca174806f9
-deleted: sha256:83bf6f505e6c1262d9196b8088811dad8b672baf89627781dca5faef6df434ec
-deleted: sha256:82d2953f7cc29d335c367afa51e5678532169e3d913da1f0a53c5eb29956c910
-deleted: sha256:861de5223d1cc15f8ebb37b1523c52bc70320b32ae0ce9d796366dba5cf295bb
-deleted: sha256:68ef99af64f539c25adcc88bf83e6bee863b7d6cf796d31ff8668e11a0e683cd
-deleted: sha256:6c9ca3f26e723634e0d124160e2fb1094161db75d3e3a89f0f52db96343acbc6
-deleted: sha256:5dce545dd6d54f9da8daf14636b4bf27b8660dc45c8e1039ba1d765060f40c41
-deleted: sha256:e70492d8217f65a3adf92bdc13f2e308a11368b5de2ab2b53cb9e0ab89e04e18
-deleted: sha256:14ee08c06e650c42178c6693cf0b66aa87ce5bb39f9fe603871cd65cebc654d4
-deleted: sha256:4fe141a7d7f4f49671c401d21719610fb59eae69c785296668c6670c6e96efbe
-deleted: sha256:e3301d4bdcbd5e49f71d7f4e21980edbe7a0a6e6802ccc1efd4640fd11ec35a8
-deleted: sha256:91eae20a70c41a09e0f2d5327387bc3c1b0f731fb2023a469bc4a4b22bba758e
-deleted: sha256:4486c5626b3341e2c3e6051d767ca38a758bc2bc2f1db152a28e156afc278ad5
-deleted: sha256:3dddf5e83f956a31343facfc2a0a9e59d0efa31cf4e46fb8ff79b3f629ddf01a
-
-Deleted build cache objects:
-09u3hk68311ak2gluzw97vr8j
-wu30sx6y8tot50ygfj6ps6fcm
-u40dw1o4tqib3zwgdu3jvgzt9
-lv52dzytn4y2satk6zr6w2o89
-h9lbl6vndaraxcpwpa6qexzgb
-kxsojtk5f9a0aiupp85mxmvw4
-rkxapul7z9ynfiz8fijttorlc
-cu4mpm0gw689yfu4rqo4jevl5
-7leukd3aoshrjg8xbieytuqic
-hihnhunf9muhox8vzcqtsuru5
-lqesux7f10sh70j29cx70azid
-fal1n073kmgkyx8rtag8y32x7
-xlk2xu7if97vxbadav7u97hl1
-eeaeh1lm77c4gt00fpodmw0fr
-hklpvpxnnen9umyu0xopetoa6
-syg0uzqzb8orolcys3gy9h7eg
-
-Total reclaimed space: 9.823GB
-WARN[0000] /opt/regulagent/src/RegulAgentV2/regulagent-backend/docker/compose.prod.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
-[+] Building 143.0s (21/21) FINISHED                                                                                             
- => [internal] load local bake definitions                                                                                  0.0s
- => => reading from stdin 1.62kB                                                                                            0.0s
- => [beat internal] load build definition from Dockerfile                                                                   0.0s
- => => transferring dockerfile: 1.59kB                                                                                      0.0s
- => [celery internal] load metadata for docker.io/library/python:3.11-slim                                                  0.4s
- => [web internal] load .dockerignore                                                                                       0.0s
- => => transferring context: 2B                                                                                             0.0s
- => [beat internal] load build context                                                                                      1.3s
- => => transferring context: 86.53MB                                                                                        1.3s
- => [beat  1/10] FROM docker.io/library/python:3.11-slim@sha256:1dd3dca85e22886e44fcad1bb7ccab6691dfa83db52214cf9e20696e09  0.1s
- => => resolve docker.io/library/python:3.11-slim@sha256:1dd3dca85e22886e44fcad1bb7ccab6691dfa83db52214cf9e20696e095f3e36   0.0s
- => => sha256:1dd3dca85e22886e44fcad1bb7ccab6691dfa83db52214cf9e20696e095f3e36 10.37kB / 10.37kB                            0.0s
- => => sha256:6930196ac2d4c3a295bac0e7039dcc93b3038bd50f548b3a6a6af39a79cab132 1.75kB / 1.75kB                              0.0s
- => => sha256:955f4ccb562435365ab83ac6405b197bcfe93e778301cd0187bfb27d76f1ffa0 5.48kB / 5.48kB                              0.0s
- => [web  2/10] WORKDIR /app                                                                                                0.1s
- => [web  3/10] RUN apt-get update     && apt-get install -y --no-install-recommends         build-essential         libp  47.9s
- => [celery  4/10] COPY requirements/ /tmp/requirements/                                                                    0.0s
- => [beat  5/10] RUN if [ "development" = "production" ]; then         pip install -r /tmp/requirements/production.txt;    49.9s
- => [beat  6/10] RUN python -m playwright install-deps chromium || true                                                     6.8s 
- => [celery  7/10] COPY . /app                                                                                              0.2s 
- => [web  8/10] RUN useradd -m appuser && chown -R appuser:appuser /app                                                     3.6s 
- => [beat  9/10] RUN python -m playwright install chromium || true                                                         13.3s 
- => [celery 10/10] RUN chmod -R 755 /app                                                                                    4.4s 
- => [web] exporting to image                                                                                               16.0s 
- => => exporting layers                                                                                                    15.9s 
- => => writing image sha256:331a0e7b0112b0db0800c6ac37e8e2c568b9324d10b507abce961b8b3660c641                                0.0s 
- => => naming to docker.io/library/docker-web                                                                               0.0s 
- => [beat] exporting to image                                                                                              16.0s 
- => => exporting layers                                                                                                    15.9s
- => => writing image sha256:5390c8cf4c632ebf28e7e0bd65637d4940dfd4bb86bdb9168f0eaf9035e27a2f                                0.0s
- => => naming to docker.io/library/docker-beat                                                                              0.0s
- => [celery] exporting to image                                                                                            16.0s
- => => exporting layers                                                                                                    15.9s
- => => writing image sha256:9d2818f90f33da4b581f7c705030d6d8fde6e6fb584bd5a9368b73846b4f4000                                0.0s
- => => naming to docker.io/library/docker-celery                                                                            0.0s
- => [web] resolving provenance for metadata file                                                                            0.1s
- => [beat] resolving provenance for metadata file                                                                           0.0s
- => [celery] resolving provenance for metadata file                                                                         0.0s
-[+] Building 3/3
- ✔ docker-web     Built                                                                                                     0.0s 
- ✔ docker-beat    Built                                                                                                     0.0s 
- ✔ docker-celery  Built                                                                                                     0.0s 
-WARN[0000] /opt/regulagent/src/RegulAgentV2/regulagent-backend/docker/compose.prod.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
-[+] Running 4/4
- ✔ Container regulagent_redis_prod   Healthy                                                                                8.9s 
- ✔ Container regulagent_celery_prod  Started                                                                                8.9s 
- ✔ Container regulagent_beat_prod    Started                                                                                8.9s 
- ✔ Container regulagent_web_prod     Started                                                                                8.9s 
-WARN[0000] /opt/regulagent/src/RegulAgentV2/regulagent-backend/docker/compose.prod.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
-regulagent_web_prod  | [entrypoint] Waiting for database regulagent-db.ctkqg6cwmghc.us-east-2.rds.amazonaws.com:5432...
-regulagent_web_prod  | [entrypoint] Applying migrations...
-regulagent_web_prod  | === Starting migration
-regulagent_web_prod  | Operations to perform:
-regulagent_web_prod  |   Apply all migrations: admin, assistant, auth, contenttypes, django_celery_beat, permissions, plans, policy_ingest, public_core, sessions, tenant_overlay, tenants
-regulagent_web_prod  | Running migrations:
-regulagent_web_prod  |   No migrations to apply.
-regulagent_web_prod  |   Your models in app(s): 'plans', 'public_core' have changes that are not yet reflected in a migration, and so won't be applied.
-regulagent_web_prod  |   Run 'manage.py makemigrations' to make new migrations, and then re-run 'manage.py migrate' to apply them.
-regulagent_web_prod  | === Starting migration
-regulagent_web_prod  | Operations to perform:
-regulagent_web_prod  |   Apply all migrations: admin, assistant, auth, contenttypes, django_celery_beat, permissions, plans, policy_ingest, public_core, sessions, tenant_overlay, tenants
-regulagent_web_prod  | Running migrations:
-regulagent_web_prod  |   No migrations to apply.
-regulagent_web_prod  |   Your models in app(s): 'plans', 'public_core' have changes that are not yet reflected in a migration, and so won't be applied.
-regulagent_web_prod  |   Run 'manage.py makemigrations' to make new migrations, and then re-run 'manage.py migrate' to apply them.
-regulagent_web_prod  | === Starting migration
-regulagent_web_prod  | Operations to perform:
-regulagent_web_prod  |   Apply all migrations: admin, assistant, auth, contenttypes, django_celery_beat, permissions, plans, policy_ingest, public_core, sessions, tenant_overlay, tenants
-regulagent_web_prod  | Running migrations:
-regulagent_web_prod  |   No migrations to apply.
-regulagent_web_prod  |   Your models in app(s): 'plans', 'public_core' have changes that are not yet reflected in a migration, and so won't be applied.
-regulagent_web_prod  |   Run 'manage.py makemigrations' to make new migrations, and then re-run 'manage.py migrate' to apply them.
-regulagent_web_prod  | === Starting migration
-regulagent_web_prod  | Operations to perform:
-regulagent_web_prod  |   Apply all migrations: admin, assistant, auth, contenttypes, django_celery_beat, permissions, plans, policy_ingest, public_core, sessions, tenant_overlay, tenants
-regulagent_web_prod  | Running migrations:
-regulagent_web_prod  |   No migrations to apply.
-regulagent_web_prod  |   Your models in app(s): 'plans', 'public_core' have changes that are not yet reflected in a migration, and so won't be applied.
-regulagent_web_prod  |   Run 'manage.py makemigrations' to make new migrations, and then re-run 'manage.py migrate' to apply them.
-regulagent_web_prod  | [entrypoint] Collecting static files...
-regulagent_web_prod  | 
-regulagent_web_prod  | 165 static files copied to '/app/ra_config/staticfiles'.
-regulagent_web_prod  | [entrypoint] Creating cache table if missing...
-regulagent_web_prod  | [entrypoint] Starting app: gunicorn ra_config.asgi:application -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 --workers 2 --threads 4 --timeout 300
-regulagent_web_prod  | [2026-01-09 22:18:45 +0000] [1] [INFO] Starting gunicorn 23.0.0
-regulagent_web_prod  | [2026-01-09 22:18:45 +0000] [1] [INFO] Listening at: http://0.0.0.0:8000 (1)
-regulagent_web_prod  | [2026-01-09 22:18:45 +0000] [1] [INFO] Using worker: uvicorn.workers.UvicornWorker
-regulagent_web_prod  | [2026-01-09 22:18:45 +0000] [14] [INFO] Booting worker with pid: 14
-regulagent_web_prod  | [2026-01-09 22:18:45 +0000] [15] [INFO] Booting worker with pid: 15
-regulagent_web_prod  | [2026-01-09 22:18:48 +0000] [15] [INFO] Started server process [15]
-regulagent_web_prod  | [2026-01-09 22:18:48 +0000] [15] [INFO] Waiting for application startup.
-regulagent_web_prod  | [2026-01-09 22:18:48 +0000] [15] [INFO] ASGI 'lifespan' protocol appears unsupported.
-regulagent_web_prod  | [2026-01-09 22:18:48 +0000] [15] [INFO] Application startup complete.
-regulagent_web_prod  | [2026-01-09 22:18:48 +0000] [14] [INFO] Started server process [14]
-regulagent_web_prod  | [2026-01-09 22:18:48 +0000] [14] [INFO] Waiting for application startup.
-regulagent_web_prod  | [2026-01-09 22:18:48 +0000] [14] [INFO] ASGI 'lifespan' protocol appears unsupported.
-regulagent_web_prod  | [2026-01-09 22:18:48 +0000] [14] [INFO] Application startup complete.
-regulagent_web_prod  | 172.18.0.1:39730 - "POST /api/auth/token/ HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:37346 - "GET /api/user/profile/ HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:37378 - "GET /api/filings/breakdown-timeline/?period=month&event=created&form_type=W-3A&form_type=W-3 HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:37372 - "GET /api/filings/?page=1&page_size=10&ordering=-updated_at HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:37388 - "OPTIONS /api/filings/?page=1&page_size=100&ordering=-updated_at HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:37358 - "GET /api/filings/metrics/ HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:37390 - "GET /api/filings/?page=1&page_size=100&ordering=-updated_at HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:37412 - "GET /api/filings/metrics/ HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:37424 - "GET /api/filings/breakdown-timeline/?period=month&event=created&form_type=W-3A&form_type=W-3 HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:37396 - "GET /api/filings/?page=1&page_size=10&ordering=-updated_at HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:37426 - "POST /api/w3a/initial HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:48590 - "OPTIONS /api/w3a/temp_4246139385_121f2f8c/combined.pdf HTTP/1.1" 200
-regulagent_web_prod  |    ❌ Tenant mismatch - but allowing for temp snapshot
-regulagent_web_prod  | 172.18.0.1:48602 - "GET /api/w3a/temp_4246139385_121f2f8c/combined.pdf HTTP/1.1" 200
-regulagent_web_prod  | /usr/local/lib/python3.11/site-packages/django/http/response.py:517: Warning: StreamingHttpResponse must consume synchronous iterators in order to serve them asynchronously. Use an asynchronous iterator instead.
-regulagent_web_prod  |   warnings.warn(
-regulagent_web_prod  | 172.18.0.1:48608 - "OPTIONS /api/w3a/temp_4246139385_121f2f8c/confirm-docs HTTP/1.1" 200
-regulagent_web_prod  | openai runtime: version=1.109.1 path=/usr/local/lib/python3.11/site-packages/openai/__init__.py
-regulagent_web_prod  | responses.create signature=(self, *, background: 'Optional[bool] | Omit' = <openai.Omit object at 0x74522a595b90>, conversation: 'Optional[response_create_params.Conversation] | Omit' = <openai.Omit object at 0x74522a595b90>, include: 'Optional[List[ResponseIncludable]] | Omit' = <openai.Omit object at 0x74522a595b90>, input: 'Union[str, ResponseInputParam] | Omit' = <openai.Omit object at 0x74522a595b90>, instructions: 'Optional[str] | Omit' = <openai.Omit object at 0x74522a595b90>, max_output_tokens: 'Optional[int] | Omit' = <openai.Omit object at 0x74522a595b90>, max_tool_calls: 'Optional[int] | Omit' = <openai.Omit object at 0x74522a595b90>, metadata: 'Optional[Metadata] | Omit' = <openai.Omit object at 0x74522a595b90>, model: 'ResponsesModel | Omit' = <openai.Omit object at 0x74522a595b90>, parallel_tool_calls: 'Optional[bool] | Omit' = <openai.Omit object at 0x74522a595b90>, previous_response_id: 'Optional[str] | Omit' = <openai.Omit object at 0x74522a595b90>, prompt: 'Optional[ResponsePromptParam] | Omit' = <openai.Omit object at 0x74522a595b90>, prompt_cache_key: 'str | Omit' = <openai.Omit object at 0x74522a595b90>, reasoning: 'Optional[Reasoning] | Omit' = <openai.Omit object at 0x74522a595b90>, safety_identifier: 'str | Omit' = <openai.Omit object at 0x74522a595b90>, service_tier: "Optional[Literal['auto', 'default', 'flex', 'scale', 'priority']] | Omit" = <openai.Omit object at 0x74522a595b90>, store: 'Optional[bool] | Omit' = <openai.Omit object at 0x74522a595b90>, stream: 'Optional[Literal[False]] | Literal[True] | Omit' = <openai.Omit object at 0x74522a595b90>, stream_options: 'Optional[response_create_params.StreamOptions] | Omit' = <openai.Omit object at 0x74522a595b90>, temperature: 'Optional[float] | Omit' = <openai.Omit object at 0x74522a595b90>, text: 'ResponseTextConfigParam | Omit' = <openai.Omit object at 0x74522a595b90>, tool_choice: 'response_create_params.ToolChoice | Omit' = <openai.Omit object at 0x74522a595b90>, tools: 'Iterable[ToolParam] | Omit' = <openai.Omit object at 0x74522a595b90>, top_logprobs: 'Optional[int] | Omit' = <openai.Omit object at 0x74522a595b90>, top_p: 'Optional[float] | Omit' = <openai.Omit object at 0x74522a595b90>, truncation: "Optional[Literal['auto', 'disabled']] | Omit" = <openai.Omit object at 0x74522a595b90>, user: 'str | Omit' = <openai.Omit object at 0x74522a595b90>, extra_headers: 'Headers | None' = None, extra_query: 'Query | None' = None, extra_body: 'Body | None' = None, timeout: 'float | httpx.Timeout | None | NotGiven' = NOT_GIVEN) -> 'Response | Stream[ResponseStreamEvent]'
-regulagent_web_prod  | responses.create varnames=('self', 'background', 'conversation', 'include', 'input', 'instructions', 'max_output_tokens', 'max_tool_calls', 'metadata', 'model', 'parallel_tool_calls', 'previous_response_id', 'prompt', 'prompt_cache_key', 'reasoning', 'safety_identifier', 'service_tier', 'store', 'stream', 'stream_options', 'temperature', 'text', 'tool_choice', 'tools', 'top_logprobs', 'top_p', 'truncation', 'user', 'extra_headers', 'extra_query', 'extra_body', 'timeout')
-regulagent_web_prod  | openai runtime: version=1.109.1 path=/usr/local/lib/python3.11/site-packages/openai/__init__.py
-regulagent_web_prod  | responses.create signature=(self, *, background: 'Optional[bool] | Omit' = <openai.Omit object at 0x74522a595b90>, conversation: 'Optional[response_create_params.Conversation] | Omit' = <openai.Omit object at 0x74522a595b90>, include: 'Optional[List[ResponseIncludable]] | Omit' = <openai.Omit object at 0x74522a595b90>, input: 'Union[str, ResponseInputParam] | Omit' = <openai.Omit object at 0x74522a595b90>, instructions: 'Optional[str] | Omit' = <openai.Omit object at 0x74522a595b90>, max_output_tokens: 'Optional[int] | Omit' = <openai.Omit object at 0x74522a595b90>, max_tool_calls: 'Optional[int] | Omit' = <openai.Omit object at 0x74522a595b90>, metadata: 'Optional[Metadata] | Omit' = <openai.Omit object at 0x74522a595b90>, model: 'ResponsesModel | Omit' = <openai.Omit object at 0x74522a595b90>, parallel_tool_calls: 'Optional[bool] | Omit' = <openai.Omit object at 0x74522a595b90>, previous_response_id: 'Optional[str] | Omit' = <openai.Omit object at 0x74522a595b90>, prompt: 'Optional[ResponsePromptParam] | Omit' = <openai.Omit object at 0x74522a595b90>, prompt_cache_key: 'str | Omit' = <openai.Omit object at 0x74522a595b90>, reasoning: 'Optional[Reasoning] | Omit' = <openai.Omit object at 0x74522a595b90>, safety_identifier: 'str | Omit' = <openai.Omit object at 0x74522a595b90>, service_tier: "Optional[Literal['auto', 'default', 'flex', 'scale', 'priority']] | Omit" = <openai.Omit object at 0x74522a595b90>, store: 'Optional[bool] | Omit' = <openai.Omit object at 0x74522a595b90>, stream: 'Optional[Literal[False]] | Literal[True] | Omit' = <openai.Omit object at 0x74522a595b90>, stream_options: 'Optional[response_create_params.StreamOptions] | Omit' = <openai.Omit object at 0x74522a595b90>, temperature: 'Optional[float] | Omit' = <openai.Omit object at 0x74522a595b90>, text: 'ResponseTextConfigParam | Omit' = <openai.Omit object at 0x74522a595b90>, tool_choice: 'response_create_params.ToolChoice | Omit' = <openai.Omit object at 0x74522a595b90>, tools: 'Iterable[ToolParam] | Omit' = <openai.Omit object at 0x74522a595b90>, top_logprobs: 'Optional[int] | Omit' = <openai.Omit object at 0x74522a595b90>, top_p: 'Optional[float] | Omit' = <openai.Omit object at 0x74522a595b90>, truncation: "Optional[Literal['auto', 'disabled']] | Omit" = <openai.Omit object at 0x74522a595b90>, user: 'str | Omit' = <openai.Omit object at 0x74522a595b90>, extra_headers: 'Headers | None' = None, extra_query: 'Query | None' = None, extra_body: 'Body | None' = None, timeout: 'float | httpx.Timeout | None | NotGiven' = NOT_GIVEN) -> 'Response | Stream[ResponseStreamEvent]'
-regulagent_web_prod  | responses.create varnames=('self', 'background', 'conversation', 'include', 'input', 'instructions', 'max_output_tokens', 'max_tool_calls', 'metadata', 'model', 'parallel_tool_calls', 'previous_response_id', 'prompt', 'prompt_cache_key', 'reasoning', 'safety_identifier', 'service_tier', 'store', 'stream', 'stream_options', 'temperature', 'text', 'tool_choice', 'tools', 'top_logprobs', 'top_p', 'truncation', 'user', 'extra_headers', 'extra_query', 'extra_body', 'timeout')
-regulagent_web_prod  | 172.18.0.1:49942 - "POST /api/w3a/temp_4246139385_121f2f8c/confirm-docs HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:32854 - "OPTIONS /api/w3a/temp_4246139385_121f2f8c/extractions HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:32860 - "POST /api/w3a/temp_4246139385_121f2f8c/extractions HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:32874 - "OPTIONS /api/w3a/temp_4246139385_121f2f8c/geometry HTTP/1.1" 200
-regulagent_web_prod  | 🔍 LOADER: district=7C → normalized=07c
-regulagent_web_prod  | 🔍 LOADER: combined_path=/app/apps/policy/packs/tx/w3a/district_overlays/07c__auto.yml
-regulagent_web_prod  | 🔍 LOADER: file exists=False
-regulagent_web_prod  | 🔍 LOADER: 7C Hybrid mode - checking for:
-regulagent_web_prod  |   YAML procedures: /app/apps/policy/packs/tx/w3a/district_overlays/07c_county_procedures.yml (exists=True)
-regulagent_web_prod  |   JSON formations: /app/apps/policy/packs/tx/w3a/district_overlays/07c_plugging_book.json (exists=True)
-regulagent_web_prod  | 🔍 LOADER: Loaded 7C procedures YAML, keys=['district', 'extracted_at', 'requirements', 'preferences', 'counties']
-regulagent_web_prod  | 🔍 LOADER: Loaded 7C formations JSON, 14 counties
-regulagent_web_prod  | 🔍 LOADER: Merged requirements
-regulagent_web_prod  | 🔍 LOADER: Merged preferences
-regulagent_web_prod  | 🔍 LOADER: Looking up county=UPTON in combined YAML
-regulagent_web_prod  | 🔍 LOADER: Available counties=['Coke County', 'Concho County', 'Crockett County', 'Irion County', 'Kimble County']
-regulagent_web_prod  | 🔍 LOADER: Trying aliases=['UPTON', 'UPTON County']
-regulagent_web_prod  | 🔍 LOADER: County data found, keys=['requirements', 'preferences', 'county_procedures']
-regulagent_web_prod  | 🔍 LOADER: county_overrides keys=['county_procedures']
-regulagent_web_prod  | 🔍 LOADER: formation_tops in county_overrides=0
-regulagent_web_prod  | 🔍 LOADER: Checking 7C formation loading: is_7c_hybrid=True, has_formation_json=True, field=SPRABERRY (TREND AREA)
-regulagent_web_prod  | 🔍 LOADER: Loading formations from JSON for county=UPTON, field=SPRABERRY (TREND AREA)
-regulagent_web_prod  | 🔍 _load_7c_formations: county=UPTON, field=SPRABERRY (TREND AREA), field_norm=spraberry
-regulagent_web_prod  | 🔍 _load_7c_formations: 107 total fieldSpecs for county
-regulagent_web_prod  | 🔍 _load_7c_formations: 11 specs matched field, 11 formations extracted
-regulagent_web_prod  | 🔍 LOADER: _load_7c_formations_for_field returned 11 formations
-regulagent_web_prod  | 🔍 LOADER: Loaded 11 formations from JSON for SPRABERRY (TREND AREA)
-regulagent_web_prod  | 🔍 LOADER FINAL: merged['district_overrides'] has 11 formation_tops
-regulagent_web_prod  | 🔍 LOADER FINAL: Formation names=['Spraberry', 'San Andres', 'Yates', 'Spraberry', 'San Andres']
-regulagent_web_prod  | 🔍 LOADER POST-VALIDATION: out['effective']['district_overrides'] has 11 formation_tops
-regulagent_web_prod  | 172.18.0.1:32888 - "GET /api/w3a/temp_4246139385_121f2f8c/geometry HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:32902 - "OPTIONS /api/w3a/temp_4246139385_121f2f8c/confirm-geometry HTTP/1.1" 200
-regulagent_web_prod  | 🔍 LOADER: district=7C → normalized=07c
-regulagent_web_prod  | 🔍 LOADER: combined_path=/app/apps/policy/packs/tx/w3a/district_overlays/07c__auto.yml
-regulagent_web_prod  | 🔍 LOADER: file exists=False
-regulagent_web_prod  | 🔍 LOADER: 7C Hybrid mode - checking for:
-regulagent_web_prod  |   YAML procedures: /app/apps/policy/packs/tx/w3a/district_overlays/07c_county_procedures.yml (exists=True)
-regulagent_web_prod  |   JSON formations: /app/apps/policy/packs/tx/w3a/district_overlays/07c_plugging_book.json (exists=True)
-regulagent_web_prod  | 🔍 LOADER: Loaded 7C procedures YAML, keys=['district', 'extracted_at', 'requirements', 'preferences', 'counties']
-regulagent_web_prod  | 🔍 LOADER: Loaded 7C formations JSON, 14 counties
-regulagent_web_prod  | 🔍 LOADER: Merged requirements
-regulagent_web_prod  | 🔍 LOADER: Merged preferences
-regulagent_web_prod  | 🔍 LOADER: Looking up county=UPTON in combined YAML
-regulagent_web_prod  | 🔍 LOADER: Available counties=['Coke County', 'Concho County', 'Crockett County', 'Irion County', 'Kimble County']
-regulagent_web_prod  | 🔍 LOADER: Trying aliases=['UPTON', 'UPTON County']
-regulagent_web_prod  | 🔍 LOADER: County data found, keys=['requirements', 'preferences', 'county_procedures']
-regulagent_web_prod  | 🔍 LOADER: county_overrides keys=['county_procedures']
-regulagent_web_prod  | 🔍 LOADER: formation_tops in county_overrides=0
-regulagent_web_prod  | 🔍 LOADER: Checking 7C formation loading: is_7c_hybrid=True, has_formation_json=True, field=SPRABERRY (TREND AREA)
-regulagent_web_prod  | 🔍 LOADER: Loading formations from JSON for county=UPTON, field=SPRABERRY (TREND AREA)
-regulagent_web_prod  | 🔍 _load_7c_formations: county=UPTON, field=SPRABERRY (TREND AREA), field_norm=spraberry
-regulagent_web_prod  | 🔍 _load_7c_formations: 107 total fieldSpecs for county
-regulagent_web_prod  | 🔍 _load_7c_formations: 11 specs matched field, 11 formations extracted
-regulagent_web_prod  | 🔍 LOADER: _load_7c_formations_for_field returned 11 formations
-regulagent_web_prod  | 🔍 LOADER: Loaded 11 formations from JSON for SPRABERRY (TREND AREA)
-regulagent_web_prod  | 🔍 LOADER FINAL: merged['district_overrides'] has 11 formation_tops
-regulagent_web_prod  | 🔍 LOADER FINAL: Formation names=['Spraberry', 'San Andres', 'Yates', 'Spraberry', 'San Andres']
-regulagent_web_prod  | 🔍 LOADER POST-VALIDATION: out['effective']['district_overrides'] has 11 formation_tops
-regulagent_web_prod  | 🔍 KERNEL MAIN: policy keys=['policy_id', 'policy_version', 'jurisdiction', 'form', 'effective_from', 'as_of', 'base', 'effective', 'district', 'county', 'field_resolution', 'incomplete_reasons', 'complete', 'preferences']
-regulagent_web_prod  | 🔍 KERNEL MAIN: policy['complete']=True
-regulagent_web_prod  | 🔍 KERNEL MAIN: Policy is complete, proceeding to generate steps
-regulagent_web_prod  | 🚨🚨🚨 KERNEL GENERATE_STEPS CALLED - facts has annular_gaps: False, count: 0
-regulagent_web_prod  | 🚨 KERNEL: annular_gaps from facts = 0 gaps
-regulagent_web_prod  | 🔧 CIBP: Found 1 perforations in facts
-regulagent_web_prod  |    Perf 6910.0-10400 ft
-regulagent_web_prod  | 🔧 CIBP: Shallowest perforation top: 6910.0 ft
-regulagent_web_prod  | 🔧 CIBP: Deepest formation top: 7000.0 ft
-regulagent_web_prod  | 🔧 CIBP: Using SHALLOWER of perf (6910.0) and formation (7000.0): 6910.0 ft
-regulagent_web_prod  | 🔧 CIBP DETECTOR: exposed=True, has_existing_cibp=False, has_cap_step=False, shallowest_perf_top_ft=6910.0, covered_by_ops=False
-regulagent_web_prod  | 🔧 CIBP DETECTOR: production_shoe_ft=10500.0
-regulagent_web_prod  | 🔧🔧🔧 CIBP DETECTOR: ENTERED CIBP GENERATION BLOCK
-regulagent_web_prod  | 🔧 CIBP: Step 1 - Calculating perf-based depth from shallowest_perf_top_ft=6910.0
-regulagent_web_prod  | 🔧 CIBP: Step 1 COMPLETE - plug_depth_from_perfs=6860.0 (50 ft above shallowest perf top)
-regulagent_web_prod  | 🔧 CIBP: Step 2 - Checking for KOP in resolved_facts: ['api14', 'state', 'district', 'county', 'field', 'lease', 'well_no', 'lat', 'lon', 'has_uqw', 'uqw_base_ft', 'use_cibp', 'casing_record', 'surface_shoe_ft', 'production_casing_toc_ft', 'production_shoe_ft', 'formation_tops_map', 'perforations', 'production_perforations', 'tubing', 'historic_cement_jobs']
-regulagent_web_prod  | 🔧 CIBP: Step 2 - kop_data={}
-regulagent_web_prod  | 🔧 CIBP: Step 2 COMPLETE - kop_md_ft=None
-regulagent_web_prod  | 🔧 CIBP: Step 3 SKIPPED - No KOP found, using perf-based depth=6860.0
-regulagent_web_prod  | 🔧 CIBP: Step 4 - Creating bridge_plug step at depth=6860.0, reason='perforations (50 ft above shallowest perf top)'
-regulagent_web_prod  | 🔧 CIBP: Step 4a - About to append bridge_plug_step to steps (current steps count: 4)
-regulagent_web_prod  | 🔧 CIBP: Step 4b - bridge_plug appended successfully (new steps count: 5)
-regulagent_web_prod  | 🔧 CIBP: Step 4 COMPLETE - ✅ bridge_plug added
-regulagent_web_prod  | 🔧 CIBP: Step 5 - Creating bridge_plug_cap
-regulagent_web_prod  | 🔧 CIBP: Step 5a - Policy override cap_len=20.0
-regulagent_web_prod  | 🔧 CIBP: Step 5c - Building cap_step (cap_len=20.0, plug_depth=6860.0)
-regulagent_web_prod  | 🔧 CIBP: Step 5d - Added geometry to cap: casing_id=None, stinger_od=None
-regulagent_web_prod  | 🔧 CIBP: Step 5e - About to append cap_step (current steps count: 5)
-regulagent_web_prod  | 🔧 CIBP: Step 5f - cap appended successfully (new steps count: 6)
-regulagent_web_prod  | 🔧 CIBP: Step 5 COMPLETE - ✅ bridge_plug_cap added with length 20.0 ft
-regulagent_web_prod  | 🔧 CIBP: Step 6 - Checking for redundant productive_horizon_isolation_plug
-regulagent_web_prod  | 🔧 CIBP: Step 6 COMPLETE - No productive_horizon_isolation_plug found to remove
-regulagent_web_prod  | 🔍 KERNEL MAIN: About to call _apply_district_overrides with 6 steps
-regulagent_web_prod  | 🔍 KERNEL MAIN: policy.get('effective') type=<class 'dict'>
-regulagent_web_prod  | 🔍 KERNEL MAIN: district=7C, county=UPTON
-regulagent_web_prod  | 🔍 KERNEL _apply_district_overrides: START
-regulagent_web_prod  | 🔍 KERNEL: policy_effective type=<class 'dict'>, keys=['citations', 'requirements', 'cement_class', 'preferences', 'district_overrides']
-regulagent_web_prod  | 🔍 KERNEL: overrides type=<class 'dict'>, keys=['county_procedures', 'formation_tops']
-regulagent_web_prod  | 🔍 KERNEL: formation_tops count=11
-regulagent_web_prod  | 🔍 KERNEL: Formation names=['Spraberry', 'San Andres', 'Yates', 'Spraberry', 'San Andres', 'Yates', 'Santa Rosa', 'Spraberry', 'San Andres', 'Yates', 'Santa Rosa']
-regulagent_web_prod  | 🔍 KERNEL: About to iterate 11 formation tops
-regulagent_web_prod  | 🔍 KERNEL: Formation=Spraberry, plug_required=True, use_when='East Central Upton Co.'
-regulagent_web_prod  | 🔍 KERNEL: use_when 'East Central Upton Co.' evaluated to True
-regulagent_web_prod  | 🔍 KERNEL: Appending formation plug for Spraberry
-regulagent_web_prod  | 🔍 KERNEL: Successfully added Spraberry plug to out list (now 7 steps)
-regulagent_web_prod  | 🔍 KERNEL: Formation=San Andres, plug_required=True, use_when='East Central Upton Co.'
-regulagent_web_prod  | 🔍 KERNEL: use_when 'East Central Upton Co.' evaluated to True
-regulagent_web_prod  | 🔍 KERNEL: Applying additional_requirements 'Tag' to San Andres
-regulagent_web_prod  | 🔍 KERNEL: Appending formation plug for San Andres
-regulagent_web_prod  | 🔍 KERNEL: Successfully added San Andres plug to out list (now 8 steps)
-regulagent_web_prod  | 🔍 KERNEL: Formation=Yates, plug_required=True, use_when='East Central Upton Co.'
-regulagent_web_prod  | 🔍 KERNEL: use_when 'East Central Upton Co.' evaluated to True
-regulagent_web_prod  | 🔍 KERNEL: Appending formation plug for Yates
-regulagent_web_prod  | 🔍 KERNEL: Successfully added Yates plug to out list (now 9 steps)
-regulagent_web_prod  | 🔍 KERNEL: Formation=Spraberry, plug_required=True, use_when='Northeast Upton Co.'
-regulagent_web_prod  | 🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to True
-regulagent_web_prod  | 🔍 KERNEL: Appending formation plug for Spraberry
-regulagent_web_prod  | 🔍 KERNEL: Successfully added Spraberry plug to out list (now 10 steps)
-regulagent_web_prod  | 🔍 KERNEL: Formation=San Andres, plug_required=True, use_when='Northeast Upton Co.'
-regulagent_web_prod  | 🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to True
-regulagent_web_prod  | 🔍 KERNEL: Applying additional_requirements 'Tag' to San Andres
-regulagent_web_prod  | 🔍 KERNEL: Appending formation plug for San Andres
-regulagent_web_prod  | 🔍 KERNEL: Successfully added San Andres plug to out list (now 11 steps)
-regulagent_web_prod  | 🔍 KERNEL: Formation=Yates, plug_required=True, use_when='Northeast Upton Co.'
-regulagent_web_prod  | 🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to True
-regulagent_web_prod  | 🔍 KERNEL: Appending formation plug for Yates
-regulagent_web_prod  | 🔍 KERNEL: Successfully added Yates plug to out list (now 12 steps)
-regulagent_web_prod  | 🔍 KERNEL: Formation=Santa Rosa, plug_required=True, use_when='Northeast Upton Co.'
-regulagent_web_prod  | 🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to True
-regulagent_web_prod  | 🔍 KERNEL: Applying additional_requirements 'Tag' to Santa Rosa
-regulagent_web_prod  | 🔍 KERNEL: Appending formation plug for Santa Rosa
-regulagent_web_prod  | 🔍 KERNEL: Successfully added Santa Rosa plug to out list (now 13 steps)
-regulagent_web_prod  | 🔍 KERNEL: Formation=Spraberry, plug_required=True, use_when='Central and Northwest Upton Co.'
-regulagent_web_prod  | 🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
-regulagent_web_prod  | 🔍 KERNEL: Appending formation plug for Spraberry
-regulagent_web_prod  | 🔍 KERNEL: Successfully added Spraberry plug to out list (now 14 steps)
-regulagent_web_prod  | 🔍 KERNEL: Formation=San Andres, plug_required=True, use_when='Central and Northwest Upton Co.'
-regulagent_web_prod  | 🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
-regulagent_web_prod  | 🔍 KERNEL: Applying additional_requirements 'Tag' to San Andres
-regulagent_web_prod  | 🔍 KERNEL: Appending formation plug for San Andres
-regulagent_web_prod  | 🔍 KERNEL: Successfully added San Andres plug to out list (now 15 steps)
-regulagent_web_prod  | 🔍 KERNEL: Formation=Yates, plug_required=True, use_when='Central and Northwest Upton Co.'
-regulagent_web_prod  | 🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
-regulagent_web_prod  | 🔍 KERNEL: Appending formation plug for Yates
-regulagent_web_prod  | 🔍 KERNEL: Successfully added Yates plug to out list (now 16 steps)
-regulagent_web_prod  | 🔍 KERNEL: Formation=Santa Rosa, plug_required=True, use_when='Central and Northwest Upton Co.'
-regulagent_web_prod  | 🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
-regulagent_web_prod  | 🔍 KERNEL: Applying additional_requirements 'Tag' to Santa Rosa
-regulagent_web_prod  | 🔍 KERNEL: Appending formation plug for Santa Rosa
-regulagent_web_prod  | 🔍 KERNEL: Successfully added Santa Rosa plug to out list (now 17 steps)
-regulagent_web_prod  | 🔍 KERNEL SUPPRESSION: Checking 17 steps for CIBP
-regulagent_web_prod  | 🔍 KERNEL SUPPRESSION: Found bridge_plug - top_ft=6860.0, bottom_ft=6860.0, plug_depth_ft=None
-regulagent_web_prod  | 🔍 KERNEL: Found CIBP at 6860.0 ft
-regulagent_web_prod  | 🔍 KERNEL: Suppressed 3 formation plug(s) below CIBP at 6860.0 ft
-regulagent_web_prod  | 🔍 KERNEL MAIN: After _apply_district_overrides, got 14 steps back
-regulagent_web_prod  | 🔍 KERNEL MAIN: Applying county procedures: ['cibp_required', 'surface_shoe_straddle', 'straddle_uqw', 'waterboard_protection_depth_range', 'formation_specific_tagging', 'san_andres_formation_required']
-regulagent_web_prod  | 🔍 KERNEL MAIN: After _apply_county_procedures, got 14 steps back
-regulagent_web_prod  | 🔧 MATERIALS COMPUTE: Processing 14 steps
-regulagent_web_prod  |    Step 1: type=surface_casing_shoe_plug, top_ft=600.0, bottom_ft=700.0
-regulagent_web_prod  |    Step 2: type=uqw_isolation_plug, top_ft=None, bottom_ft=None
-regulagent_web_prod  |    Step 3: type=top_plug, top_ft=0.0, bottom_ft=10.0
-regulagent_web_prod  |    Step 4: type=cut_casing_below_surface, top_ft=None, bottom_ft=None
-regulagent_web_prod  |    Step 5: type=bridge_plug, top_ft=6860.0, bottom_ft=6860.0
-regulagent_web_prod  |    Step 6: type=bridge_plug_cap, top_ft=6840.0, bottom_ft=6860.0
-regulagent_web_prod  |    Step 7: type=formation_top_plug, top_ft=3500.0, bottom_ft=3400.0
-regulagent_web_prod  |    Step 8: type=formation_top_plug, top_ft=2500.0, bottom_ft=2400.0
-regulagent_web_prod  |    Step 9: type=formation_top_plug, top_ft=4000.0, bottom_ft=3900.0
-regulagent_web_prod  |    Step 10: type=formation_top_plug, top_ft=2500.0, bottom_ft=2400.0
-regulagent_web_prod  |    Step 11: type=formation_top_plug, top_ft=1000.0, bottom_ft=900.0
-regulagent_web_prod  |    Step 12: type=formation_top_plug, top_ft=4500.0, bottom_ft=4400.0
-regulagent_web_prod  |    Step 13: type=formation_top_plug, top_ft=2500.0, bottom_ft=2400.0
-regulagent_web_prod  |    Step 14: type=formation_top_plug, top_ft=1000.0, bottom_ft=900.0
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 🔧 PERF & SQUEEZE CALCULATION
-regulagent_web_prod  |    Target depth: 700.0 ft
-regulagent_web_prod  |    Interval length: 100.0 ft
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 📋 SPACES TO FILL:
-regulagent_web_prod  |    • 1 annuli (all uncmented)
-regulagent_web_prod  |    • Inside production casing (plug column)
-regulagent_web_prod  | 
-regulagent_web_prod  |    ANNULUS 1: production TO surface
-regulagent_web_prod  |       Inner OD: 5.500" | Outer ID/Hole: 8.097"
-regulagent_web_prod  |       Capacity: 0.034303 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 3.43 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    INSIDE CASING: production
-regulagent_web_prod  |       Casing ID: 5.044"
-regulagent_web_prod  |       Capacity: 0.024718 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 2.47 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    ─────────────────────────────────────────────────
-regulagent_web_prod  |    Subtotal (annuli): 3.43 bbl
-regulagent_web_prod  |    Subtotal (inside): 2.47 bbl
-regulagent_web_prod  |    Subtotal (total):  5.90 bbl
-regulagent_web_prod  |    × Texas excess: 1.0700x (+7.0% @ 0.70 kft) → 6.32 bbl
-regulagent_web_prod  |    ═════════════════════════════════════════════════
-regulagent_web_prod  |    ✓ TOTAL VOLUME: 6.32 bbl
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ✅ PLUG CALCULATION COMPLETE: SURFACE_CASING_SHOE_PLUG
-regulagent_web_prod  |    Type: PERF & SQUEEZE PLUG (cement-aware)
-regulagent_web_prod  |    Depth: 600.0-700.0 ft
-regulagent_web_prod  |    Fill method: Perforate casing and squeeze into annuli
-regulagent_web_prod  |    Perforate through: production
-regulagent_web_prod  |    Filling: 1 annuli (uncmented)
-regulagent_web_prod  |       • production to surface: 3.43 bbl
-regulagent_web_prod  |    Total volume: 6.32 bbl
-regulagent_web_prod  |    ✓ SACKS REQUIRED: 33 sacks
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 🔧 TOP PLUG CALCULATION TRIGGERED for step: top_plug
-regulagent_web_prod  | 🔧 TOP PLUG: top_ft=0.0, bottom_ft=10.0
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 🔧 PERF & SQUEEZE CALCULATION
-regulagent_web_prod  |    Target depth: 2400.0 ft
-regulagent_web_prod  |    Interval length: 100.0 ft
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 📋 SPACES TO FILL:
-regulagent_web_prod  |    • 1 annuli (all uncmented)
-regulagent_web_prod  |    • Inside production casing (plug column)
-regulagent_web_prod  | 
-regulagent_web_prod  |    ANNULUS 1: production TO openhole
-regulagent_web_prod  |       Inner OD: 5.500" | Outer ID/Hole: 7.875"
-regulagent_web_prod  |       Capacity: 0.030858 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 3.09 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    INSIDE CASING: production
-regulagent_web_prod  |       Casing ID: 5.044"
-regulagent_web_prod  |       Capacity: 0.024718 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 2.47 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    ─────────────────────────────────────────────────
-regulagent_web_prod  |    Subtotal (annuli): 3.09 bbl
-regulagent_web_prod  |    Subtotal (inside): 2.47 bbl
-regulagent_web_prod  |    Subtotal (total):  5.56 bbl
-regulagent_web_prod  |    × Texas excess: 1.2400x (+24.0% @ 2.40 kft) → 6.89 bbl
-regulagent_web_prod  |    ═════════════════════════════════════════════════
-regulagent_web_prod  |    ✓ TOTAL VOLUME: 6.89 bbl
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
-regulagent_web_prod  |    Type: PERF & SQUEEZE PLUG (cement-aware)
-regulagent_web_prod  |    Depth: 2500.0-2400.0 ft
-regulagent_web_prod  |    Fill method: Perforate casing and squeeze into annuli
-regulagent_web_prod  |    Perforate through: production
-regulagent_web_prod  |    Filling: 1 annuli (uncmented)
-regulagent_web_prod  |       • production to openhole: 3.09 bbl
-regulagent_web_prod  |    Total volume: 6.89 bbl
-regulagent_web_prod  |    ✓ SACKS REQUIRED: 37 sacks
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 🔧 PERF & SQUEEZE CALCULATION
-regulagent_web_prod  |    Target depth: 2400.0 ft
-regulagent_web_prod  |    Interval length: 100.0 ft
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 📋 SPACES TO FILL:
-regulagent_web_prod  |    • 1 annuli (all uncmented)
-regulagent_web_prod  |    • Inside production casing (plug column)
-regulagent_web_prod  | 
-regulagent_web_prod  |    ANNULUS 1: production TO openhole
-regulagent_web_prod  |       Inner OD: 5.500" | Outer ID/Hole: 7.875"
-regulagent_web_prod  |       Capacity: 0.030858 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 3.09 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    INSIDE CASING: production
-regulagent_web_prod  |       Casing ID: 5.044"
-regulagent_web_prod  |       Capacity: 0.024718 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 2.47 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    ─────────────────────────────────────────────────
-regulagent_web_prod  |    Subtotal (annuli): 3.09 bbl
-regulagent_web_prod  |    Subtotal (inside): 2.47 bbl
-regulagent_web_prod  |    Subtotal (total):  5.56 bbl
-regulagent_web_prod  |    × Texas excess: 1.2400x (+24.0% @ 2.40 kft) → 6.89 bbl
-regulagent_web_prod  |    ═════════════════════════════════════════════════
-regulagent_web_prod  |    ✓ TOTAL VOLUME: 6.89 bbl
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
-regulagent_web_prod  |    Type: PERF & SQUEEZE PLUG (cement-aware)
-regulagent_web_prod  |    Depth: 2500.0-2400.0 ft
-regulagent_web_prod  |    Fill method: Perforate casing and squeeze into annuli
-regulagent_web_prod  |    Perforate through: production
-regulagent_web_prod  |    Filling: 1 annuli (uncmented)
-regulagent_web_prod  |       • production to openhole: 3.09 bbl
-regulagent_web_prod  |    Total volume: 6.89 bbl
-regulagent_web_prod  |    ✓ SACKS REQUIRED: 37 sacks
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 🔧 PERF & SQUEEZE CALCULATION
-regulagent_web_prod  |    Target depth: 900.0 ft
-regulagent_web_prod  |    Interval length: 100.0 ft
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 📋 SPACES TO FILL:
-regulagent_web_prod  |    • 1 annuli (all uncmented)
-regulagent_web_prod  |    • Inside production casing (plug column)
-regulagent_web_prod  | 
-regulagent_web_prod  |    ANNULUS 1: production TO openhole
-regulagent_web_prod  |       Inner OD: 5.500" | Outer ID/Hole: 7.875"
-regulagent_web_prod  |       Capacity: 0.030858 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 3.09 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    INSIDE CASING: production
-regulagent_web_prod  |       Casing ID: 5.044"
-regulagent_web_prod  |       Capacity: 0.024718 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 2.47 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    ─────────────────────────────────────────────────
-regulagent_web_prod  |    Subtotal (annuli): 3.09 bbl
-regulagent_web_prod  |    Subtotal (inside): 2.47 bbl
-regulagent_web_prod  |    Subtotal (total):  5.56 bbl
-regulagent_web_prod  |    × Texas excess: 1.0900x (+9.0% @ 0.90 kft) → 6.06 bbl
-regulagent_web_prod  |    ═════════════════════════════════════════════════
-regulagent_web_prod  |    ✓ TOTAL VOLUME: 6.06 bbl
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
-regulagent_web_prod  |    Type: PERF & SQUEEZE PLUG (cement-aware)
-regulagent_web_prod  |    Depth: 1000.0-900.0 ft
-regulagent_web_prod  |    Fill method: Perforate casing and squeeze into annuli
-regulagent_web_prod  |    Perforate through: production
-regulagent_web_prod  |    Filling: 1 annuli (uncmented)
-regulagent_web_prod  |       • production to openhole: 3.09 bbl
-regulagent_web_prod  |    Total volume: 6.06 bbl
-regulagent_web_prod  |    ✓ SACKS REQUIRED: 32 sacks
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 🔧 PERF & SQUEEZE CALCULATION
-regulagent_web_prod  |    Target depth: 2400.0 ft
-regulagent_web_prod  |    Interval length: 100.0 ft
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 📋 SPACES TO FILL:
-regulagent_web_prod  |    • 1 annuli (all uncmented)
-regulagent_web_prod  |    • Inside production casing (plug column)
-regulagent_web_prod  | 
-regulagent_web_prod  |    ANNULUS 1: production TO openhole
-regulagent_web_prod  |       Inner OD: 5.500" | Outer ID/Hole: 7.875"
-regulagent_web_prod  |       Capacity: 0.030858 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 3.09 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    INSIDE CASING: production
-regulagent_web_prod  |       Casing ID: 5.044"
-regulagent_web_prod  |       Capacity: 0.024718 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 2.47 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    ─────────────────────────────────────────────────
-regulagent_web_prod  |    Subtotal (annuli): 3.09 bbl
-regulagent_web_prod  |    Subtotal (inside): 2.47 bbl
-regulagent_web_prod  |    Subtotal (total):  5.56 bbl
-regulagent_web_prod  |    × Texas excess: 1.2400x (+24.0% @ 2.40 kft) → 6.89 bbl
-regulagent_web_prod  |    ═════════════════════════════════════════════════
-regulagent_web_prod  |    ✓ TOTAL VOLUME: 6.89 bbl
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
-regulagent_web_prod  |    Type: PERF & SQUEEZE PLUG (cement-aware)
-regulagent_web_prod  |    Depth: 2500.0-2400.0 ft
-regulagent_web_prod  |    Fill method: Perforate casing and squeeze into annuli
-regulagent_web_prod  |    Perforate through: production
-regulagent_web_prod  |    Filling: 1 annuli (uncmented)
-regulagent_web_prod  |       • production to openhole: 3.09 bbl
-regulagent_web_prod  |    Total volume: 6.89 bbl
-regulagent_web_prod  |    ✓ SACKS REQUIRED: 37 sacks
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 🔧 PERF & SQUEEZE CALCULATION
-regulagent_web_prod  |    Target depth: 900.0 ft
-regulagent_web_prod  |    Interval length: 100.0 ft
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 📋 SPACES TO FILL:
-regulagent_web_prod  |    • 1 annuli (all uncmented)
-regulagent_web_prod  |    • Inside production casing (plug column)
-regulagent_web_prod  | 
-regulagent_web_prod  |    ANNULUS 1: production TO openhole
-regulagent_web_prod  |       Inner OD: 5.500" | Outer ID/Hole: 7.875"
-regulagent_web_prod  |       Capacity: 0.030858 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 3.09 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    INSIDE CASING: production
-regulagent_web_prod  |       Casing ID: 5.044"
-regulagent_web_prod  |       Capacity: 0.024718 bbl/ft
-regulagent_web_prod  |       Length: 100.0 ft
-regulagent_web_prod  |       Base volume: 2.47 bbl
-regulagent_web_prod  | 
-regulagent_web_prod  |    ─────────────────────────────────────────────────
-regulagent_web_prod  |    Subtotal (annuli): 3.09 bbl
-regulagent_web_prod  |    Subtotal (inside): 2.47 bbl
-regulagent_web_prod  |    Subtotal (total):  5.56 bbl
-regulagent_web_prod  |    × Texas excess: 1.0900x (+9.0% @ 0.90 kft) → 6.06 bbl
-regulagent_web_prod  |    ═════════════════════════════════════════════════
-regulagent_web_prod  |    ✓ TOTAL VOLUME: 6.06 bbl
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | ✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
-regulagent_web_prod  |    Type: PERF & SQUEEZE PLUG (cement-aware)
-regulagent_web_prod  |    Depth: 1000.0-900.0 ft
-regulagent_web_prod  |    Fill method: Perforate casing and squeeze into annuli
-regulagent_web_prod  |    Perforate through: production
-regulagent_web_prod  |    Filling: 1 annuli (uncmented)
-regulagent_web_prod  |       • production to openhole: 3.09 bbl
-regulagent_web_prod  |    Total volume: 6.06 bbl
-regulagent_web_prod  |    ✓ SACKS REQUIRED: 32 sacks
-regulagent_web_prod  | ================================================================================
-regulagent_web_prod  | 🔍 VALIDATION: Removing duplicate formation plug - Yates at 2500.0-2400.0 ft (already have plug at 2500.0-2400.0)
-regulagent_web_prod  | 🔍 VALIDATION: Removing duplicate formation plug - Yates at 2500.0-2400.0 ft (already have plug at 2500.0-2400.0)
-regulagent_web_prod  | 🔍 VALIDATION: Removing duplicate formation plug - Santa Rosa at 1000.0-900.0 ft (already have plug at 1000.0-900.0)
-regulagent_web_prod  | 172.18.0.1:32912 - "POST /api/w3a/temp_4246139385_121f2f8c/confirm-geometry HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:60812 - "GET /api/plans/4246139385%3Acombined/ HTTP/1.1" 200
-regulagent_web_prod  | 172.18.0.1:60818 - "GET /api/chat/threads/ HTTP/1.1" 200
+2026-01-09 15:39:19 [09/Jan/2026 22:39:19] "OPTIONS /api/w3a/temp_4246139385_12457f74/confirm-geometry HTTP/1.1" 200 0
+2026-01-09 15:39:19 🚀🚀🚀 _build_plan_from_snapshot CALLED - IF YOU SEE THIS, CODE IS ACTIVE 🚀🚀🚀
+2026-01-09 15:39:19 🔍 _build_plan_from_snapshot START: geometry has 2 casing_strings
+2026-01-09 15:39:19 🔍 _build_plan_from_snapshot: First casing_string keys=['value', 'source', 'editable', 'field_id', 'field_label']
+2026-01-09 15:39:19 ❌ CASING DEBUG: casing_strings_geometry=2 items
+2026-01-09 15:39:19 ❌ CASING DEBUG: casing_record from W-2=2 items
+2026-01-09 15:39:19 ❌ CASING DEBUG: geometry casing preview=[{'string': 'surface', 'top_ft': None, 'size_in': 8.625, 'bottom_ft': 730, 'hole_size_in': 13.5, 'cement_top_ft': 0, 'shoe_depth_ft': 700, 'weight_per_ft': None}]
+2026-01-09 15:39:19 ❌ CASING DEBUG: W-2 casing_record preview=[{'string': 'surface', 'top_ft': None, 'size_in': 8.625, 'bottom_ft': 730, 'hole_size_in': 13.5, 'cement_top_ft': 0, 'shoe_depth_ft': 700, 'weight_per_ft': None}, {'string': 'production', 'top_ft': None, 'size_in': 5.5, 'bottom_ft': 10500, 'hole_size_in': 7.875, 'cement_top_ft': 2756, 'shoe_depth_ft': None, 'weight_per_ft': None}]
+2026-01-09 15:39:19 ❌ EXTRACTED 2 casing strings from geometry for kernel
+2026-01-09 15:39:19 ❌ FIRST CASING: {'string': 'surface', 'top_ft': None, 'size_in': 8.625, 'bottom_ft': 730, 'hole_size_in': 13.5, 'cement_top_ft': 0, 'shoe_depth_ft': 700, 'weight_per_ft': None}
+2026-01-09 15:39:19 🚀🚀🚀 _build_plan_from_snapshot CALLED 🚀🚀🚀
+2026-01-09 15:39:19 🔍 LOADER: district=7C → normalized=07c
+2026-01-09 15:39:19 🔍 LOADER: combined_path=/app/apps/policy/packs/tx/w3a/district_overlays/07c__auto.yml
+2026-01-09 15:39:19 🔍 LOADER: file exists=False
+2026-01-09 15:39:19 🔍 LOADER: 7C Hybrid mode - checking for:
+2026-01-09 15:39:19   YAML procedures: /app/apps/policy/packs/tx/w3a/district_overlays/07c_county_procedures.yml (exists=True)
+2026-01-09 15:39:19   JSON formations: /app/apps/policy/packs/tx/w3a/district_overlays/07c_plugging_book.json (exists=True)
+2026-01-09 15:39:19 🔍 LOADER: Loaded 7C procedures YAML, keys=['district', 'extracted_at', 'requirements', 'preferences', 'counties']
+2026-01-09 15:39:19 🔍 LOADER: Loaded 7C formations JSON, 14 counties
+2026-01-09 15:39:19 🔍 LOADER: Merged requirements
+2026-01-09 15:39:19 🔍 LOADER: Merged preferences
+2026-01-09 15:39:19 🔍 LOADER: Looking up county=UPTON in combined YAML
+2026-01-09 15:39:19 🔍 LOADER: Available counties=['Coke County', 'Concho County', 'Crockett County', 'Irion County', 'Kimble County']
+2026-01-09 15:39:19 🔍 LOADER: Trying aliases=['UPTON', 'UPTON County']
+2026-01-09 15:39:19 🔍 LOADER: County data found, keys=['requirements', 'preferences', 'county_procedures']
+2026-01-09 15:39:19 🔍 LOADER: county_overrides keys=['county_procedures']
+2026-01-09 15:39:19 🔍 LOADER: formation_tops in county_overrides=0
+2026-01-09 15:39:19 🔍 LOADER: Checking 7C formation loading: is_7c_hybrid=True, has_formation_json=True, field=SPRABERRY (TREND AREA)
+2026-01-09 15:39:19 🔍 LOADER: Loading formations from JSON for county=UPTON, field=SPRABERRY (TREND AREA)
+2026-01-09 15:39:19 🔍 _load_7c_formations: county=UPTON, field=SPRABERRY (TREND AREA), field_norm=spraberry
+2026-01-09 15:39:19 🔍 _load_7c_formations: 107 total fieldSpecs for county
+2026-01-09 15:39:19 🔍 _load_7c_formations: 11 specs matched field, 11 formations extracted
+2026-01-09 15:39:19 🔍 LOADER: _load_7c_formations_for_field returned 11 formations
+2026-01-09 15:39:19 🔍 LOADER: Loaded 11 formations from JSON for SPRABERRY (TREND AREA)
+2026-01-09 15:39:19 🔍 LOADER FINAL: merged['district_overrides'] has 11 formation_tops
+2026-01-09 15:39:19 🔍 LOADER FINAL: Formation names=['Spraberry', 'San Andres', 'Yates', 'Spraberry', 'San Andres']
+2026-01-09 15:39:19 🔍 LOADER POST-VALIDATION: out['effective']['district_overrides'] has 11 formation_tops
+2026-01-09 15:39:19 🔍 KERNEL MAIN: policy keys=['policy_id', 'policy_version', 'jurisdiction', 'form', 'effective_from', 'as_of', 'base', 'effective', 'district', 'county', 'field_resolution', 'incomplete_reasons', 'complete', 'preferences']
+2026-01-09 15:39:19 🔍 KERNEL MAIN: policy['complete']=True
+2026-01-09 15:39:19 🔍 KERNEL MAIN: Policy is complete, proceeding to generate steps
+2026-01-09 15:39:19 🚨🚨🚨 KERNEL GENERATE_STEPS CALLED - facts has annular_gaps: False, count: 0
+2026-01-09 15:39:19 🚨 KERNEL: annular_gaps from facts = 0 gaps
+2026-01-09 15:39:19 🔧 CIBP: Found 1 perforations in facts
+2026-01-09 15:39:19    Perf 6910.0-10400 ft
+2026-01-09 15:39:19 🔧 CIBP: Shallowest perforation top: 6910.0 ft
+2026-01-09 15:39:19 🔧 CIBP: Deepest formation top: 7000.0 ft
+2026-01-09 15:39:19 🔧 CIBP: Using SHALLOWER of perf (6910.0) and formation (7000.0): 6910.0 ft
+2026-01-09 15:39:19 🔧 CIBP DETECTOR: exposed=True, has_existing_cibp=False, has_cap_step=False, shallowest_perf_top_ft=6910.0, covered_by_ops=False
+2026-01-09 15:39:19 🔧 CIBP DETECTOR: production_shoe_ft=10500.0
+2026-01-09 15:39:19 🔧🔧🔧 CIBP DETECTOR: ENTERED CIBP GENERATION BLOCK
+2026-01-09 15:39:19 🔧 CIBP: Step 1 - Calculating perf-based depth from shallowest_perf_top_ft=6910.0
+2026-01-09 15:39:19 🔧 CIBP: Step 1 COMPLETE - plug_depth_from_perfs=6860.0 (50 ft above shallowest perf top)
+2026-01-09 15:39:19 🔧 CIBP: Step 2 - Checking for KOP in resolved_facts: ['api14', 'state', 'district', 'county', 'field', 'lease', 'well_no', 'lat', 'lon', 'has_uqw', 'uqw_base_ft', 'use_cibp', 'casing_record', 'surface_shoe_ft', 'production_casing_toc_ft', 'production_shoe_ft', 'formation_tops_map', 'perforations', 'production_perforations', 'tubing', 'historic_cement_jobs']
+2026-01-09 15:39:19 🔧 CIBP: Step 2 - kop_data={}
+2026-01-09 15:39:19 🔧 CIBP: Step 2 COMPLETE - kop_md_ft=None
+2026-01-09 15:39:19 🔧 CIBP: Step 3 SKIPPED - No KOP found, using perf-based depth=6860.0
+2026-01-09 15:39:19 🔧 CIBP: Step 4 - Creating bridge_plug step at depth=6860.0, reason='perforations (50 ft above shallowest perf top)'
+2026-01-09 15:39:19 🔧 CIBP: Step 4a - About to append bridge_plug_step to steps (current steps count: 4)
+2026-01-09 15:39:19 🔧 CIBP: Step 4b - bridge_plug appended successfully (new steps count: 5)
+2026-01-09 15:39:19 🔧 CIBP: Step 4 COMPLETE - ✅ bridge_plug added
+2026-01-09 15:39:19 🔧 CIBP: Step 5 - Creating bridge_plug_cap
+2026-01-09 15:39:19 🔧 CIBP: Step 5a - Policy override cap_len=20.0
+2026-01-09 15:39:19 🔧 CIBP: Step 5c - Building cap_step (cap_len=20.0, plug_depth=6860.0)
+2026-01-09 15:39:19 🔧 CIBP: Step 5d - Added geometry to cap: casing_id=None, stinger_od=None
+2026-01-09 15:39:19 🔧 CIBP: Step 5e - About to append cap_step (current steps count: 5)
+2026-01-09 15:39:19 🔧 CIBP: Step 5f - cap appended successfully (new steps count: 6)
+2026-01-09 15:39:19 🔧 CIBP: Step 5 COMPLETE - ✅ bridge_plug_cap added with length 20.0 ft
+2026-01-09 15:39:19 🔧 CIBP: Step 6 - Checking for redundant productive_horizon_isolation_plug
+2026-01-09 15:39:19 🔧 CIBP: Step 6 COMPLETE - No productive_horizon_isolation_plug found to remove
+2026-01-09 15:39:19 🔍 KERNEL MAIN: About to call _apply_district_overrides with 6 steps
+2026-01-09 15:39:19 🔍 KERNEL MAIN: policy.get('effective') type=<class 'dict'>
+2026-01-09 15:39:19 🔍 KERNEL MAIN: district=7C, county=UPTON
+2026-01-09 15:39:19 🔍 KERNEL _apply_district_overrides: START
+2026-01-09 15:39:19 🔍 KERNEL: policy_effective type=<class 'dict'>, keys=['citations', 'requirements', 'cement_class', 'preferences', 'district_overrides']
+2026-01-09 15:39:19 🔍 KERNEL: overrides type=<class 'dict'>, keys=['county_procedures', 'formation_tops']
+2026-01-09 15:39:19 🔍 KERNEL: formation_tops count=11
+2026-01-09 15:39:19 🔍 KERNEL: Formation names=['Spraberry', 'San Andres', 'Yates', 'Spraberry', 'San Andres', 'Yates', 'Santa Rosa', 'Spraberry', 'San Andres', 'Yates', 'Santa Rosa']
+2026-01-09 15:39:19 🔍 KERNEL: About to iterate 11 formation tops
+2026-01-09 15:39:19 🔍 KERNEL: Formation=Spraberry, plug_required=True, use_when='East Central Upton Co.'
+2026-01-09 15:39:19 🔍 KERNEL: use_when 'East Central Upton Co.' evaluated to True
+2026-01-09 15:39:19 🔍 KERNEL: Appending formation plug for Spraberry
+2026-01-09 15:39:19 🔍 KERNEL: Successfully added Spraberry plug to out list (now 7 steps)
+2026-01-09 15:39:19 🔍 KERNEL: Formation=San Andres, plug_required=True, use_when='East Central Upton Co.'
+2026-01-09 15:39:19 🔍 KERNEL: use_when 'East Central Upton Co.' evaluated to True
+2026-01-09 15:39:19 🔍 KERNEL: Applying additional_requirements 'Tag' to San Andres
+2026-01-09 15:39:19 🔍 KERNEL: Appending formation plug for San Andres
+2026-01-09 15:39:19 🔍 KERNEL: Successfully added San Andres plug to out list (now 8 steps)
+2026-01-09 15:39:19 🔍 KERNEL: Formation=Yates, plug_required=True, use_when='East Central Upton Co.'
+2026-01-09 15:39:19 🔍 KERNEL: use_when 'East Central Upton Co.' evaluated to True
+2026-01-09 15:39:19 🔍 KERNEL: Appending formation plug for Yates
+2026-01-09 15:39:19 🔍 KERNEL: Successfully added Yates plug to out list (now 9 steps)
+2026-01-09 15:39:19 🔍 KERNEL: Formation=Spraberry, plug_required=True, use_when='Northeast Upton Co.'
+2026-01-09 15:39:19 🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to True
+2026-01-09 15:39:19 🔍 KERNEL: Appending formation plug for Spraberry
+2026-01-09 15:39:19 🔍 KERNEL: Successfully added Spraberry plug to out list (now 10 steps)
+2026-01-09 15:39:19 🔍 KERNEL: Formation=San Andres, plug_required=True, use_when='Northeast Upton Co.'
+2026-01-09 15:39:19 🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to True
+2026-01-09 15:39:19 🔍 KERNEL: Applying additional_requirements 'Tag' to San Andres
+2026-01-09 15:39:19 🔍 KERNEL: Appending formation plug for San Andres
+2026-01-09 15:39:19 🔍 KERNEL: Successfully added San Andres plug to out list (now 11 steps)
+2026-01-09 15:39:19 🔍 KERNEL: Formation=Yates, plug_required=True, use_when='Northeast Upton Co.'
+2026-01-09 15:39:19 🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to True
+2026-01-09 15:39:19 🔍 KERNEL: Appending formation plug for Yates
+2026-01-09 15:39:19 🔍 KERNEL: Successfully added Yates plug to out list (now 12 steps)
+2026-01-09 15:39:19 🔍 KERNEL: Formation=Santa Rosa, plug_required=True, use_when='Northeast Upton Co.'
+2026-01-09 15:39:19 🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to True
+2026-01-09 15:39:19 🔍 KERNEL: Applying additional_requirements 'Tag' to Santa Rosa
+2026-01-09 15:39:19 🔍 KERNEL: Appending formation plug for Santa Rosa
+2026-01-09 15:39:19 🔍 KERNEL: Successfully added Santa Rosa plug to out list (now 13 steps)
+2026-01-09 15:39:19 🔍 KERNEL: Formation=Spraberry, plug_required=True, use_when='Central and Northwest Upton Co.'
+2026-01-09 15:39:19 🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
+2026-01-09 15:39:19 🔍 KERNEL: Appending formation plug for Spraberry
+2026-01-09 15:39:19 🔍 KERNEL: Successfully added Spraberry plug to out list (now 14 steps)
+2026-01-09 15:39:19 🔍 KERNEL: Formation=San Andres, plug_required=True, use_when='Central and Northwest Upton Co.'
+2026-01-09 15:39:19 🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
+2026-01-09 15:39:19 🔍 KERNEL: Applying additional_requirements 'Tag' to San Andres
+2026-01-09 15:39:19 🔍 KERNEL: Appending formation plug for San Andres
+2026-01-09 15:39:19 🔍 KERNEL: Successfully added San Andres plug to out list (now 15 steps)
+2026-01-09 15:39:19 🔍 KERNEL: Formation=Yates, plug_required=True, use_when='Central and Northwest Upton Co.'
+2026-01-09 15:39:19 🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
+2026-01-09 15:39:19 🔍 KERNEL: Appending formation plug for Yates
+2026-01-09 15:39:19 🔍 KERNEL: Successfully added Yates plug to out list (now 16 steps)
+2026-01-09 15:39:19 🔍 KERNEL: Formation=Santa Rosa, plug_required=True, use_when='Central and Northwest Upton Co.'
+2026-01-09 15:39:19 🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
+2026-01-09 15:39:19 🔍 KERNEL: Applying additional_requirements 'Tag' to Santa Rosa
+2026-01-09 15:39:19 🔍 KERNEL: Appending formation plug for Santa Rosa
+2026-01-09 15:39:19 🔍 KERNEL: Successfully added Santa Rosa plug to out list (now 17 steps)
+2026-01-09 15:39:19 🔍 KERNEL SUPPRESSION: Checking 17 steps for CIBP
+2026-01-09 15:39:19 🔍 KERNEL SUPPRESSION: Found bridge_plug - top_ft=6860.0, bottom_ft=6860.0, plug_depth_ft=None
+2026-01-09 15:39:19 🔍 KERNEL: Found CIBP at 6860.0 ft
+2026-01-09 15:39:19 🔍 KERNEL: Suppressed 3 formation plug(s) below CIBP at 6860.0 ft
+2026-01-09 15:39:19 🔍 KERNEL MAIN: After _apply_district_overrides, got 14 steps back
+2026-01-09 15:39:19 🔍 KERNEL MAIN: Applying county procedures: ['cibp_required', 'surface_shoe_straddle', 'straddle_uqw', 'waterboard_protection_depth_range', 'formation_specific_tagging', 'san_andres_formation_required']
+2026-01-09 15:39:19 🔍 KERNEL MAIN: After _apply_county_procedures, got 14 steps back
+2026-01-09 15:39:19 🔧 MATERIALS COMPUTE: Processing 14 steps
+2026-01-09 15:39:19    Step 1: type=surface_casing_shoe_plug, top_ft=600.0, bottom_ft=700.0
+2026-01-09 15:39:19    Step 2: type=uqw_isolation_plug, top_ft=None, bottom_ft=None
+2026-01-09 15:39:19    Step 3: type=top_plug, top_ft=0.0, bottom_ft=10.0
+2026-01-09 15:39:19    Step 4: type=cut_casing_below_surface, top_ft=None, bottom_ft=None
+2026-01-09 15:39:19    Step 5: type=bridge_plug, top_ft=6860.0, bottom_ft=6860.0
+2026-01-09 15:39:19    Step 6: type=bridge_plug_cap, top_ft=6840.0, bottom_ft=6860.0
+2026-01-09 15:39:19    Step 7: type=formation_top_plug, top_ft=3500.0, bottom_ft=3400.0
+2026-01-09 15:39:19    Step 8: type=formation_top_plug, top_ft=2500.0, bottom_ft=2400.0
+2026-01-09 15:39:19    Step 9: type=formation_top_plug, top_ft=4000.0, bottom_ft=3900.0
+2026-01-09 15:39:19    Step 10: type=formation_top_plug, top_ft=2500.0, bottom_ft=2400.0
+2026-01-09 15:39:19    Step 11: type=formation_top_plug, top_ft=1000.0, bottom_ft=900.0
+2026-01-09 15:39:19    Step 12: type=formation_top_plug, top_ft=4500.0, bottom_ft=4400.0
+2026-01-09 15:39:19    Step 13: type=formation_top_plug, top_ft=2500.0, bottom_ft=2400.0
+2026-01-09 15:39:19    Step 14: type=formation_top_plug, top_ft=1000.0, bottom_ft=900.0
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 🔧 PERF & SQUEEZE CALCULATION
+2026-01-09 15:39:19    Target depth: 700.0 ft
+2026-01-09 15:39:19    Interval length: 100.0 ft
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 📋 SPACES TO FILL:
+2026-01-09 15:39:19    • 1 annuli (all uncmented)
+2026-01-09 15:39:19    • Inside production casing (plug column)
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ANNULUS 1: production TO surface
+2026-01-09 15:39:19       Inner OD: 5.500" | Outer ID/Hole: 8.097"
+2026-01-09 15:39:19       Capacity: 0.034303 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 3.43 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    INSIDE CASING: production
+2026-01-09 15:39:19       Casing ID: 5.044"
+2026-01-09 15:39:19       Capacity: 0.024718 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 2.47 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ─────────────────────────────────────────────────
+2026-01-09 15:39:19    Subtotal (annuli): 3.43 bbl
+2026-01-09 15:39:19    Subtotal (inside): 2.47 bbl
+2026-01-09 15:39:19    Subtotal (total):  5.90 bbl
+2026-01-09 15:39:19    × Texas excess: 1.0700x (+7.0% @ 0.70 kft) → 6.32 bbl
+2026-01-09 15:39:19    ═════════════════════════════════════════════════
+2026-01-09 15:39:19    ✓ TOTAL VOLUME: 6.32 bbl
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ✅ PLUG CALCULATION COMPLETE: SURFACE_CASING_SHOE_PLUG
+2026-01-09 15:39:19    Type: PERF & SQUEEZE PLUG (cement-aware)
+2026-01-09 15:39:19    Depth: 600.0-700.0 ft
+2026-01-09 15:39:19    Fill method: Perforate casing and squeeze into annuli
+2026-01-09 15:39:19    Perforate through: production
+2026-01-09 15:39:19    Filling: 1 annuli (uncmented)
+2026-01-09 15:39:19       • production to surface: 3.43 bbl
+2026-01-09 15:39:19    Total volume: 6.32 bbl
+2026-01-09 15:39:19    ✓ SACKS REQUIRED: 33 sacks
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 🔧 TOP PLUG CALCULATION TRIGGERED for step: top_plug
+2026-01-09 15:39:19 🔧 TOP PLUG: top_ft=0.0, bottom_ft=10.0
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 🔧 PERF & SQUEEZE CALCULATION
+2026-01-09 15:39:19    Target depth: 2400.0 ft
+2026-01-09 15:39:19    Interval length: 100.0 ft
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 📋 SPACES TO FILL:
+2026-01-09 15:39:19    • 1 annuli (all uncmented)
+2026-01-09 15:39:19    • Inside production casing (plug column)
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ANNULUS 1: production TO openhole
+2026-01-09 15:39:19       Inner OD: 5.500" | Outer ID/Hole: 7.875"
+2026-01-09 15:39:19       Capacity: 0.030858 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 3.09 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    INSIDE CASING: production
+2026-01-09 15:39:19       Casing ID: 5.044"
+2026-01-09 15:39:19       Capacity: 0.024718 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 2.47 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ─────────────────────────────────────────────────
+2026-01-09 15:39:19    Subtotal (annuli): 3.09 bbl
+2026-01-09 15:39:19    Subtotal (inside): 2.47 bbl
+2026-01-09 15:39:19    Subtotal (total):  5.56 bbl
+2026-01-09 15:39:19    × Texas excess: 1.2400x (+24.0% @ 2.40 kft) → 6.89 bbl
+2026-01-09 15:39:19    ═════════════════════════════════════════════════
+2026-01-09 15:39:19    ✓ TOTAL VOLUME: 6.89 bbl
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
+2026-01-09 15:39:19    Type: PERF & SQUEEZE PLUG (cement-aware)
+2026-01-09 15:39:19    Depth: 2500.0-2400.0 ft
+2026-01-09 15:39:19    Fill method: Perforate casing and squeeze into annuli
+2026-01-09 15:39:19    Perforate through: production
+2026-01-09 15:39:19    Filling: 1 annuli (uncmented)
+2026-01-09 15:39:19       • production to openhole: 3.09 bbl
+2026-01-09 15:39:19    Total volume: 6.89 bbl
+2026-01-09 15:39:19    ✓ SACKS REQUIRED: 37 sacks
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 🔧 PERF & SQUEEZE CALCULATION
+2026-01-09 15:39:19    Target depth: 2400.0 ft
+2026-01-09 15:39:19    Interval length: 100.0 ft
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 📋 SPACES TO FILL:
+2026-01-09 15:39:19    • 1 annuli (all uncmented)
+2026-01-09 15:39:19    • Inside production casing (plug column)
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ANNULUS 1: production TO openhole
+2026-01-09 15:39:19       Inner OD: 5.500" | Outer ID/Hole: 7.875"
+2026-01-09 15:39:19       Capacity: 0.030858 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 3.09 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    INSIDE CASING: production
+2026-01-09 15:39:19       Casing ID: 5.044"
+2026-01-09 15:39:19       Capacity: 0.024718 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 2.47 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ─────────────────────────────────────────────────
+2026-01-09 15:39:19    Subtotal (annuli): 3.09 bbl
+2026-01-09 15:39:19    Subtotal (inside): 2.47 bbl
+2026-01-09 15:39:19    Subtotal (total):  5.56 bbl
+2026-01-09 15:39:19    × Texas excess: 1.2400x (+24.0% @ 2.40 kft) → 6.89 bbl
+2026-01-09 15:39:19    ═════════════════════════════════════════════════
+2026-01-09 15:39:19    ✓ TOTAL VOLUME: 6.89 bbl
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
+2026-01-09 15:39:19    Type: PERF & SQUEEZE PLUG (cement-aware)
+2026-01-09 15:39:19    Depth: 2500.0-2400.0 ft
+2026-01-09 15:39:19    Fill method: Perforate casing and squeeze into annuli
+2026-01-09 15:39:19    Perforate through: production
+2026-01-09 15:39:19    Filling: 1 annuli (uncmented)
+2026-01-09 15:39:19       • production to openhole: 3.09 bbl
+2026-01-09 15:39:19    Total volume: 6.89 bbl
+2026-01-09 15:39:19    ✓ SACKS REQUIRED: 37 sacks
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 🔧 PERF & SQUEEZE CALCULATION
+2026-01-09 15:39:19    Target depth: 900.0 ft
+2026-01-09 15:39:19    Interval length: 100.0 ft
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 📋 SPACES TO FILL:
+2026-01-09 15:39:19    • 1 annuli (all uncmented)
+2026-01-09 15:39:19    • Inside production casing (plug column)
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ANNULUS 1: production TO openhole
+2026-01-09 15:39:19       Inner OD: 5.500" | Outer ID/Hole: 7.875"
+2026-01-09 15:39:19       Capacity: 0.030858 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 3.09 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    INSIDE CASING: production
+2026-01-09 15:39:19       Casing ID: 5.044"
+2026-01-09 15:39:19       Capacity: 0.024718 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 2.47 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ─────────────────────────────────────────────────
+2026-01-09 15:39:19    Subtotal (annuli): 3.09 bbl
+2026-01-09 15:39:19    Subtotal (inside): 2.47 bbl
+2026-01-09 15:39:19    Subtotal (total):  5.56 bbl
+2026-01-09 15:39:19    × Texas excess: 1.0900x (+9.0% @ 0.90 kft) → 6.06 bbl
+2026-01-09 15:39:19    ═════════════════════════════════════════════════
+2026-01-09 15:39:19    ✓ TOTAL VOLUME: 6.06 bbl
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
+2026-01-09 15:39:19    Type: PERF & SQUEEZE PLUG (cement-aware)
+2026-01-09 15:39:19    Depth: 1000.0-900.0 ft
+2026-01-09 15:39:19    Fill method: Perforate casing and squeeze into annuli
+2026-01-09 15:39:19    Perforate through: production
+2026-01-09 15:39:19    Filling: 1 annuli (uncmented)
+2026-01-09 15:39:19       • production to openhole: 3.09 bbl
+2026-01-09 15:39:19    Total volume: 6.06 bbl
+2026-01-09 15:39:19    ✓ SACKS REQUIRED: 32 sacks
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 🔧 PERF & SQUEEZE CALCULATION
+2026-01-09 15:39:19    Target depth: 2400.0 ft
+2026-01-09 15:39:19    Interval length: 100.0 ft
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 📋 SPACES TO FILL:
+2026-01-09 15:39:19    • 1 annuli (all uncmented)
+2026-01-09 15:39:19    • Inside production casing (plug column)
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ANNULUS 1: production TO openhole
+2026-01-09 15:39:19       Inner OD: 5.500" | Outer ID/Hole: 7.875"
+2026-01-09 15:39:19       Capacity: 0.030858 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 3.09 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    INSIDE CASING: production
+2026-01-09 15:39:19       Casing ID: 5.044"
+2026-01-09 15:39:19       Capacity: 0.024718 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 2.47 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ─────────────────────────────────────────────────
+2026-01-09 15:39:19    Subtotal (annuli): 3.09 bbl
+2026-01-09 15:39:19    Subtotal (inside): 2.47 bbl
+2026-01-09 15:39:19    Subtotal (total):  5.56 bbl
+2026-01-09 15:39:19    × Texas excess: 1.2400x (+24.0% @ 2.40 kft) → 6.89 bbl
+2026-01-09 15:39:19    ═════════════════════════════════════════════════
+2026-01-09 15:39:19    ✓ TOTAL VOLUME: 6.89 bbl
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
+2026-01-09 15:39:19    Type: PERF & SQUEEZE PLUG (cement-aware)
+2026-01-09 15:39:19    Depth: 2500.0-2400.0 ft
+2026-01-09 15:39:19    Fill method: Perforate casing and squeeze into annuli
+2026-01-09 15:39:19    Perforate through: production
+2026-01-09 15:39:19    Filling: 1 annuli (uncmented)
+2026-01-09 15:39:19       • production to openhole: 3.09 bbl
+2026-01-09 15:39:19    Total volume: 6.89 bbl
+2026-01-09 15:39:19    ✓ SACKS REQUIRED: 37 sacks
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 🔧 PERF & SQUEEZE CALCULATION
+2026-01-09 15:39:19    Target depth: 900.0 ft
+2026-01-09 15:39:19    Interval length: 100.0 ft
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 📋 SPACES TO FILL:
+2026-01-09 15:39:19    • 1 annuli (all uncmented)
+2026-01-09 15:39:19    • Inside production casing (plug column)
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ANNULUS 1: production TO openhole
+2026-01-09 15:39:19       Inner OD: 5.500" | Outer ID/Hole: 7.875"
+2026-01-09 15:39:19       Capacity: 0.030858 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 3.09 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    INSIDE CASING: production
+2026-01-09 15:39:19       Casing ID: 5.044"
+2026-01-09 15:39:19       Capacity: 0.024718 bbl/ft
+2026-01-09 15:39:19       Length: 100.0 ft
+2026-01-09 15:39:19       Base volume: 2.47 bbl
+2026-01-09 15:39:19 
+2026-01-09 15:39:19    ─────────────────────────────────────────────────
+2026-01-09 15:39:19    Subtotal (annuli): 3.09 bbl
+2026-01-09 15:39:19    Subtotal (inside): 2.47 bbl
+2026-01-09 15:39:19    Subtotal (total):  5.56 bbl
+2026-01-09 15:39:19    × Texas excess: 1.0900x (+9.0% @ 0.90 kft) → 6.06 bbl
+2026-01-09 15:39:19    ═════════════════════════════════════════════════
+2026-01-09 15:39:19    ✓ TOTAL VOLUME: 6.06 bbl
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 ✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
+2026-01-09 15:39:19    Type: PERF & SQUEEZE PLUG (cement-aware)
+2026-01-09 15:39:19    Depth: 1000.0-900.0 ft
+2026-01-09 15:39:19    Fill method: Perforate casing and squeeze into annuli
+2026-01-09 15:39:19    Perforate through: production
+2026-01-09 15:39:19    Filling: 1 annuli (uncmented)
+2026-01-09 15:39:19       • production to openhole: 3.09 bbl
+2026-01-09 15:39:19    Total volume: 6.06 bbl
+2026-01-09 15:39:19    ✓ SACKS REQUIRED: 32 sacks
+2026-01-09 15:39:19 ================================================================================
+2026-01-09 15:39:19 🔍 VALIDATION: Removing duplicate formation plug - Yates at 2500.0-2400.0 ft (already have plug at 2500.0-2400.0)
+2026-01-09 15:39:19 🔍 VALIDATION: Removing duplicate formation plug - Yates at 2500.0-2400.0 ft (already have plug at 2500.0-2400.0)
+2026-01-09 15:39:19 🔍 VALIDATION: Removing duplicate formation plug - Santa Rosa at 1000.0-900.0 ft (already have plug at 1000.0-900.0)
+2026-01-09 15:39:19 ❌ FINAL PAYLOAD: casing_strings count = 2
+2026-01-09 15:39:19 ❌ FINAL PAYLOAD: Sample casing = {'string': 'surface', 'top_ft': None, 'size_in': 8.625, 'bottom_ft': 730, 'hole_size_in': 13.5, 'cement_top_ft': 0, 'shoe_depth_ft': 700, 'weight_per_ft': None}
+2026-01-09 15:39:19 [09/Jan/2026 22:39:19] "POST /api/w3a/temp_4246139385_12457f74/confirm-geometry HTTP/1.1" 200 551
+2026-01-09 15:39:21 [09/Jan/2026 22:39:21] "GET /api/plans/4246139385:combined/ HTTP/1.1" 200 11873
+2026-01-09 15:39:21 [09/Jan/2026 22:39:21] "GET /api/plans/4246139385:combined/ HTTP/1.1" 200 11873
+2026-01-09 15:39:21 [09/Jan/2026 22:39:21] "GET /api/chat/threads/ HTTP/1.1" 200 1900
+2026-01-09 15:39:21 [09/Jan/2026 22:39:21] "GET /api/chat/threads/ HTTP/1.1" 200 1900

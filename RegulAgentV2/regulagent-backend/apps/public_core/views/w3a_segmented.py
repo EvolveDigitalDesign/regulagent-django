@@ -1127,9 +1127,20 @@ class W3AConfirmGeometryView(APIView):
         and generates a plan using the policy kernel.
         """
         
+        # 🚀🚀🚀 CRITICAL DEBUG: Verify method was called
+        print("🚀🚀🚀 _build_plan_from_snapshot CALLED 🚀🚀🚀")
+        logger.error("🚀🚀🚀 _build_plan_from_snapshot CALLED - IF YOU SEE THIS, CODE IS ACTIVE 🚀🚀🚀")
+        
         # Get extractions from snapshot
         extractions = snapshot.payload.get("extractions", [])
         geometry = snapshot.payload.get("geometry", {})
+        
+        # 🔍 DEBUG: Log what geometry we received at the start
+        logger.error(f"🔍 _build_plan_from_snapshot START: geometry has {len(geometry.get('casing_strings', []))} casing_strings")
+        if geometry.get('casing_strings'):
+            logger.error(f"🔍 _build_plan_from_snapshot: First casing_string keys={list(geometry['casing_strings'][0].keys())}")
+        else:
+            logger.error(f"❌ _build_plan_from_snapshot: casing_strings is EMPTY or not in geometry!")
         api = snapshot.payload.get("api")
         
         # Build W-2 data from extractions
@@ -1205,23 +1216,27 @@ class W3AConfirmGeometryView(APIView):
         casing_strings_geometry = geometry.get("casing_strings", [])
         casing_record = w2_data.get("casing_record", [])
         
-        logger.info(f"🔍 CASING DEBUG: casing_strings_geometry={len(casing_strings_geometry)} items")
-        logger.info(f"🔍 CASING DEBUG: casing_record from W-2={len(casing_record)} items")
+        logger.error(f"❌ CASING DEBUG: casing_strings_geometry={len(casing_strings_geometry)} items")
+        logger.error(f"❌ CASING DEBUG: casing_record from W-2={len(casing_record)} items")
+        if casing_strings_geometry:
+            logger.error(f"❌ CASING DEBUG: geometry casing preview={[cs.get('value') for cs in casing_strings_geometry[:1]]}")
         if casing_record:
-            logger.info(f"🔍 CASING DEBUG: W-2 casing_record preview={casing_record[:2] if len(casing_record) > 0 else 'empty'}")
+            logger.error(f"❌ CASING DEBUG: W-2 casing_record preview={casing_record[:2] if len(casing_record) > 0 else 'empty'}")
         
         # Use geometry casing if available (takes precedence)
         if casing_strings_geometry:
             facts["casing_record"] = [cs.get("value", cs) for cs in casing_strings_geometry]
             casing_to_process = [cs.get("value", cs) for cs in casing_strings_geometry]
-            logger.info(f"📍 Using {len(casing_to_process)} casing strings from geometry")
+            logger.error(f"❌ EXTRACTED {len(casing_to_process)} casing strings from geometry for kernel")
+            if casing_to_process:
+                logger.error(f"❌ FIRST CASING: {casing_to_process[0]}")
         elif casing_record:
             facts["casing_record"] = casing_record
             casing_to_process = casing_record
-            logger.info(f"📍 Using {len(casing_to_process)} casing strings from W-2")
+            logger.error(f"❌ EXTRACTED {len(casing_to_process)} casing strings from W-2 for kernel")
         else:
             casing_to_process = []
-            logger.warning(f"⚠️ NO CASING DATA FOUND - casing_strings will be empty!")
+            logger.error(f"❌❌❌ NO CASING DATA FOUND - casing_strings will be empty!")
         
         # Extract surface shoe depth and production TOC (critical for plug type determination)
         for casing in casing_to_process:
@@ -1475,6 +1490,12 @@ class W3AConfirmGeometryView(APIView):
             # Add production perforations for well_geometry
             "production_perforations": facts.get("production_perforations", []),
         }
+        
+        logger.error(f"❌ FINAL PAYLOAD: casing_strings count = {len(plan_payload.get('casing_strings', []))}")
+        if plan_payload.get('casing_strings'):
+            logger.error(f"❌ FINAL PAYLOAD: Sample casing = {plan_payload['casing_strings'][0]}")
+        else:
+            logger.error(f"❌❌❌ FINAL PAYLOAD: casing_strings is EMPTY!")
         
         # Add mechanical_equipment from geometry (including user-added tools)
         mechanical_barriers_geometry = geometry.get("mechanical_barriers", [])
