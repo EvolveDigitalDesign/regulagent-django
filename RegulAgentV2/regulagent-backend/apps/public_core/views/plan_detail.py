@@ -213,8 +213,12 @@ def _build_well_geometry(api14: str, payload: Optional[Dict[str, Any]] = None) -
         
         # Also check for casing_strings in payload (from segmented W3A flow)
         casing_strings_from_payload = payload.get('casing_strings', [])
+        logger.info(f"🔍 _build_well_geometry: Found {len(casing_strings_from_payload)} casing_strings in payload")
         if casing_strings_from_payload:
             geometry['casing_strings'] = casing_strings_from_payload
+            logger.info(f"✅ Using {len(casing_strings_from_payload)} casing_strings from payload")
+        else:
+            logger.info(f"⚠️ No casing_strings in payload, will try ExtractedDocument")
     
     # Get W-2 document for casing and formation data (fallback if not in payload)
     w2 = ExtractedDocument.objects.filter(

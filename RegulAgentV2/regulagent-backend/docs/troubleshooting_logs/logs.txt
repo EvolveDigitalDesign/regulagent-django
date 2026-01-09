@@ -1,3 +1,319 @@
+172.18.0.1:58124 - "POST /api/w3a/temp_4246139385_140b4c31/confirm-docs HTTP/1.1" 200
+172.18.0.1:52512 - "OPTIONS /api/w3a/temp_4246139385_140b4c31/extractions HTTP/1.1" 200
+172.18.0.1:52520 - "POST /api/w3a/temp_4246139385_140b4c31/extractions HTTP/1.1" 200
+172.18.0.1:52534 - "OPTIONS /api/w3a/temp_4246139385_140b4c31/geometry HTTP/1.1" 200
+🔍 LOADER: district=7C → normalized=07c
+🔍 LOADER: combined_path=/app/apps/policy/packs/tx/w3a/district_overlays/07c__auto.yml
+🔍 LOADER: file exists=False
+🔍 LOADER: 7C Hybrid mode - checking for:
+  YAML procedures: /app/apps/policy/packs/tx/w3a/district_overlays/07c_county_procedures.yml (exists=True)
+  JSON formations: /app/apps/policy/packs/tx/w3a/district_overlays/07c_plugging_book.json (exists=True)
+🔍 LOADER: Loaded 7C procedures YAML, keys=['district', 'extracted_at', 'requirements', 'preferences', 'counties']
+🔍 LOADER: Loaded 7C formations JSON, 14 counties
+🔍 LOADER: Merged requirements
+🔍 LOADER: Merged preferences
+🔍 LOADER: Looking up county=UPTON in combined YAML
+🔍 LOADER: Available counties=['Coke County', 'Concho County', 'Crockett County', 'Irion County', 'Kimble County']
+🔍 LOADER: Trying aliases=['UPTON', 'UPTON County']
+🔍 LOADER: County data found, keys=['requirements', 'preferences', 'county_procedures']
+🔍 LOADER: county_overrides keys=['county_procedures']
+🔍 LOADER: formation_tops in county_overrides=0
+🔍 LOADER: Checking 7C formation loading: is_7c_hybrid=True, has_formation_json=True, field=SPRABERRY (TREND AREA)
+🔍 LOADER: Loading formations from JSON for county=UPTON, field=SPRABERRY (TREND AREA)
+🔍 _load_7c_formations: county=UPTON, field=SPRABERRY (TREND AREA), field_norm=spraberry
+🔍 _load_7c_formations: 107 total fieldSpecs for county
+🔍 _load_7c_formations: 11 specs matched field, 11 formations extracted
+🔍 LOADER: _load_7c_formations_for_field returned 11 formations
+🔍 LOADER: Loaded 11 formations from JSON for SPRABERRY (TREND AREA)
+🔍 LOADER FINAL: merged['district_overrides'] has 11 formation_tops
+🔍 LOADER FINAL: Formation names=['Spraberry', 'San Andres', 'Yates', 'Spraberry', 'San Andres']
+🔍 LOADER POST-VALIDATION: out['effective']['district_overrides'] has 11 formation_tops
+172.18.0.1:52550 - "GET /api/w3a/temp_4246139385_140b4c31/geometry HTTP/1.1" 200
+172.18.0.1:58992 - "OPTIONS /api/w3a/temp_4246139385_140b4c31/confirm-geometry HTTP/1.1" 200
+🔍 LOADER: district=7C → normalized=07c
+🔍 LOADER: combined_path=/app/apps/policy/packs/tx/w3a/district_overlays/07c__auto.yml
+🔍 LOADER: file exists=False
+🔍 LOADER: 7C Hybrid mode - checking for:
+  YAML procedures: /app/apps/policy/packs/tx/w3a/district_overlays/07c_county_procedures.yml (exists=True)
+  JSON formations: /app/apps/policy/packs/tx/w3a/district_overlays/07c_plugging_book.json (exists=True)
+🔍 LOADER: Loaded 7C procedures YAML, keys=['district', 'extracted_at', 'requirements', 'preferences', 'counties']
+🔍 LOADER: Loaded 7C formations JSON, 14 counties
+🔍 LOADER: Merged requirements
+🔍 LOADER: Merged preferences
+🔍 LOADER: Looking up county=UPTON in combined YAML
+🔍 LOADER: Available counties=['Coke County', 'Concho County', 'Crockett County', 'Irion County', 'Kimble County']
+🔍 LOADER: Trying aliases=['UPTON', 'UPTON County']
+🔍 LOADER: County data found, keys=['requirements', 'preferences', 'county_procedures']
+🔍 LOADER: county_overrides keys=['county_procedures']
+🔍 LOADER: formation_tops in county_overrides=0
+🔍 LOADER: Checking 7C formation loading: is_7c_hybrid=True, has_formation_json=True, field=SPRABERRY (TREND AREA)
+🔍 LOADER: Loading formations from JSON for county=UPTON, field=SPRABERRY (TREND AREA)
+🔍 _load_7c_formations: county=UPTON, field=SPRABERRY (TREND AREA), field_norm=spraberry
+🔍 _load_7c_formations: 107 total fieldSpecs for county
+🔍 _load_7c_formations: 11 specs matched field, 11 formations extracted
+🔍 LOADER: _load_7c_formations_for_field returned 11 formations
+🔍 LOADER: Loaded 11 formations from JSON for SPRABERRY (TREND AREA)
+🔍 LOADER FINAL: merged['district_overrides'] has 11 formation_tops
+🔍 LOADER FINAL: Formation names=['Spraberry', 'San Andres', 'Yates', 'Spraberry', 'San Andres']
+🔍 LOADER POST-VALIDATION: out['effective']['district_overrides'] has 11 formation_tops
+🔍 KERNEL MAIN: policy keys=['policy_id', 'policy_version', 'jurisdiction', 'form', 'effective_from', 'as_of', 'base', 'effective', 'district', 'county', 'field_resolution', 'incomplete_reasons', 'complete', 'preferences']
+🔍 KERNEL MAIN: policy['complete']=True
+🔍 KERNEL MAIN: Policy is complete, proceeding to generate steps
+🚨🚨🚨 KERNEL GENERATE_STEPS CALLED - facts has annular_gaps: False, count: 0
+🚨 KERNEL: annular_gaps from facts = 0 gaps
+🔧 CIBP: Found 1 perforations in facts
+   Perf 6910.0-10400 ft
+🔧 CIBP: Shallowest perforation top: 6910.0 ft
+🔧 CIBP: Deepest formation top: 7000.0 ft
+🔧 CIBP: Using SHALLOWER of perf (6910.0) and formation (7000.0): 6910.0 ft
+🔧 CIBP DETECTOR: exposed=True, has_existing_cibp=False, has_cap_step=False, shallowest_perf_top_ft=6910.0, covered_by_ops=False
+🔧 CIBP DETECTOR: production_shoe_ft=10500.0
+🔧🔧🔧 CIBP DETECTOR: ENTERED CIBP GENERATION BLOCK
+🔧 CIBP: Step 1 - Calculating perf-based depth from shallowest_perf_top_ft=6910.0
+🔧 CIBP: Step 1 COMPLETE - plug_depth_from_perfs=6860.0 (50 ft above shallowest perf top)
+🔧 CIBP: Step 2 - Checking for KOP in resolved_facts: ['api14', 'state', 'district', 'county', 'field', 'lease', 'well_no', 'lat', 'lon', 'has_uqw', 'uqw_base_ft', 'use_cibp', 'casing_record', 'surface_shoe_ft', 'production_casing_toc_ft', 'production_shoe_ft', 'formation_tops_map', 'perforations', 'production_perforations', 'existing_mechanical_barriers', 'cibp_present', 'tubing', 'historic_cement_jobs']
+🔧 CIBP: Step 2 - kop_data={}
+🔧 CIBP: Step 2 COMPLETE - kop_md_ft=None
+🔧 CIBP: Step 3 SKIPPED - No KOP found, using perf-based depth=6860.0
+🔧 CIBP: Step 4 - Creating bridge_plug step at depth=6860.0, reason='perforations (50 ft above shallowest perf top)'
+🔧 CIBP: Step 4a - About to append bridge_plug_step to steps (current steps count: 4)
+🔧 CIBP: Step 4b - bridge_plug appended successfully (new steps count: 5)
+🔧 CIBP: Step 4 COMPLETE - ✅ bridge_plug added
+🔧 CIBP: Step 5 - Creating bridge_plug_cap
+🔧 CIBP: Step 5a - Policy override cap_len=20.0
+🔧 CIBP: Step 5c - Building cap_step (cap_len=20.0, plug_depth=6860.0)
+🔧 CIBP: Step 5d - Added geometry to cap: casing_id=None, stinger_od=None
+🔧 CIBP: Step 5e - About to append cap_step (current steps count: 5)
+🔧 CIBP: Step 5f - cap appended successfully (new steps count: 6)
+🔧 CIBP: Step 5 COMPLETE - ✅ bridge_plug_cap added with length 20.0 ft
+🔧 CIBP: Step 6 - Checking for redundant productive_horizon_isolation_plug
+🔧 CIBP: Step 6 COMPLETE - No productive_horizon_isolation_plug found to remove
+🔍 KERNEL MAIN: About to call _apply_district_overrides with 6 steps
+🔍 KERNEL MAIN: policy.get('effective') type=<class 'dict'>
+🔍 KERNEL MAIN: district=7C, county=UPTON
+🔍 KERNEL _apply_district_overrides: START
+🔍 KERNEL: policy_effective type=<class 'dict'>, keys=['citations', 'requirements', 'cement_class', 'preferences', 'district_overrides']
+🔍 KERNEL: overrides type=<class 'dict'>, keys=['county_procedures', 'formation_tops']
+🔍 KERNEL: formation_tops count=12
+🔍 KERNEL: Formation names=['Spraberry', 'San Andres', 'Yates', 'Spraberry', 'San Andres', 'Yates', 'Santa Rosa', 'Spraberry', 'San Andres', 'Yates', 'Santa Rosa', 'Wolfcamp']
+🔍 KERNEL: About to iterate 12 formation tops
+🔍 KERNEL: Formation=Spraberry, plug_required=True, use_when='East Central Upton Co.'
+🗺️ GEO EVAL: use_when='East Central Upton Co.', lat=31.393926, lon=-102.169205, center=(31.4, -102.1)
+🗺️ GEO FLAGS: N=False, S=True, E=False, W=True, CenterLat=True, CenterLon=True
+🔍 KERNEL: use_when 'East Central Upton Co.' evaluated to False
+🔍 KERNEL: SKIPPING Spraberry - use_when condition not met
+🔍 KERNEL: Formation=San Andres, plug_required=True, use_when='East Central Upton Co.'
+🗺️ GEO EVAL: use_when='East Central Upton Co.', lat=31.393926, lon=-102.169205, center=(31.4, -102.1)
+🗺️ GEO FLAGS: N=False, S=True, E=False, W=True, CenterLat=True, CenterLon=True
+🔍 KERNEL: use_when 'East Central Upton Co.' evaluated to False
+🔍 KERNEL: SKIPPING San Andres - use_when condition not met
+🔍 KERNEL: Formation=Yates, plug_required=True, use_when='East Central Upton Co.'
+🗺️ GEO EVAL: use_when='East Central Upton Co.', lat=31.393926, lon=-102.169205, center=(31.4, -102.1)
+🗺️ GEO FLAGS: N=False, S=True, E=False, W=True, CenterLat=True, CenterLon=True
+🔍 KERNEL: use_when 'East Central Upton Co.' evaluated to False
+🔍 KERNEL: SKIPPING Yates - use_when condition not met
+🔍 KERNEL: Formation=Spraberry, plug_required=True, use_when='Northeast Upton Co.'
+🗺️ GEO EVAL: use_when='Northeast Upton Co.', lat=31.393926, lon=-102.169205, center=(31.4, -102.1)
+🗺️ GEO FLAGS: N=False, S=True, E=False, W=True, CenterLat=True, CenterLon=True
+🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to False
+🔍 KERNEL: SKIPPING Spraberry - use_when condition not met
+🔍 KERNEL: Formation=San Andres, plug_required=True, use_when='Northeast Upton Co.'
+🗺️ GEO EVAL: use_when='Northeast Upton Co.', lat=31.393926, lon=-102.169205, center=(31.4, -102.1)
+🗺️ GEO FLAGS: N=False, S=True, E=False, W=True, CenterLat=True, CenterLon=True
+🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to False
+🔍 KERNEL: SKIPPING San Andres - use_when condition not met
+🔍 KERNEL: Formation=Yates, plug_required=True, use_when='Northeast Upton Co.'
+🗺️ GEO EVAL: use_when='Northeast Upton Co.', lat=31.393926, lon=-102.169205, center=(31.4, -102.1)
+🗺️ GEO FLAGS: N=False, S=True, E=False, W=True, CenterLat=True, CenterLon=True
+🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to False
+🔍 KERNEL: SKIPPING Yates - use_when condition not met
+🔍 KERNEL: Formation=Santa Rosa, plug_required=True, use_when='Northeast Upton Co.'
+🗺️ GEO EVAL: use_when='Northeast Upton Co.', lat=31.393926, lon=-102.169205, center=(31.4, -102.1)
+🗺️ GEO FLAGS: N=False, S=True, E=False, W=True, CenterLat=True, CenterLon=True
+🔍 KERNEL: use_when 'Northeast Upton Co.' evaluated to False
+🔍 KERNEL: SKIPPING Santa Rosa - use_when condition not met
+🔍 KERNEL: Formation=Spraberry, plug_required=True, use_when='Central and Northwest Upton Co.'
+🗺️ GEO EVAL: use_when='Central and Northwest Upton Co.', lat=31.393926, lon=-102.169205, center=(31.4, -102.1)
+🗺️ GEO FLAGS: N=False, S=True, E=False, W=True, CenterLat=True, CenterLon=True
+🗺️ 'Central and X' eval: 'Central and Northwest Upton Co.' → central=True OR directional=True
+🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
+🔍 KERNEL: Appending formation plug for Spraberry
+🔍 KERNEL: Successfully added Spraberry plug to out list (now 7 steps)
+🔍 KERNEL: Formation=San Andres, plug_required=True, use_when='Central and Northwest Upton Co.'
+🗺️ GEO EVAL: use_when='Central and Northwest Upton Co.', lat=31.393926, lon=-102.169205, center=(31.4, -102.1)
+🗺️ GEO FLAGS: N=False, S=True, E=False, W=True, CenterLat=True, CenterLon=True
+🗺️ 'Central and X' eval: 'Central and Northwest Upton Co.' → central=True OR directional=True
+🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
+🔍 KERNEL: Applying additional_requirements 'Tag' to San Andres
+🔍 KERNEL: Appending formation plug for San Andres
+🔍 KERNEL: Successfully added San Andres plug to out list (now 8 steps)
+🔍 KERNEL: Formation=Yates, plug_required=True, use_when='Central and Northwest Upton Co.'
+🗺️ GEO EVAL: use_when='Central and Northwest Upton Co.', lat=31.393926, lon=-102.169205, center=(31.4, -102.1)
+🗺️ GEO FLAGS: N=False, S=True, E=False, W=True, CenterLat=True, CenterLon=True
+🗺️ 'Central and X' eval: 'Central and Northwest Upton Co.' → central=True OR directional=True
+🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
+🔍 KERNEL: Appending formation plug for Yates
+🔍 KERNEL: Successfully added Yates plug to out list (now 9 steps)
+🔍 KERNEL: Formation=Santa Rosa, plug_required=True, use_when='Central and Northwest Upton Co.'
+🗺️ GEO EVAL: use_when='Central and Northwest Upton Co.', lat=31.393926, lon=-102.169205, center=(31.4, -102.1)
+🗺️ GEO FLAGS: N=False, S=True, E=False, W=True, CenterLat=True, CenterLon=True
+🗺️ 'Central and X' eval: 'Central and Northwest Upton Co.' → central=True OR directional=True
+🔍 KERNEL: use_when 'Central and Northwest Upton Co.' evaluated to True
+🔍 KERNEL: Applying additional_requirements 'Tag' to Santa Rosa
+🔍 KERNEL: Appending formation plug for Santa Rosa
+🔍 KERNEL: Successfully added Santa Rosa plug to out list (now 10 steps)
+🔍 KERNEL: Formation=Wolfcamp, plug_required=True, use_when='always'
+🔍 KERNEL: use_when 'always' evaluated to True
+🔍 KERNEL: Appending formation plug for Wolfcamp
+🔍 KERNEL: Successfully added Wolfcamp plug to out list (now 11 steps)
+🔍 KERNEL SUPPRESSION: Checking 11 steps for CIBP
+🔍 KERNEL SUPPRESSION: Found bridge_plug - top_ft=6860.0, bottom_ft=6860.0, plug_depth_ft=None
+🔍 KERNEL: Found CIBP at 6860.0 ft
+🔍 KERNEL: Suppressed 1 formation plug(s) below CIBP at 6860.0 ft
+🔍 KERNEL MAIN: After _apply_district_overrides, got 10 steps back
+🔍 KERNEL MAIN: Applying county procedures: ['cibp_required', 'surface_shoe_straddle', 'straddle_uqw', 'waterboard_protection_depth_range', 'formation_specific_tagging', 'san_andres_formation_required']
+🔍 KERNEL MAIN: After _apply_county_procedures, got 10 steps back
+🔧 MATERIALS COMPUTE: Processing 10 steps
+   Step 1: type=surface_casing_shoe_plug, top_ft=600.0, bottom_ft=700.0
+   Step 2: type=uqw_isolation_plug, top_ft=None, bottom_ft=None
+   Step 3: type=top_plug, top_ft=0.0, bottom_ft=10.0
+   Step 4: type=cut_casing_below_surface, top_ft=None, bottom_ft=None
+   Step 5: type=bridge_plug, top_ft=6860.0, bottom_ft=6860.0
+   Step 6: type=bridge_plug_cap, top_ft=6840.0, bottom_ft=6860.0
+   Step 7: type=formation_top_plug, top_ft=4500.0, bottom_ft=4400.0
+   Step 8: type=formation_top_plug, top_ft=2500.0, bottom_ft=2400.0
+   Step 9: type=formation_top_plug, top_ft=1000.0, bottom_ft=900.0
+   Step 10: type=formation_top_plug, top_ft=3750.0, bottom_ft=3650.0
+================================================================================
+🔧 PERF & SQUEEZE CALCULATION
+   Target depth: 700.0 ft
+   Interval length: 100.0 ft
+================================================================================
+📋 SPACES TO FILL:
+   • 1 annuli (all uncmented)
+   • Inside production casing (plug column)
+
+   ANNULUS 1: production TO surface
+      Inner OD: 5.500" | Outer ID/Hole: 8.097"
+      Capacity: 0.034303 bbl/ft
+      Length: 100.0 ft
+      Base volume: 3.43 bbl
+
+   INSIDE CASING: production
+      Casing ID: 5.044"
+      Capacity: 0.024718 bbl/ft
+      Length: 100.0 ft
+      Base volume: 2.47 bbl
+
+   ─────────────────────────────────────────────────
+   Subtotal (annuli): 3.43 bbl
+   Subtotal (inside): 2.47 bbl
+   Subtotal (total):  5.90 bbl
+   × Texas excess: 1.0700x (+7.0% @ 0.70 kft) → 6.32 bbl
+   ═════════════════════════════════════════════════
+   ✓ TOTAL VOLUME: 6.32 bbl
+================================================================================
+================================================================================
+✅ PLUG CALCULATION COMPLETE: SURFACE_CASING_SHOE_PLUG
+   Type: PERF & SQUEEZE PLUG (cement-aware)
+   Depth: 600.0-700.0 ft
+   Fill method: Perforate casing and squeeze into annuli
+   Perforate through: production
+   Filling: 1 annuli (uncmented)
+      • production to surface: 3.43 bbl
+   Total volume: 6.32 bbl
+   ✓ SACKS REQUIRED: 33 sacks
+================================================================================
+🔧 TOP PLUG CALCULATION TRIGGERED for step: top_plug
+🔧 TOP PLUG: top_ft=0.0, bottom_ft=10.0
+================================================================================
+🔧 PERF & SQUEEZE CALCULATION
+   Target depth: 2400.0 ft
+   Interval length: 100.0 ft
+================================================================================
+📋 SPACES TO FILL:
+   • 1 annuli (all uncmented)
+   • Inside production casing (plug column)
+
+   ANNULUS 1: production TO openhole
+      Inner OD: 5.500" | Outer ID/Hole: 7.875"
+      Capacity: 0.030858 bbl/ft
+      Length: 100.0 ft
+      Base volume: 3.09 bbl
+
+   INSIDE CASING: production
+      Casing ID: 5.044"
+      Capacity: 0.024718 bbl/ft
+      Length: 100.0 ft
+      Base volume: 2.47 bbl
+
+   ─────────────────────────────────────────────────
+   Subtotal (annuli): 3.09 bbl
+   Subtotal (inside): 2.47 bbl
+   Subtotal (total):  5.56 bbl
+   × Texas excess: 1.2400x (+24.0% @ 2.40 kft) → 6.89 bbl
+   ═════════════════════════════════════════════════
+   ✓ TOTAL VOLUME: 6.89 bbl
+================================================================================
+================================================================================
+✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
+   Type: PERF & SQUEEZE PLUG (cement-aware)
+   Depth: 2500.0-2400.0 ft
+   Fill method: Perforate casing and squeeze into annuli
+   Perforate through: production
+   Filling: 1 annuli (uncmented)
+      • production to openhole: 3.09 bbl
+   Total volume: 6.89 bbl
+   ✓ SACKS REQUIRED: 37 sacks
+================================================================================
+================================================================================
+🔧 PERF & SQUEEZE CALCULATION
+   Target depth: 900.0 ft
+   Interval length: 100.0 ft
+================================================================================
+📋 SPACES TO FILL:
+   • 1 annuli (all uncmented)
+   • Inside production casing (plug column)
+
+   ANNULUS 1: production TO openhole
+      Inner OD: 5.500" | Outer ID/Hole: 7.875"
+      Capacity: 0.030858 bbl/ft
+      Length: 100.0 ft
+      Base volume: 3.09 bbl
+
+   INSIDE CASING: production
+      Casing ID: 5.044"
+      Capacity: 0.024718 bbl/ft
+      Length: 100.0 ft
+      Base volume: 2.47 bbl
+
+   ─────────────────────────────────────────────────
+   Subtotal (annuli): 3.09 bbl
+   Subtotal (inside): 2.47 bbl
+   Subtotal (total):  5.56 bbl
+   × Texas excess: 1.0900x (+9.0% @ 0.90 kft) → 6.06 bbl
+   ═════════════════════════════════════════════════
+   ✓ TOTAL VOLUME: 6.06 bbl
+================================================================================
+================================================================================
+✅ PLUG CALCULATION COMPLETE: FORMATION_TOP_PLUG
+   Type: PERF & SQUEEZE PLUG (cement-aware)
+   Depth: 1000.0-900.0 ft
+   Fill method: Perforate casing and squeeze into annuli
+   Perforate through: production
+   Filling: 1 annuli (uncmented)
+      • production to openhole: 3.09 bbl
+   Total volume: 6.06 bbl
+   ✓ SACKS REQUIRED: 32 sacks
+================================================================================
+172.18.0.1:58994 - "POST /api/w3a/temp_4246139385_140b4c31/confirm-geometry HTTP/1.1" 200
+172.18.0.1:59004 - "GET /api/plans/4246139385%3Acombined/ HTTP/1.1" 200
+172.18.0.1:59020 - "GET /api/chat/threads/ HTTP/1.1" 200
+ubuntu@ip-10-0-7-116:/opt/regulagent$ 
+
+
+
+
 {
     "id": 94,
     "plan_id": "4246139385:combined",

@@ -670,10 +670,19 @@ class W3AGeometryView(APIView):
             # Derive geometry from edited extractions
             geometry = self._derive_geometry(edited_extractions)
             
+            # 🔍 DEBUG: Log what was derived
+            logger.info(f"🔍 DERIVED GEOMETRY: casing_strings={len(geometry.get('casing_strings', []))} items")
+            logger.info(f"🔍 DERIVED GEOMETRY: perforations={len(geometry.get('perforations', []))} items")
+            logger.info(f"🔍 DERIVED GEOMETRY: formation_tops={len(geometry.get('formation_tops', []))} items")
+            if geometry.get('casing_strings'):
+                logger.info(f"🔍 DERIVED GEOMETRY: First casing string={geometry['casing_strings'][0]}")
+            
             # Save geometry to snapshot for later reference and editing
             snapshot.payload["geometry"] = geometry
             snapshot.payload["stage"] = "geometry_derived"
             snapshot.save()
+            
+            logger.info(f"✅ SAVED GEOMETRY TO SNAPSHOT: payload keys={list(snapshot.payload.keys())}")
             
             # Format for UI display
             response_data = {
@@ -881,6 +890,13 @@ class W3AConfirmGeometryView(APIView):
             
             # Apply edits to snapshot geometry and save audit records
             geometry = snapshot.payload.get("geometry", {})
+            
+            # 🔍 DEBUG: Log what's in geometry before processing edits
+            logger.info(f"🔍 GEOMETRY BEFORE EDITS: casing_strings={len(geometry.get('casing_strings', []))} items")
+            logger.info(f"🔍 GEOMETRY BEFORE EDITS: perforations={len(geometry.get('perforations', []))} items")
+            logger.info(f"🔍 GEOMETRY BEFORE EDITS: formation_tops={len(geometry.get('formation_tops', []))} items")
+            logger.info(f"🔍 GEOMETRY BEFORE EDITS: mechanical_barriers={len(geometry.get('mechanical_barriers', []))} items")
+            
             formation_tops = geometry.get("formation_tops", [])
             formation_tops_map = {ft["field_id"]: ft for ft in formation_tops}
             
@@ -959,6 +975,15 @@ class W3AConfirmGeometryView(APIView):
             # Update geometry with edited formations and tools
             geometry["formation_tops"] = list(formation_tops_map.values())
             geometry["mechanical_barriers"] = list(mechanical_barriers_map.values())
+            # Explicitly preserve other geometry fields (casing_strings, perforations, etc.)
+            # Note: These should already be in 'geometry' object, but logging to verify
+            logger.info(f"🔍 GEOMETRY AFTER EDITS: casing_strings={len(geometry.get('casing_strings', []))} items")
+            logger.info(f"🔍 GEOMETRY AFTER EDITS: perforations={len(geometry.get('perforations', []))} items")
+            if not geometry.get('casing_strings'):
+                logger.error(f"❌ CRITICAL: casing_strings is EMPTY after processing edits!")
+            if not geometry.get('perforations'):
+                logger.warning(f"⚠️ perforations is EMPTY after processing edits")
+            
             snapshot.payload["geometry"] = geometry
             
             # Log final formation tops for plan generation
@@ -1180,6 +1205,11 @@ class W3AConfirmGeometryView(APIView):
         casing_strings_geometry = geometry.get("casing_strings", [])
         casing_record = w2_data.get("casing_record", [])
         
+        logger.info(f"🔍 CASING DEBUG: casing_strings_geometry={len(casing_strings_geometry)} items")
+        logger.info(f"🔍 CASING DEBUG: casing_record from W-2={len(casing_record)} items")
+        if casing_record:
+            logger.info(f"🔍 CASING DEBUG: W-2 casing_record preview={casing_record[:2] if len(casing_record) > 0 else 'empty'}")
+        
         # Use geometry casing if available (takes precedence)
         if casing_strings_geometry:
             facts["casing_record"] = [cs.get("value", cs) for cs in casing_strings_geometry]
@@ -1191,6 +1221,7 @@ class W3AConfirmGeometryView(APIView):
             logger.info(f"📍 Using {len(casing_to_process)} casing strings from W-2")
         else:
             casing_to_process = []
+            logger.warning(f"⚠️ NO CASING DATA FOUND - casing_strings will be empty!")
         
         # Extract surface shoe depth and production TOC (critical for plug type determination)
         for casing in casing_to_process:
@@ -1461,6 +1492,14 @@ class W3AConfirmGeometryView(APIView):
         
         plan_payload["mechanical_equipment"] = mechanical_equipment_list
         plan_payload["existing_tools"] = mechanical_equipment_list  # Alias for compatibility
+        
+        # Debug logging to verify casing_strings is in payload
+        casing_in_payload = plan_payload.get("casing_strings", [])
+        logger.info(f"📦 PAYLOAD CASING_STRINGS: {len(casing_in_payload)} items saved to plan payload")
+        if casing_in_payload:
+            logger.info(f"📦 PAYLOAD CASING_STRINGS sample: {casing_in_payload[0] if len(casing_in_payload) > 0 else 'none'}")
+        else:
+            logger.warning(f"⚠️ PAYLOAD CASING_STRINGS IS EMPTY!")
         
         return plan_payload
 
