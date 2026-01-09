@@ -169,4 +169,3 @@ class ChangePasswordView(APIView):
                 {"detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-

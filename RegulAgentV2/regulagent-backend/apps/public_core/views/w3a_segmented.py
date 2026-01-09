@@ -1437,6 +1437,8 @@ class W3AConfirmGeometryView(APIView):
                 "status": "success",
                 "files": [e.get("filename") for e in extractions],
             },
+            # Add casing strings for well_geometry (CRITICAL: needed for diagram rendering)
+            "casing_strings": facts.get("casing_record", []),
             # Add historic cement jobs from W-15 for well_geometry
             "historic_cement_jobs": facts.get("historic_cement_jobs", []),
             # Add production perforations for well_geometry
