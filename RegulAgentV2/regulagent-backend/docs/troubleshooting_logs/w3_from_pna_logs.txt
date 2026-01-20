@@ -1,0 +1,38 @@
+regulagent_web_prod  | responses.create varnames=('self', 'background', 'conversation', 'include', 'input', 'instructions', 'max_output_tokens', 'max_tool_calls', 'metadata', 'model', 'parallel_tool_calls', 'previous_response_id', 'prompt', 'prompt_cache_key', 'reasoning', 'safety_identifier', 'service_tier', 'store', 'stream', 'stream_options', 'temperature', 'text', 'tool_choice', 'tools', 'top_logprobs', 'top_p', 'truncation', 'user', 'extra_headers', 'extra_query', 'extra_body', 'timeout')
+regulagent_web_prod  | ✅ Mapped pna_event (id=8, type_field='Tag TOC') -> W3Event: tag_toc at depths None-None ft, plug#None, class=None, sacks=None
+regulagent_web_prod  | ✅ Mapped pna_event (id=1, type_field='Perforation') -> W3Event: perforate at depths None-None ft, plug#None, class=None, sacks=None
+regulagent_web_prod  | ✅ Mapped pna_event (id=7, type_field='Set Surface Plug') -> W3Event: squeeze at depths 6500.0-6400.0 ft, plug#1, class=C, sacks=40.0
+regulagent_web_prod  | ✅ Mapped pna_event (id=8, type_field='Tag TOC') -> W3Event: tag_toc at depths None-None ft, plug#None, class=None, sacks=None
+regulagent_web_prod  | ✅ Mapped pna_event (id=1, type_field='Perforation') -> W3Event: perforate at depths None-None ft, plug#None, class=None, sacks=None
+regulagent_web_prod  | ✅ Mapped pna_event (id=7, type_field='Set Surface Plug') -> W3Event: squeeze at depths 3600.0-3400.0 ft, plug#2, class=C, sacks=70.0
+regulagent_web_prod  | ✅ Mapped pna_event (id=8, type_field='Tag TOC') -> W3Event: tag_toc at depths None-None ft, plug#None, class=None, sacks=None
+regulagent_web_prod  | ✅ Mapped pna_event (id=1, type_field='Perforation') -> W3Event: perforate at depths None-None ft, plug#None, class=None, sacks=None
+regulagent_web_prod  | ✅ Mapped pna_event (id=7, type_field='Set Surface Plug') -> W3Event: squeeze at depths 2345.0-2245.0 ft, plug#3, class=C, sacks=40.0
+regulagent_web_prod  | ✅ Mapped pna_event (id=1, type_field='Perforation') -> W3Event: perforate at depths None-None ft, plug#None, class=None, sacks=None
+regulagent_web_prod  | ✅ Mapped pna_event (id=7, type_field='Set Surface Plug') -> W3Event: squeeze at depths 1000.0-900.0 ft, plug#4, class=C, sacks=40.0
+regulagent_web_prod  | ✅ Mapped pna_event (id=1, type_field='Perforation') -> W3Event: perforate at depths None-None ft, plug#None, class=None, sacks=None
+regulagent_web_prod  | 🔴 DEBUG: Set Surface Plug (id=3) missing position 5 - setting depth_bottom=0.0 (input_values keys: ['1', '2', '3', '4'])
+regulagent_web_prod  | ✅ Mapped pna_event (id=3, type_field='Set Surface Plug') -> W3Event: set_surface_plug at depths 350.0-0.0 ft, plug#5, class=C, sacks=95.0
+regulagent_web_prod  | ✅ Mapped 13 pnaexchange events to 13 W3Events
+regulagent_web_prod  |    📍 W3Event: plug#1, type=squeeze, depths=6500.0-6400.0, sacks=40.0
+regulagent_web_prod  |    📍 W3Event: plug#2, type=squeeze, depths=3600.0-3400.0, sacks=70.0
+regulagent_web_prod  |    📍 W3Event: plug#3, type=squeeze, depths=2345.0-2245.0, sacks=40.0
+regulagent_web_prod  |    📍 W3Event: plug#4, type=squeeze, depths=1000.0-900.0, sacks=40.0
+regulagent_web_prod  |    📍 W3Event: plug#5, type=set_surface_plug, depths=350.0-0.0, sacks=95.0
+regulagent_web_prod  |    ❌ Failed to save W3FormORM: W3FormORM() got unexpected keyword arguments: 'w3_json'
+regulagent_web_prod  | Traceback (most recent call last):
+regulagent_web_prod  |   File "/app/apps/public_core/views/w3_from_pna.py", line 321, in post
+regulagent_web_prod  |     w3_form = W3FormORM.objects.create(
+regulagent_web_prod  |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+regulagent_web_prod  |   File "/usr/local/lib/python3.11/site-packages/django/db/models/manager.py", line 87, in manager_method
+regulagent_web_prod  |     return getattr(self.get_queryset(), name)(*args, **kwargs)
+regulagent_web_prod  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+regulagent_web_prod  |   File "/usr/local/lib/python3.11/site-packages/django/db/models/query.py", line 677, in create
+regulagent_web_prod  |     obj = self.model(**kwargs)
+regulagent_web_prod  |           ^^^^^^^^^^^^^^^^^^^^
+regulagent_web_prod  |   File "/usr/local/lib/python3.11/site-packages/django/db/models/base.py", line 567, in __init__
+regulagent_web_prod  |     raise TypeError(
+regulagent_web_prod  | TypeError: W3FormORM() got unexpected keyword arguments: 'w3_json'
+regulagent_web_prod  |    Continuing anyway - form data still in response but not persisted
+regulagent_web_prod  | ❌ Response validation failed: {'w3_form': {'perforations': [{'interval_top_ft': [ErrorDetail(string='This field may not be null.', code='null')]}]}}
+regulagent_web_prod  | 172.18.0.1:48988 - "POST /api/w3/build-from-pna/ HTTP/1.1" 500

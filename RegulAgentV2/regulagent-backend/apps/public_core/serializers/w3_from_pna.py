@@ -125,9 +125,9 @@ class W3AReference(serializers.Serializer):
     """Reference to W-3A form (either database or PDF upload)."""
     
     type = serializers.ChoiceField(
-        choices=["regulagent", "pdf"],
+        choices=["regulagent", "pdf", "auto"],
         required=True,
-        help_text="'regulagent' to load from database, 'pdf' to upload/base64"
+        help_text="'regulagent' to load from database, 'pdf' to upload/base64, 'auto' to auto-generate from RRC data"
     )
     
     w3a_id = serializers.IntegerField(
@@ -176,6 +176,11 @@ class W3AReference(serializers.Serializer):
                 raise serializers.ValidationError(
                     f"Either 'w3a_file' (multipart) or 'w3a_file_base64' (JSON) is required when type='pdf'. Got keys: {available_keys}"
                 )
+        
+        if ref_type == "auto":
+            # Auto mode doesn't require any additional fields
+            # The system will automatically generate W-3A from RRC data
+            pass
         
         return data
 
@@ -279,8 +284,8 @@ class CasingRowSerializer(serializers.Serializer):
 class PerforationRowSerializer(serializers.Serializer):
     """Single perforation/open hole interval in output."""
     
-    interval_top_ft = serializers.FloatField()
-    interval_bottom_ft = serializers.FloatField()
+    interval_top_ft = serializers.FloatField(allow_null=True)
+    interval_bottom_ft = serializers.FloatField(allow_null=True)
     formation = serializers.CharField(allow_null=True, allow_blank=True)
     status = serializers.CharField(max_length=50)
     perforation_date = serializers.DateField(allow_null=True)

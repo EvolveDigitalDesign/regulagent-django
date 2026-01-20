@@ -157,9 +157,7 @@ class ChangePasswordView(APIView):
             return Response(
                 {"detail": "Old password is incorrect."},
                 status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Set new password
+            )        # Set new password
         user.set_password(new_password)
         try:
             user.save()

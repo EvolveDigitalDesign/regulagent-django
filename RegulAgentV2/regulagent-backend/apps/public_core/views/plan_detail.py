@@ -451,6 +451,9 @@ def get_plan_detail(request, plan_id):
     This is the primary plan view that users interact with before
     making modifications via chat or manual edits.
     """
+    # 🚀 CRITICAL: Log that this view was called
+    logger.error(f"🚀🚀🚀 get_plan_detail CALLED with plan_id={plan_id}")
+    
     user_tenant = request.user.tenants.first()
     if not user_tenant:
         return Response(

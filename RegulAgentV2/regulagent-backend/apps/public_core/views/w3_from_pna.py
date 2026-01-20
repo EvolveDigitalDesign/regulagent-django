@@ -132,18 +132,38 @@ class BuildW3FromPNAView(APIView):
             # Extract well info from wrapper
             well_data = w3_form_data.get('well', {})
             events = w3_form_data.get('events', [])
+            subproject_data = w3_form_data.get('subproject', {})
             
             logger.info(f"      Well ID: {well_data.get('well_id')}")
             logger.info(f"      API Number: {well_data.get('api_number')}")
             logger.info(f"      Number of events: {len(events)}")
+            logger.info(f"      Subproject ID: {subproject_data.get('id')}")
             
             # Unwrap to flat structure expected by serializer
             data['api_number'] = well_data.get('api_number') or data.get('api_number')
             data['well_name'] = well_data.get('well_name') or data.get('well_name')
-            data['dwr_id'] = data.get('dwr_id') or 0  # Will need real DWR ID
+            
+            # Extract subproject_id from nested structure
+            subproject_id = subproject_data.get('id') or data.get('subproject_id')
+            if subproject_id:
+                data['subproject_id'] = subproject_id
+                logger.info(f"      Extracted subproject_id: {subproject_id}")
+            else:
+                # Fallback to legacy dwr_id or 0
+                data['dwr_id'] = data.get('dwr_id') or 0
+                logger.warning(f"      No subproject_id found, using dwr_id={data['dwr_id']}")
+            
             data['pna_events'] = events
             
-            logger.info(f"      Unwrapped payload: api_number={data['api_number']}, events={len(events)}")
+            # Add placeholder w3a_reference if not present (since this is coming from PNA after the fact)
+            if 'w3a_reference' not in data:
+                logger.info("      Adding placeholder w3a_reference (auto-generate mode)")
+                data['w3a_reference'] = {
+                    'type': 'auto',  # Signal to auto-generate W-3A
+                    'w3a_file_base64': None
+                }
+            
+            logger.info(f"      Unwrapped payload: api_number={data['api_number']}, events={len(events)}, subproject_id={data.get('subproject_id')}")
         else:
             logger.info("   ✓ Payload structure is flat (not wrapped in w3_form)")
 
@@ -322,7 +342,7 @@ class BuildW3FromPNAView(APIView):
                         well=well,
                         api_number=api_number,
                         status="draft",  # Initial status
-                        w3_json=w3_form_data,  # Store full W-3 JSON
+                        form_data=w3_form_data,  # Store full W-3 JSON
                         submitted_by=str(request.user) if request.user else "API",
                         submitted_at=None,  # Not submitted yet
                         rrc_confirmation_number=None,
