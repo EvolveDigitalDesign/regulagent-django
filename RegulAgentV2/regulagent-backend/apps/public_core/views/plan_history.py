@@ -10,8 +10,7 @@ from ..models import PlanSnapshot, WellRegistry
 
 
 class PlanHistoryView(APIView):
-    authentication_classes = []  # TODO: wire auth
-    permission_classes = []
+    """Get the history of plan snapshots for a well."""
 
     def get(self, request, api: str) -> Response:
         api_digits = ''.join(ch for ch in str(api) if ch.isdigit())

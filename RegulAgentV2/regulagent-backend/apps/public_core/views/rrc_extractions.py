@@ -11,8 +11,7 @@ import os
 
 
 class RRCCompletionsExtractView(APIView):
-    authentication_classes = []  # wire real auth later
-    permission_classes = []
+    """Extract and vectorize documents from RRC completion records."""
 
     def post(self, request):
         api14 = (request.data or {}).get("api14") or (request.query_params.get("api14") if request else None)

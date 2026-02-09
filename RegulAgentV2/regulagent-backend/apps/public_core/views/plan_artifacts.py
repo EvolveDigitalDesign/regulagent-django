@@ -7,8 +7,7 @@ import re
 
 
 class PlanArtifactsView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    """List artifacts associated with a plan snapshot."""
 
     def get(self, request, api: str):
         api_normalized = re.sub(r"\D+", "", str(api or ""))

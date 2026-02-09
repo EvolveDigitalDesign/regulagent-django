@@ -12,8 +12,7 @@ import re
 
 
 class PlanModifyView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    """Apply manual operations to modify a plan (combine_plugs, replace_cibp, etc.)."""
 
     def post(self, request, api: str):
         api_digits = re.sub(r"\D+", "", str(api or ""))

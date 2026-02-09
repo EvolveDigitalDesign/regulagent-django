@@ -25,8 +25,7 @@ def haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float
 
 
 class SimilarWellsView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    """Find similar wells based on location, architecture, and plan patterns."""
 
     def get(self, request):
         api = request.query_params.get('api')

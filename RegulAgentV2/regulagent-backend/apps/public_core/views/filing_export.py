@@ -11,8 +11,7 @@ from apps.public_core.models import PlanSnapshot, WellRegistry
 
 
 class FilingExportView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    """Export a plan's RRC filing data in JSON or PDF format."""
 
     def get(self, request, api: str):
         fmt = (request.query_params.get("format") or "json").lower()

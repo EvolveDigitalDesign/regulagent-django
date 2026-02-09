@@ -12,8 +12,7 @@ import re
 
 
 class PlanModifyAIView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    """AI-assisted plan modification - infer operations from natural language."""
 
     def post(self, request, api: str):
         api_digits = re.sub(r"\D+", "", str(api or ""))

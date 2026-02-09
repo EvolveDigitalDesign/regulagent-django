@@ -10,8 +10,7 @@ from apps.tenant_overlay.models import TenantArtifact
 
 
 class ArtifactDownloadView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    """Download a tenant artifact file by ID."""
 
     def get(self, request, artifact_id: str):
         try:
