@@ -6,6 +6,7 @@ Used for API responses and validation of extracted regulatory documents.
 
 from rest_framework import serializers
 from apps.public_core.models import ExtractedDocument
+from apps.public_core.forms import ALL_FORM_TYPES
 
 
 class ExtractedDocumentListSerializer(serializers.ModelSerializer):
@@ -100,9 +101,9 @@ class ExtractedDocumentQuerySerializer(serializers.Serializer):
         help_text="API number to filter by"
     )
     document_type = serializers.ChoiceField(
-        choices=['w2', 'w15', 'gau', 'schematic', 'formation_tops', 'w3', 'w3a'],
+        choices=ALL_FORM_TYPES,
         required=False,
-        help_text="Document type to filter by"
+        help_text="Document type to filter by (supports TX, NM forms)"
     )
     tracking_no = serializers.CharField(
         required=False,

@@ -180,14 +180,6 @@
     },
     {
       "step_order": 5,
-      "step_type": "tag_toc",
-      "plug_number": 3,
-      "depth_ft": null,
-      "wait_hours": null,
-      "description": "Tag top of plug"
-    },
-    {
-      "step_order": 6,
       "step_type": "plug",
       "plug_number": 4,
       "depth_ft": null,
@@ -195,7 +187,7 @@
       "description": "Cement Plug Set at 4500 to 4300"
     },
     {
-      "step_order": 7,
+      "step_order": 6,
       "step_type": "perforate_and_squeeze",
       "plug_number": 4,
       "depth_ft": null,
@@ -203,7 +195,7 @@
       "description": "Perforate and Squeeze"
     },
     {
-      "step_order": 8,
+      "step_order": 7,
       "step_type": "tag_toc",
       "plug_number": 4,
       "depth_ft": null,
@@ -211,7 +203,7 @@
       "description": "Tag top of plug"
     },
     {
-      "step_order": 9,
+      "step_order": 8,
       "step_type": "plug",
       "plug_number": 5,
       "depth_ft": null,
@@ -219,7 +211,7 @@
       "description": "Cement Plug Set at 3638 to 3538"
     },
     {
-      "step_order": 10,
+      "step_order": 9,
       "step_type": "plug",
       "plug_number": 6,
       "depth_ft": null,
@@ -227,7 +219,7 @@
       "description": "Cement Plug Set at 1850 to 1550"
     },
     {
-      "step_order": 11,
+      "step_order": 10,
       "step_type": "perforate_and_squeeze",
       "plug_number": 6,
       "depth_ft": null,
@@ -235,7 +227,7 @@
       "description": "Perforate and Squeeze"
     },
     {
-      "step_order": 12,
+      "step_order": 11,
       "step_type": "wait_on_cement",
       "plug_number": 6,
       "depth_ft": null,
@@ -243,7 +235,7 @@
       "description": "Wait 4 hours and tag top of plug"
     },
     {
-      "step_order": 13,
+      "step_order": 12,
       "step_type": "plug",
       "plug_number": 7,
       "depth_ft": null,
@@ -251,7 +243,7 @@
       "description": "Cement Plug Set at 1250 to 950"
     },
     {
-      "step_order": 14,
+      "step_order": 13,
       "step_type": "perforate_and_squeeze",
       "plug_number": 7,
       "depth_ft": null,
@@ -259,7 +251,7 @@
       "description": "Perforate and Squeeze"
     },
     {
-      "step_order": 15,
+      "step_order": 14,
       "step_type": "plug",
       "plug_number": 8,
       "depth_ft": null,
@@ -267,7 +259,7 @@
       "description": "Cement Surface Plug Set at 350 to 3"
     },
     {
-      "step_order": 16,
+      "step_order": 15,
       "step_type": "perforate_and_circulate",
       "plug_number": 8,
       "depth_ft": null,

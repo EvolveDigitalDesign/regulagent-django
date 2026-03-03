@@ -1,25 +1,22 @@
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Optional, Tuple
 
+from django.http import Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
 from apps.public_core.models import WellRegistry, PlanSnapshot
+from apps.public_core.services.api_normalization import get_well_by_api
 from apps.tenant_overlay.models.plan_modification import PlanModification
-import re
 
 
 class PlanModifyView(APIView):
     """Apply manual operations to modify a plan (combine_plugs, replace_cibp, etc.)."""
 
     def post(self, request, api: str):
-        api_digits = re.sub(r"\D+", "", str(api or ""))
-        if not api_digits:
-            return Response({"detail": "API number is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        import json
         op = (request.data or {}).get("operation")
         params = (request.data or {}).get("params") or {}
         if isinstance(params, str):
@@ -30,9 +27,10 @@ class PlanModifyView(APIView):
         if not op:
             return Response({"detail": "operation is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        well = WellRegistry.objects.filter(api14__icontains=api_digits[-8:]).first()
-        if not well:
-            return Response({"detail": "Well not found"}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            well = get_well_by_api(api)
+        except Http404 as e:
+            return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
 
         base = (
             PlanSnapshot.objects
@@ -145,7 +143,7 @@ class PlanModifyView(APIView):
             return Response({"detail": "Failed to persist modification"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({
-            "api": api_digits,
+            "api": well.api14,
             "plan_id": ps.plan_id,
             "snapshot_id": ps.id,
             "diff": diff,

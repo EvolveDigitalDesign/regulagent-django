@@ -11,6 +11,57 @@ KERNEL_VERSION = "0.1.0"
 from .w3a_rules import generate_steps as generate_w3a_steps
 
 
+def _get_jurisdiction(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> str:
+    """
+    Determine well jurisdiction from facts or policy.
+
+    Jurisdiction determines which regulatory formula engine to use for
+    cement calculations (depth excess, coverage requirements, etc.).
+
+    Args:
+        resolved_facts: Well facts containing state/api14
+        policy: Policy overlay containing jurisdiction
+
+    Returns:
+        Two-letter jurisdiction code (e.g., "TX", "NM")
+    """
+    # Try policy first (most explicit)
+    jurisdiction = policy.get("jurisdiction")
+    if jurisdiction:
+        return jurisdiction.upper().strip()
+
+    # Try state from facts
+    state_val = resolved_facts.get("state")
+    if isinstance(state_val, dict):
+        state = state_val.get("value")
+    else:
+        state = state_val
+
+    if state:
+        return state.upper().strip()
+
+    # Fallback: parse from API14 (first 2 digits = state code)
+    api14_val = resolved_facts.get("api14")
+    if isinstance(api14_val, dict):
+        api14 = api14_val.get("value")
+    else:
+        api14 = api14_val
+
+    if api14:
+        state_code = str(api14)[:2]
+        # Map API state codes to jurisdiction codes
+        api_state_map = {
+            "42": "TX",  # Texas
+            "30": "NM",  # New Mexico
+        }
+        if state_code in api_state_map:
+            return api_state_map[state_code]
+
+    # Default to Texas (backward compatibility)
+    logger.warning("Could not determine jurisdiction, defaulting to TX")
+    return "TX"
+
+
 def get_cement_yield(cement_class: str) -> float:
     """
     Get standard cement yield in ft³/sack based on cement class.
@@ -91,10 +142,17 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
     
     print(f"🔍 KERNEL MAIN: Policy is complete, proceeding to generate steps", flush=True)
 
+    # Get jurisdiction-specific formula engine for cement calculations
+    from apps.policy.services.formula_engine import get_formula_engine
+
+    jurisdiction = _get_jurisdiction(resolved_facts, policy)
+    formula_engine = get_formula_engine(jurisdiction)
+    logger.info(f"Using formula engine for jurisdiction: {jurisdiction} ({formula_engine.__class__.__name__})")
+
     # Deterministic step generation (scaffold for W-3A)
     if is_complete and policy.get("policy_id") == "tx.w3a":
         logger.debug("kernel.plan_from_facts: generating W3A steps")
-        generated = generate_w3a_steps(resolved_facts, policy.get("effective") or {})
+        generated = generate_w3a_steps(resolved_facts, policy.get("effective") or {}, formula_engine)
         plan["violations"] = generated.get("violations", [])
         steps = generated.get("steps", [])
         # --- Mechanical awareness: suppress conflicting ops when barriers exist ---
@@ -1182,13 +1240,11 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                             if inner_id and outer_id:
                                 ann_cap = annulus_capacity_bbl_per_ft(outer_id, inner_id)
                                 base_bbl = seg_len * ann_cap
-                                
-                                # Texas depth excess ONLY (no squeeze factor or annular excess for perf & squeeze)
-                                # Texas depth excess: exact depth in kft (not rounded)
-                                depth_kft = seg_bot / 1000.0
-                                texas_excess = 1.0 + (0.10 * depth_kft)
-                                seg_bbl = base_bbl * texas_excess
-                                
+
+                                # Apply jurisdiction-specific depth excess (no squeeze factor or annular excess for perf & squeeze)
+                                depth_excess = formula_engine.cement_depth_excess(seg_bot)
+                                seg_bbl = base_bbl * depth_excess
+
                                 seg_info.update({
                                     "context": "annulus_squeeze",
                                     "inner_casing": inner_str.get("name"),
@@ -1197,7 +1253,7 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                                     "outer_size_in": outer_str.get("size_in"),
                                     "annular_capacity_bbl_per_ft": ann_cap,
                                     "base_bbl": base_bbl,
-                                    "texas_excess": texas_excess,
+                                    "depth_excess": depth_excess,
                                     "segment_bbl": seg_bbl,
                                 })
                         
@@ -1212,13 +1268,11 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                             if hole_size and inner_od:
                                 ann_cap = annulus_capacity_bbl_per_ft(float(hole_size), float(inner_od))
                                 base_bbl = seg_len * ann_cap
-                                
-                                # Texas depth excess ONLY (no squeeze factor or annular excess for perf & squeeze)
-                                # Texas depth excess: exact depth in kft (not rounded)
-                                depth_kft = seg_bot / 1000.0
-                                texas_excess = 1.0 + (0.10 * depth_kft)
-                                seg_bbl = base_bbl * texas_excess
-                                
+
+                                # Apply jurisdiction-specific depth excess (no squeeze factor or annular excess for perf & squeeze)
+                                depth_excess = formula_engine.cement_depth_excess(seg_bot)
+                                seg_bbl = base_bbl * depth_excess
+
                                 seg_info.update({
                                     "context": "open_hole_squeeze",
                                     "casing_name": inner_str.get("name"),
@@ -1226,7 +1280,7 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                                     "hole_size_in": hole_size,
                                     "annular_capacity_bbl_per_ft": ann_cap,
                                     "base_bbl": base_bbl,
-                                    "texas_excess": texas_excess,
+                                    "depth_excess": depth_excess,
                                     "segment_bbl": seg_bbl,
                                 })
                         
@@ -1241,12 +1295,11 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                         if prod_id:
                             interval_len = top_ft - bottom_ft
                             inside_cap = casing_capacity_bbl_per_ft(float(prod_id))
-                            # Texas depth excess for inside casing
-                            depth_kft = bottom_ft / 1000.0
-                            texas_excess = 1.0 + (0.10 * depth_kft)
-                            inside_bbl = interval_len * inside_cap * texas_excess
+                            # Apply jurisdiction-specific depth excess for inside casing
+                            depth_excess = formula_engine.cement_depth_excess(bottom_ft)
+                            inside_bbl = interval_len * inside_cap * depth_excess
                             total_bbl += inside_bbl
-                            
+
                             segments_calc.append({
                                 "top_ft": top_ft,
                                 "bottom_ft": bottom_ft,
@@ -1255,7 +1308,7 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                                 "casing_name": prod_casing.get("string"),
                                 "casing_id_in": float(prod_id),
                                 "capacity_bbl_per_ft": inside_cap,
-                                "texas_excess": texas_excess,
+                                "depth_excess": depth_excess,
                                 "segment_bbl": inside_bbl,
                                 "description": "Inside production casing (full bore, no tubing)"
                             })
@@ -1522,16 +1575,13 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                                 logger.warning(f"Failed to get casing context: {e}")
                                 casing_context = {"context": "unknown", "count": 0}
                             
-                            # Texas TAC §3.14(d)(11): 1 + 10% per 1000 ft of depth (exact, not rounded)
-                            # At 5000 ft: 1 + (10% × 5.0) = 1.5x
-                            # At 10,000 ft: 1 + (10% × 10.0) = 2.0x
-                            depth_kft = perf_bot / 1000.0  # Exact depth in kft
-                            texas_excess_factor = 1.0 + (0.10 * depth_kft)
-                            
+                            # Apply jurisdiction-specific depth excess multiplier
+                            depth_excess_factor = formula_engine.cement_depth_excess(perf_bot)
+
                             # Store context in details for transparency
                             details["squeeze_context"] = casing_context.get("context", "unknown")
-                            details["texas_excess_factor"] = texas_excess_factor
-                            details["depth_kft"] = depth_kft
+                            details["depth_excess_factor"] = depth_excess_factor
+                            details["depth_kft"] = perf_bot / 1000.0
                             
                             # Calculate annular capacity based on context
                             if casing_context["context"] == "annulus_squeeze":
@@ -1603,15 +1653,15 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                                     "context": "default"
                                 }
                             
-                            # Calculate squeeze volume with Texas depth-based excess
+                            # Calculate squeeze volume with jurisdiction-specific depth excess
                             base_volume = perf_len * ann_cap
-                            squeeze_bbl = base_volume * texas_excess_factor
-                            
+                            squeeze_bbl = base_volume * depth_excess_factor
+
                             details["squeeze_calculation"] = {
                                 "perf_length_ft": perf_len,
                                 "annular_capacity_bbl_per_ft": ann_cap,
                                 "base_volume_bbl": base_volume,
-                                "texas_excess_factor": texas_excess_factor,
+                                "depth_excess_factor": depth_excess_factor,
                                 "final_volume_bbl": squeeze_bbl
                             }
                     
@@ -1661,7 +1711,8 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                     total_bbl, annuli_breakdown = _calculate_perf_squeeze_volume(
                         resolved_facts,
                         float(bottom_ft),  # Use bottom depth for calculations
-                        interval_length_ft
+                        interval_length_ft,
+                        formula_engine
                     )
                     
                     if total_bbl > 0 and annuli_breakdown:
@@ -1724,12 +1775,11 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                         ex = float(step.get("annular_excess", 0.4))
                         cap = annulus_capacity_bbl_per_ft(float(casing_id), float(stinger_od))
                         base_volume_bbl = interval_ft * cap * (1.0 + ex)
-                        
-                        # TAC §3.14(d)(11): +10% per 1000 ft of DEPTH (exact, not rounded)
+
+                        # Apply jurisdiction-specific depth excess
                         # Use bottom depth (deeper point) for calculating the depth-based excess
-                        depth_kft = b / 1000.0
-                        texas_excess_factor = 1.0 + (0.10 * depth_kft)
-                        total_bbl = base_volume_bbl * texas_excess_factor
+                        depth_excess_factor = formula_engine.cement_depth_excess(b)
+                        total_bbl = base_volume_bbl * depth_excess_factor
                         rounding_mode = (step.get("recipe", {}) or {}).get("rounding") or "nearest"
                         vb = compute_sacks(total_bbl, recipe, rounding=rounding_mode)
                         materials["slurry"] = {
@@ -1750,8 +1800,8 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                             "cap_bbl_per_ft": cap,
                             "interval_ft": interval_ft,
                             "excess_used": ex,
-                            "texas_excess_factor": texas_excess_factor,
-                            "depth_kft": depth_kft,
+                            "depth_excess_factor": depth_excess_factor,
+                            "depth_kft": b / 1000.0,
                             "rounding": rounding_mode,
                         })
                         # annotate geometry used
@@ -1795,17 +1845,16 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                     
                     # Annulus capacity between outer ID and inner OD
                     ann_cap = annulus_capacity_bbl_per_ft(float(outer_id), float(inner_od))
-                    
-                    # Texas depth excess using bottom depth (shoe) - exact, not rounded
-                    depth_kft = b / 1000.0
-                    texas_excess_factor = 1.0 + (0.10 * depth_kft)
-                    
+
+                    # Apply jurisdiction-specific depth excess using bottom depth (shoe)
+                    depth_excess_factor = formula_engine.cement_depth_excess(b)
+
                     # Operational top-off for circulation to ensure surface returns
                     operational_topoff = float(step.get("operational_topoff", 1.05))  # Default 5%
-                    
+
                     # Total volume
                     base_volume_bbl = interval_ft * ann_cap
-                    total_bbl = base_volume_bbl * texas_excess_factor * operational_topoff
+                    total_bbl = base_volume_bbl * depth_excess_factor * operational_topoff
                     
                     # Round to nearest 5 or 10 sacks for surface jobs
                     rounding_mode = (step.get("recipe", {}) or {}).get("rounding") or "nearest"
@@ -1831,21 +1880,21 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                         "path": "annulus_circulation_to_surface",
                         "annular_capacity_bbl_per_ft": ann_cap,
                         "interval_ft": interval_ft,
-                        "texas_excess_factor": texas_excess_factor,
-                        "depth_kft": depth_kft,
+                        "depth_excess_factor": depth_excess_factor,
+                        "depth_kft": b / 1000.0,
                         "operational_topoff": operational_topoff,
                         "rounding": "nearest_5_sacks",
                     })
-                    
+
                     step.setdefault("details", {})["geometry_used"] = {
                         "annulus": f"{step.get('outer_string')}_id_vs_{step.get('inner_string')}_od",
                         "outer_casing_id_in": float(outer_id),
                         "inner_casing_od_in": float(inner_od),
                     }
-                    
+
                     logger.info(
                         f"Calculated perf_and_circulate_to_surface: {interval_ft:.1f} ft × {ann_cap:.4f} bbl/ft "
-                        f"× {texas_excess_factor:.2f} × {operational_topoff:.2f} = {total_bbl:.2f} bbl = {sacks_rounded} sacks"
+                        f"× {depth_excess_factor:.2f} × {operational_topoff:.2f} = {total_bbl:.2f} bbl = {sacks_rounded} sacks"
                     )
             elif step_type in ("perf_circulate",):
                 # Operational step: no cement sacks

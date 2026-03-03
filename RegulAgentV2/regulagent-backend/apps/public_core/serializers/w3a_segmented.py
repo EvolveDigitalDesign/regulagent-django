@@ -19,12 +19,19 @@ class W3AInitialRequestSerializer(serializers.Serializer):
     Initial request to start W3A flow (document sourcing only).
     """
     api10 = serializers.CharField(help_text="10-digit API number")
+    jurisdiction = serializers.ChoiceField(
+        choices=[("TX", "Texas"), ("NM", "New Mexico")],
+        required=False,
+        default="TX",
+        help_text="Jurisdiction for the well (TX or NM). Auto-detected from API prefix if not specified."
+    )
     input_mode = serializers.ChoiceField(
         choices=("extractions", "user_files", "hybrid"),
         required=False,
         default="extractions"
     )
-    
+    workspace_id = serializers.IntegerField(required=False, allow_null=True)
+
     # Optional uploaded files
     gau_file = serializers.FileField(required=False, allow_null=True)
     w2_file = serializers.FileField(required=False, allow_null=True)
@@ -35,9 +42,28 @@ class W3AInitialRequestSerializer(serializers.Serializer):
     def validate_api10(self, value: str) -> str:
         import re
         digits = re.sub(r"\D+", "", str(value or ""))
-        if len(digits) != 10:
-            raise serializers.ValidationError("api10 must contain exactly 10 digits")
+        # Accept 10-digit (API-10) or 14-digit (API-14) formats
+        if len(digits) not in (10, 14):
+            raise serializers.ValidationError("api10 must contain 10 or 14 digits")
+        # Normalize to 10 digits for consistency
+        if len(digits) == 14:
+            digits = digits[:10]
         return digits
+
+    def validate(self, attrs):
+        """Cross-field validation including jurisdiction auto-detection."""
+        api10 = attrs.get("api10", "")
+        jurisdiction = attrs.get("jurisdiction")
+
+        # Auto-detect jurisdiction from API prefix if not explicitly provided
+        if not jurisdiction or jurisdiction == "TX":
+            # NM API numbers start with "30" (state code)
+            if api10.startswith("30"):
+                attrs["jurisdiction"] = "NM"
+            else:
+                attrs["jurisdiction"] = "TX"
+
+        return attrs
 
 
 class W3AInitialResponseSerializer(serializers.Serializer):

@@ -3,11 +3,13 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Optional
 
+from django.http import Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
 from apps.public_core.models import PlanSnapshot, WellRegistry
+from apps.public_core.services.api_normalization import get_well_by_api, normalize_api_14digit
 
 
 class FilingExportView(APIView):
@@ -18,22 +20,30 @@ class FilingExportView(APIView):
         if fmt not in ("json", "pdf"):
             return Response({"detail": "Unsupported format. Use ?format=json|pdf"}, status=status.HTTP_400_BAD_REQUEST)
 
-        api_digits = re.sub(r"\D+", "", str(api or ""))
-        if not api_digits:
-            return Response({"detail": "API number is required"}, status=status.HTTP_400_BAD_REQUEST)
+        # Normalize API for consistent lookup
+        api_14 = normalize_api_14digit(api)
+        if not api_14:
+            return Response({"detail": "Invalid API number format"}, status=status.HTTP_400_BAD_REQUEST)
 
-        well: Optional[WellRegistry] = WellRegistry.objects.filter(api14__icontains=api_digits[-8:]).first()
+        well: Optional[WellRegistry] = None
         snapshot: Optional[PlanSnapshot] = None
-        if well:
+
+        # Try to find well by API
+        try:
+            well = get_well_by_api(api)
             snapshot = (
                 PlanSnapshot.objects
                 .filter(well=well)
                 .order_by('-created_at')
                 .first()
             )
+        except Http404:
+            # Well not found, try fallback
+            pass
+
         if not snapshot:
             # Fallback by plan_id when WellRegistry is missing
-            expected_ids = [f"{api_digits}:combined", f"{api_digits}:isolated", f"{api_digits}:both"]
+            expected_ids = [f"{api_14}:combined", f"{api_14}:isolated", f"{api_14}:both"]
             snapshot = (
                 PlanSnapshot.objects
                 .filter(plan_id__in=expected_ids)
@@ -57,7 +67,7 @@ class FilingExportView(APIView):
         rrc_export = plan_payload.get("rrc_export") or []
         if fmt == "json":
             out = {
-                "api": api_digits,
+                "api": api_14,
                 "plan_id": snapshot.plan_id,
                 "filing": rrc_export,
                 "kernel_version": plan_payload.get("kernel_version"),

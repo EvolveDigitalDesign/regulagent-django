@@ -7,6 +7,13 @@ from rest_framework import serializers
 
 class W3AFromApiRequestSerializer(serializers.Serializer):
     api10 = serializers.CharField(help_text="10-digit API number")
+    jurisdiction = serializers.ChoiceField(
+        choices=[("TX", "Texas"), ("NM", "New Mexico")],
+        required=False,
+        default=None,
+        allow_null=True,
+        help_text="Jurisdiction for the well (TX or NM). Auto-detected from API prefix if not specified."
+    )
     use_gau_override_if_invalid = serializers.BooleanField(required=False, default=False)
     confirm_fact_updates = serializers.BooleanField(required=False, default=False)
     allow_precision_upgrades_only = serializers.BooleanField(required=False, default=True)
@@ -45,6 +52,18 @@ class W3AFromApiRequestSerializer(serializers.Serializer):
         return digits
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        import re
+
+        # Auto-detect jurisdiction from API prefix if not explicitly provided
+        api10 = attrs.get("api10", "")
+        jurisdiction = attrs.get("jurisdiction")
+        if not jurisdiction:
+            # NM API numbers start with "30" (state code)
+            if api10.startswith("30"):
+                attrs["jurisdiction"] = "NM"
+            else:
+                attrs["jurisdiction"] = "TX"
+
         # If user opted to provide a GAU override, require the file in the same request
         if attrs.get("use_gau_override_if_invalid"):
             if not attrs.get("gau_file"):

@@ -347,8 +347,8 @@ def execute_combine_plugs(
                         "rounding_mode": rounding_mode,
                         "cap_bbl_per_ft": cap_bbl_per_ft,
                         "annular_excess": annular_excess,
-                        "tac_excess_factor": tac_factor,
-                        "tac_excess_kft_units": kft_units,
+                        "tac_excess_factor": 0,  # cement_plug doesn't use Texas depth-based excess
+                        "tac_excess_kft_units": 0,
                     }
                     logger.info(
                         f"Calculated materials for combined plug: {sacks_calculated} sacks "
@@ -537,19 +537,725 @@ def execute_replace_cibp(
 ) -> Dict[str, Any]:
     """
     Replace CIBP + cap with long cement plug.
-    
-    MVP: Returns placeholder - full implementation pending.
+
+    This operation:
+    1. Finds CIBP (bridge_plug) and cap (bridge_plug_cap) steps
+    2. Gets the producing interval from the plan
+    3. Removes the CIBP and cap steps
+    4. Creates a single cement_plug spanning the producing interval
+    5. Recalculates materials
+    6. Creates new PlanSnapshot with kind="post_edit"
     """
-    if not allow_plan_changes:
+    try:
+        # Check guardrails
+        if not allow_plan_changes:
+            raise GuardrailViolation(
+                "plan_changes_disabled",
+                "Plan modifications disabled. Set allow_plan_changes=true to enable."
+            )
+
+        source_plan = thread.current_plan
+        plan_payload = source_plan.payload.copy()
+
+        # Find target steps
+        steps = plan_payload.get('steps', [])
+
+        # Find CIBP and cap steps
+        cibp_step = None
+        cap_step = None
+
+        for step in steps:
+            step_type = step.get('type')
+            if step_type == 'bridge_plug':
+                cibp_step = step
+            elif step_type in ('bridge_plug_cap', 'cibp_cap'):
+                cap_step = step
+
+        if not cibp_step:
+            return ToolCallResponse(
+                success=False,
+                message="No CIBP (bridge_plug) step found in plan"
+            ).model_dump()
+
+        if not cap_step:
+            return ToolCallResponse(
+                success=False,
+                message="No CIBP cap (bridge_plug_cap) step found in plan"
+            ).model_dump()
+
+        # Determine the interval to use
+        if interval == "custom":
+            if custom_top_depth is None or custom_base_depth is None:
+                return ToolCallResponse(
+                    success=False,
+                    message="custom_top_depth and custom_base_depth are required when interval='custom'"
+                ).model_dump()
+            plug_top = custom_top_depth
+            plug_base = custom_base_depth
+        else:
+            # For "producing" or "intermediate", use the CIBP and cap positions to determine interval
+            # CIBP is typically at the base of the producing interval
+            # Cap is above the CIBP
+            cibp_depth = cibp_step.get('depth') or cibp_step.get('base') or cibp_step.get('bottom_ft')
+            cap_top = cap_step.get('top') or cap_step.get('top_ft')
+            cap_base = cap_step.get('base') or cap_step.get('bottom_ft')
+
+            if cibp_depth is None:
+                return ToolCallResponse(
+                    success=False,
+                    message="Cannot determine CIBP depth from plan"
+                ).model_dump()
+
+            # The plug should span from above the cap to the CIBP depth
+            # Typically, the producing interval is capped at the top and plugged at the bottom
+            plug_base = cibp_depth
+            plug_top = cap_top if cap_top else (cibp_depth + 500)  # Default to 500 ft above CIBP if cap top not found
+
+        plug_interval = plug_top - plug_base
+
+        if plug_interval <= 0:
+            return ToolCallResponse(
+                success=False,
+                message=f"Invalid interval: top ({plug_top}) must be greater than base ({plug_base})"
+            ).model_dump()
+
+        # Create new cement plug step
+        new_step_id = max([s.get('step_id', 0) for s in steps], default=0) + 1
+
+        cement_plug = {
+            "step_id": new_step_id,
+            "type": "cement_plug",
+            "name": f"Cement Plug (CIBP Replacement) ({plug_top}-{plug_base} ft)",
+            "top": plug_top,
+            "base": plug_base,
+            "top_ft": plug_top,
+            "bottom_ft": plug_base,
+            "interval": plug_interval,
+            "reason": f"Replaced CIBP + cap: {reason}",
+            "replaced_step_ids": [cibp_step.get('step_id'), cap_step.get('step_id')],
+            "details": {
+                "replaced_cibp": True,
+                "original_cibp_depth": cibp_step.get('depth') or cibp_step.get('base'),
+                "interval_type": interval,
+            }
+        }
+
+        # Calculate materials for the cement plug
+        sacks_calculated = None
+        if MATERIALS_AVAILABLE:
+            try:
+                # Get well geometry
+                well_geometry = plan_payload.get('well_geometry', {})
+
+                # Try to get geometry from CIBP or cap step
+                example_step = cap_step if cap_step else cibp_step
+                geometry_used = (example_step.get('details') or {}).get('geometry_used', {})
+                casing_id = geometry_used.get('casing_id_in')
+                stinger_od = geometry_used.get('stinger_od_in')
+
+                # Fallback: extract from production casing/tubing
+                if casing_id is None or stinger_od is None:
+                    casing_strings = well_geometry.get('casing_strings', [])
+                    prod_casing = next((c for c in casing_strings if c.get('string') == 'production'), None)
+                    if prod_casing:
+                        casing_id = prod_casing.get('size_in')
+
+                    tubing_list = well_geometry.get('tubing', [])
+                    if tubing_list and isinstance(tubing_list, list):
+                        stinger_od = tubing_list[0].get('size_in')
+
+                if casing_id is not None and stinger_od is not None:
+                    # Get recipe from original step or use defaults
+                    recipe_dict = example_step.get('recipe') or plan_payload.get('default_recipe', {})
+                    recipe = SlurryRecipe(
+                        recipe_id=recipe_dict.get('id', 'class_h_neat'),
+                        cement_class=recipe_dict.get('class', 'H'),
+                        density_ppg=float(recipe_dict.get('density_ppg', 15.8)),
+                        yield_ft3_per_sk=float(recipe_dict.get('yield_ft3_per_sk', 1.18)),
+                        water_gal_per_sk=float(recipe_dict.get('water_gal_per_sk', 5.2)),
+                        additives=recipe_dict.get('additives', []),
+                    )
+
+                    # Calculate volume
+                    cap_bbl_per_ft = annulus_capacity_bbl_per_ft(float(casing_id), float(stinger_od))
+                    annular_excess = float(example_step.get('annular_excess', 0.4))
+                    total_bbl = plug_interval * cap_bbl_per_ft * (1.0 + annular_excess)
+
+                    logger.info(
+                        f"replace_cibp: Calculated materials for cement plug {plug_top}-{plug_base} ft: "
+                        f"interval={plug_interval:.1f} ft, cap={cap_bbl_per_ft:.4f} bbl/ft, "
+                        f"excess={annular_excess}, total={total_bbl:.2f} bbl"
+                    )
+
+                    # Convert to sacks
+                    rounding_mode = recipe_dict.get('rounding', 'nearest')
+                    vb = compute_sacks(total_bbl, recipe, rounding=rounding_mode)
+
+                    sacks_calculated = int(vb.sacks)
+                    cement_plug["sacks"] = sacks_calculated
+                    cement_plug["materials"] = {
+                        "slurry": {
+                            "total_bbl": total_bbl,
+                            "ft3": vb.ft3,
+                            "sacks": vb.sacks,
+                            "water_bbl": vb.water_bbl,
+                            "additives": vb.additives,
+                            "explain": vb.explain,
+                        }
+                    }
+                    cement_plug["details"]["geometry_used"] = {
+                        "annulus": "production_casing_id_vs_stinger_od",
+                        "casing_id_in": float(casing_id),
+                        "stinger_od_in": float(stinger_od),
+                    }
+                    cement_plug["details"]["materials_explain"] = {
+                        "rounding_mode": rounding_mode,
+                        "cap_bbl_per_ft": cap_bbl_per_ft,
+                        "annular_excess": annular_excess,
+                        "tac_excess_factor": 0,  # cement_plug doesn't use Texas depth-based excess
+                        "tac_excess_kft_units": 0,
+                    }
+                    logger.info(
+                        f"Calculated materials for CIBP replacement plug: {sacks_calculated} sacks "
+                        f"({plug_interval} ft interval, {total_bbl:.2f} bbl)"
+                    )
+                else:
+                    logger.warning(f"Missing geometry data for materials calculation: casing_id={casing_id}, stinger_od={stinger_od}")
+            except Exception as e:
+                logger.exception(f"Error calculating materials for CIBP replacement: {e}")
+
+        # Fallback if materials not calculated
+        if sacks_calculated is None:
+            cement_plug["materials"] = {
+                "note": "Materials calculation pending - geometry data unavailable"
+            }
+
+        # Remove CIBP and cap steps, add new cement plug
+        removed_step_ids = [cibp_step.get('step_id'), cap_step.get('step_id')]
+        new_steps = [s for s in steps if s.get('step_id') not in removed_step_ids]
+        new_steps.append(cement_plug)
+        new_steps.sort(key=lambda s: s.get('base', 0) or 0, reverse=True)  # Re-sort by depth
+
+        plan_payload['steps'] = new_steps
+
+        # Regenerate rrc_export
+        rrc_export = []
+        for idx, step in enumerate(sorted(new_steps, key=lambda s: s.get('base', 0) or 0, reverse=True), start=1):
+            step_type = step.get('type')
+            regulatory_basis = step.get('regulatory_basis', [])
+
+            # Format type for RRC export
+            if step_type == 'bridge_plug':
+                export_type = 'CIBP'
+            elif step_type in ('bridge_plug_cap', 'cibp_cap'):
+                export_type = 'CIBP cap'
+            else:
+                export_type = step_type
+
+            # Build remarks
+            remarks_parts = []
+            if isinstance(regulatory_basis, list):
+                remarks_parts.extend(regulatory_basis)
+
+            placement_basis = step.get('reason') or step.get('placement_basis')
+            if placement_basis:
+                remarks_parts.append(placement_basis)
+
+            # Get depths
+            from_ft = step.get('base')
+            if from_ft is None:
+                from_ft = step.get('bottom_ft')
+
+            to_ft = step.get('top')
+            if to_ft is None:
+                to_ft = step.get('top_ft')
+
+            rrc_export.append({
+                "plug_no": idx,
+                "step_id": step.get('step_id'),
+                "type": export_type,
+                "from_ft": from_ft,
+                "to_ft": to_ft,
+                "sacks": step.get('sacks'),
+                "remarks": "; ".join(filter(None, remarks_parts)) or None
+            })
+
+        plan_payload['rrc_export'] = rrc_export
+
+        # Recalculate materials_totals
+        total_sacks = 0
+        total_bbl = 0.0
+        for step in new_steps:
+            step_sacks = step.get('sacks')
+            if step_sacks is not None:
+                try:
+                    total_sacks += int(step_sacks)
+                except (ValueError, TypeError):
+                    pass
+
+            materials = step.get('materials', {})
+            if isinstance(materials, dict):
+                slurry = materials.get('slurry', {})
+                if isinstance(slurry, dict):
+                    step_bbl = slurry.get('total_bbl')
+                    if step_bbl is not None:
+                        try:
+                            total_bbl += float(step_bbl)
+                        except (ValueError, TypeError):
+                            pass
+
+        plan_payload['materials_totals'] = {
+            "total_sacks": total_sacks,
+            "total_bbl": round(total_bbl, 2),
+        }
+
+        logger.info(f"Recalculated materials totals: {total_sacks} sacks, {total_bbl:.2f} bbl")
+
+        # Create new snapshot
+        with transaction.atomic():
+            result_snapshot = PlanSnapshot.objects.create(
+                tenant_id=thread.tenant_id,
+                well=source_plan.well,
+                plan_id=source_plan.plan_id,
+                kind='post_edit',
+                status=PlanSnapshot.STATUS_DRAFT,
+                payload=plan_payload,
+                kernel_version=source_plan.kernel_version,
+                policy_id=source_plan.policy_id,
+            )
+
+            # Create modification record
+            modification = PlanModification.objects.create(
+                chat_thread=thread,
+                source_snapshot=source_plan,
+                result_snapshot=result_snapshot,
+                op_type='replace_cibp',
+                description=f"Replaced CIBP + cap with cement plug: {reason}",
+                operation_payload={
+                    "interval": interval,
+                    "custom_top_depth": custom_top_depth,
+                    "custom_base_depth": custom_base_depth,
+                    "cement_plug_interval": {
+                        "top": plug_top,
+                        "base": plug_base,
+                        "interval_ft": plug_interval
+                    }
+                },
+                diff={
+                    "removed_step_ids": removed_step_ids,
+                    "added_step_id": cement_plug["step_id"],
+                    "type": "replace_cibp"
+                },
+                applied_by=user,
+                is_applied=True,
+                risk_score=0.4,
+                violations_delta=[],
+            )
+
+            # Update thread's current plan
+            thread.current_plan = result_snapshot
+            thread.save(update_fields=['current_plan'])
+
+        logger.info(
+            f"Replaced CIBP + cap in thread {thread.id} "
+            f"→ modification {modification.id}"
+        )
+
+        return ToolCallResponse(
+            success=True,
+            message=f"Successfully replaced CIBP + cap with cement plug at {plug_top}-{plug_base} ft ({plug_interval} ft interval)",
+            data={
+                "modification_id": modification.id,
+                "new_step": cement_plug,
+                "cement_plug_interval_ft": plug_interval,
+                "removed_steps": {
+                    "cibp_step_id": cibp_step.get('step_id'),
+                    "cap_step_id": cap_step.get('step_id')
+                }
+            },
+            risk_score=0.4,
+            violations_delta=[]
+        ).model_dump()
+
+    except GuardrailViolation as e:
+        logger.warning(f"Guardrail violation: {e.violation_type}")
         return ToolCallResponse(
             success=False,
-            message="Plan modifications disabled. Set allow_plan_changes=true to enable."
+            message=f"Guardrail violation: {str(e)}"
         ).model_dump()
-    
-    return ToolCallResponse(
-        success=False,
-        message="CIBP replacement not yet implemented - coming in next sprint"
-    ).model_dump()
+
+    except Exception as e:
+        logger.exception(f"Error replacing CIBP: {interval}")
+        return ToolCallResponse(
+            success=False,
+            message=f"Error replacing CIBP: {str(e)}"
+        ).model_dump()
+
+
+def execute_adjust_interval(
+    step_id: int,
+    new_top_ft: int | None,
+    new_bottom_ft: int | None,
+    reason: str,
+    thread: ChatThread,
+    user,
+    allow_plan_changes: bool = False
+) -> Dict[str, Any]:
+    """
+    Adjust the depth interval of an existing step.
+
+    This operation:
+    1. Finds the target step by step_id
+    2. Updates top_ft and/or bottom_ft as specified
+    3. Recalculates interval length
+    4. Recalculates materials based on new interval
+    5. Creates new PlanSnapshot with kind="post_edit"
+    6. Creates PlanModification record
+    """
+    try:
+        # Check guardrails
+        if not allow_plan_changes:
+            raise GuardrailViolation(
+                "plan_changes_disabled",
+                "Plan modifications disabled. Set allow_plan_changes=true to enable."
+            )
+
+        # Validate at least one depth is provided
+        if new_top_ft is None and new_bottom_ft is None:
+            return ToolCallResponse(
+                success=False,
+                message="At least one of new_top_ft or new_bottom_ft must be provided"
+            ).model_dump()
+
+        source_plan = thread.current_plan
+        plan_payload = source_plan.payload.copy()
+
+        # Find target step
+        steps = plan_payload.get('steps', [])
+        target_step = None
+        target_step_index = None
+
+        for idx, step in enumerate(steps):
+            if step.get('step_id') == step_id:
+                target_step = step
+                target_step_index = idx
+                break
+
+        if not target_step:
+            return ToolCallResponse(
+                success=False,
+                message=f"Step with step_id={step_id} not found in plan"
+            ).model_dump()
+
+        # Get current depths
+        old_top = target_step.get('top') or target_step.get('top_ft')
+        old_bottom = target_step.get('base') or target_step.get('bottom_ft')
+
+        if old_top is None or old_bottom is None:
+            return ToolCallResponse(
+                success=False,
+                message=f"Step {step_id} has invalid or missing depth values"
+            ).model_dump()
+
+        # Determine new depths
+        updated_top = new_top_ft if new_top_ft is not None else old_top
+        updated_bottom = new_bottom_ft if new_bottom_ft is not None else old_bottom
+
+        # Validate new interval
+        if updated_top <= updated_bottom:
+            return ToolCallResponse(
+                success=False,
+                message=f"Invalid interval: top ({updated_top}) must be greater than bottom ({updated_bottom})"
+            ).model_dump()
+
+        new_interval = updated_top - updated_bottom
+
+        # Update step depths
+        target_step['top'] = updated_top
+        target_step['base'] = updated_bottom
+        target_step['top_ft'] = updated_top
+        target_step['bottom_ft'] = updated_bottom
+        target_step['interval'] = new_interval
+
+        # Add reason to step
+        if 'details' not in target_step:
+            target_step['details'] = {}
+        target_step['details']['interval_adjusted'] = True
+        target_step['details']['adjustment_reason'] = reason
+        target_step['details']['original_interval'] = {
+            "top": old_top,
+            "base": old_bottom,
+            "interval_ft": old_top - old_bottom
+        }
+
+        # Update name if it includes depth range
+        step_type = target_step.get('type', 'step')
+        target_step['name'] = f"{step_type.replace('_', ' ').title()} ({updated_top}-{updated_bottom} ft)"
+
+        # Recalculate materials if step is cement-based
+        step_type = target_step.get('type')
+        sacks_calculated = None
+
+        if MATERIALS_AVAILABLE and step_type not in ('bridge_plug', 'cement_retainer'):
+            try:
+                # Get well geometry
+                well_geometry = plan_payload.get('well_geometry', {})
+
+                # Try to get geometry from the step
+                geometry_used = (target_step.get('details') or {}).get('geometry_used', {})
+                casing_id = geometry_used.get('casing_id_in')
+                stinger_od = geometry_used.get('stinger_od_in')
+
+                # Fallback: extract from production casing/tubing
+                if casing_id is None or stinger_od is None:
+                    casing_strings = well_geometry.get('casing_strings', [])
+                    prod_casing = next((c for c in casing_strings if c.get('string') == 'production'), None)
+                    if prod_casing:
+                        casing_id = prod_casing.get('size_in')
+
+                    tubing_list = well_geometry.get('tubing', [])
+                    if tubing_list and isinstance(tubing_list, list):
+                        stinger_od = tubing_list[0].get('size_in')
+
+                if casing_id is not None and stinger_od is not None:
+                    # Get recipe
+                    recipe_dict = target_step.get('recipe') or plan_payload.get('default_recipe', {})
+                    recipe = SlurryRecipe(
+                        recipe_id=recipe_dict.get('id', 'class_h_neat'),
+                        cement_class=recipe_dict.get('class', 'H'),
+                        density_ppg=float(recipe_dict.get('density_ppg', 15.8)),
+                        yield_ft3_per_sk=float(recipe_dict.get('yield_ft3_per_sk', 1.18)),
+                        water_gal_per_sk=float(recipe_dict.get('water_gal_per_sk', 5.2)),
+                        additives=recipe_dict.get('additives', []),
+                    )
+
+                    # Calculate volume
+                    cap_bbl_per_ft = annulus_capacity_bbl_per_ft(float(casing_id), float(stinger_od))
+                    annular_excess = float(target_step.get('annular_excess', 0.4))
+                    total_bbl = new_interval * cap_bbl_per_ft * (1.0 + annular_excess)
+
+                    logger.info(
+                        f"adjust_interval: Recalculated materials for step {step_id} at {updated_top}-{updated_bottom} ft: "
+                        f"interval={new_interval:.1f} ft, cap={cap_bbl_per_ft:.4f} bbl/ft, "
+                        f"excess={annular_excess}, total={total_bbl:.2f} bbl"
+                    )
+
+                    # Convert to sacks
+                    rounding_mode = recipe_dict.get('rounding', 'nearest')
+                    vb = compute_sacks(total_bbl, recipe, rounding=rounding_mode)
+
+                    sacks_calculated = int(vb.sacks)
+                    target_step["sacks"] = sacks_calculated
+                    target_step["materials"] = {
+                        "slurry": {
+                            "total_bbl": total_bbl,
+                            "ft3": vb.ft3,
+                            "sacks": vb.sacks,
+                            "water_bbl": vb.water_bbl,
+                            "additives": vb.additives,
+                            "explain": vb.explain,
+                        }
+                    }
+                    target_step["details"]["geometry_used"] = {
+                        "annulus": "production_casing_id_vs_stinger_od",
+                        "casing_id_in": float(casing_id),
+                        "stinger_od_in": float(stinger_od),
+                    }
+                    target_step["details"]["materials_explain"] = {
+                        "rounding_mode": rounding_mode,
+                        "cap_bbl_per_ft": cap_bbl_per_ft,
+                        "annular_excess": annular_excess,
+                        "tac_excess_factor": 0,
+                        "tac_excess_kft_units": 0,
+                    }
+                    logger.info(
+                        f"Recalculated materials for adjusted step: {sacks_calculated} sacks "
+                        f"({new_interval} ft interval, {total_bbl:.2f} bbl)"
+                    )
+                else:
+                    logger.warning(f"Missing geometry data for materials recalculation: casing_id={casing_id}, stinger_od={stinger_od}")
+            except Exception as e:
+                logger.exception(f"Error recalculating materials for adjusted interval: {e}")
+
+        # Update the step in the steps array
+        steps[target_step_index] = target_step
+
+        # Re-sort steps by depth
+        steps.sort(key=lambda s: s.get('base', 0) or 0, reverse=True)
+        plan_payload['steps'] = steps
+
+        # Regenerate rrc_export
+        rrc_export = []
+        for idx, step in enumerate(sorted(steps, key=lambda s: s.get('base', 0) or 0, reverse=True), start=1):
+            s_type = step.get('type')
+            regulatory_basis = step.get('regulatory_basis', [])
+
+            # Format type for RRC export
+            if s_type == 'bridge_plug':
+                export_type = 'CIBP'
+            elif s_type in ('bridge_plug_cap', 'cibp_cap'):
+                export_type = 'CIBP cap'
+            else:
+                export_type = s_type
+
+            # Build remarks
+            remarks_parts = []
+            if isinstance(regulatory_basis, list):
+                remarks_parts.extend(regulatory_basis)
+
+            placement_basis = step.get('reason') or step.get('placement_basis')
+            if placement_basis:
+                remarks_parts.append(placement_basis)
+
+            # Get depths
+            from_ft = step.get('base')
+            if from_ft is None:
+                from_ft = step.get('bottom_ft')
+
+            to_ft = step.get('top')
+            if to_ft is None:
+                to_ft = step.get('top_ft')
+
+            rrc_export.append({
+                "plug_no": idx,
+                "step_id": step.get('step_id'),
+                "type": export_type,
+                "from_ft": from_ft,
+                "to_ft": to_ft,
+                "sacks": step.get('sacks'),
+                "remarks": "; ".join(filter(None, remarks_parts)) or None
+            })
+
+        plan_payload['rrc_export'] = rrc_export
+
+        # Recalculate materials_totals
+        total_sacks = 0
+        total_bbl = 0.0
+        for step in steps:
+            step_sacks = step.get('sacks')
+            if step_sacks is not None:
+                try:
+                    total_sacks += int(step_sacks)
+                except (ValueError, TypeError):
+                    pass
+
+            materials = step.get('materials', {})
+            if isinstance(materials, dict):
+                slurry = materials.get('slurry', {})
+                if isinstance(slurry, dict):
+                    step_bbl = slurry.get('total_bbl')
+                    if step_bbl is not None:
+                        try:
+                            total_bbl += float(step_bbl)
+                        except (ValueError, TypeError):
+                            pass
+
+        plan_payload['materials_totals'] = {
+            "total_sacks": total_sacks,
+            "total_bbl": round(total_bbl, 2),
+        }
+
+        logger.info(f"Recalculated materials totals: {total_sacks} sacks, {total_bbl:.2f} bbl")
+
+        # Create new snapshot
+        with transaction.atomic():
+            result_snapshot = PlanSnapshot.objects.create(
+                tenant_id=thread.tenant_id,
+                well=source_plan.well,
+                plan_id=source_plan.plan_id,
+                kind='post_edit',
+                status=PlanSnapshot.STATUS_DRAFT,
+                payload=plan_payload,
+                kernel_version=source_plan.kernel_version,
+                policy_id=source_plan.policy_id,
+            )
+
+            # Create modification record
+            modification = PlanModification.objects.create(
+                chat_thread=thread,
+                source_snapshot=source_plan,
+                result_snapshot=result_snapshot,
+                op_type='adjust_interval',
+                description=f"Adjusted interval for step {step_id}: {reason}",
+                operation_payload={
+                    "step_id": step_id,
+                    "new_top_ft": new_top_ft,
+                    "new_bottom_ft": new_bottom_ft,
+                    "old_interval": {
+                        "top": old_top,
+                        "base": old_bottom,
+                        "interval_ft": old_top - old_bottom
+                    },
+                    "new_interval": {
+                        "top": updated_top,
+                        "base": updated_bottom,
+                        "interval_ft": new_interval
+                    }
+                },
+                diff={
+                    "step_id": step_id,
+                    "changed_fields": {
+                        "top": {"old": old_top, "new": updated_top},
+                        "bottom": {"old": old_bottom, "new": updated_bottom}
+                    },
+                    "type": "adjust_interval"
+                },
+                applied_by=user,
+                is_applied=True,
+                risk_score=0.2,
+                violations_delta=[],
+            )
+
+            # Update thread's current plan
+            thread.current_plan = result_snapshot
+            thread.save(update_fields=['current_plan'])
+
+        logger.info(
+            f"Adjusted interval for step {step_id} in thread {thread.id} "
+            f"→ modification {modification.id}"
+        )
+
+        depth_changes = []
+        if new_top_ft is not None:
+            depth_changes.append(f"top: {old_top} → {updated_top} ft")
+        if new_bottom_ft is not None:
+            depth_changes.append(f"bottom: {old_bottom} → {updated_bottom} ft")
+
+        return ToolCallResponse(
+            success=True,
+            message=f"Successfully adjusted interval for step {step_id}: {', '.join(depth_changes)}",
+            data={
+                "modification_id": modification.id,
+                "step_id": step_id,
+                "before": {
+                    "top_ft": old_top,
+                    "bottom_ft": old_bottom,
+                    "interval_ft": old_top - old_bottom
+                },
+                "after": {
+                    "top_ft": updated_top,
+                    "bottom_ft": updated_bottom,
+                    "interval_ft": new_interval
+                },
+                "sacks_recalculated": sacks_calculated
+            },
+            risk_score=0.2,
+            violations_delta=[]
+        ).model_dump()
+
+    except GuardrailViolation as e:
+        logger.warning(f"Guardrail violation: {e.violation_type}")
+        return ToolCallResponse(
+            success=False,
+            message=f"Guardrail violation: {str(e)}"
+        ).model_dump()
+
+    except Exception as e:
+        logger.exception(f"Error adjusting interval for step {step_id}")
+        return ToolCallResponse(
+            success=False,
+            message=f"Error adjusting interval: {str(e)}"
+        ).model_dump()
 
 
 def execute_recalc_materials(

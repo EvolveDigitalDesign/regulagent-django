@@ -334,10 +334,28 @@ class BuildW3FromPNAView(APIView):
                     )
                     
                     logger.info(f"   Well: {well.api14} ({'created' if created else 'existing'})")
-                    
+
+                    # Resolve workspace
+                    workspace = None
+                    workspace_id = validated_data.get('workspace_id') or request.data.get('workspace_id')
+                    if workspace_id:
+                        from apps.tenants.models import ClientWorkspace
+                        user_tenant = request.user.tenants.first()
+                        if user_tenant:
+                            workspace = ClientWorkspace.objects.filter(id=workspace_id, tenant=user_tenant).first()
+
+                    # Fall back to source PlanSnapshot's workspace (if W-3 was generated from W-3A)
+                    if not workspace:
+                        w3a_snapshot_id = result.get('w3a_snapshot_id')
+                        if w3a_snapshot_id:
+                            from apps.public_core.models import PlanSnapshot
+                            source_snapshot = PlanSnapshot.objects.filter(id=w3a_snapshot_id).select_related('workspace').first()
+                            if source_snapshot and source_snapshot.workspace:
+                                workspace = source_snapshot.workspace
+
                     # Create W3FormORM from generated form
                     w3_form_data = result.get("w3_form", {})
-                    
+
                     w3_form = W3FormORM.objects.create(
                         well=well,
                         api_number=api_number,
@@ -346,6 +364,8 @@ class BuildW3FromPNAView(APIView):
                         submitted_by=str(request.user) if request.user else "API",
                         submitted_at=None,  # Not submitted yet
                         rrc_confirmation_number=None,
+                        tenant_id=request.user.tenants.first().id if request.user.tenants.exists() else None,
+                        workspace=workspace,
                     )
                     
                     logger.info(f"   ✅ W3FormORM created: ID={w3_form.id}")

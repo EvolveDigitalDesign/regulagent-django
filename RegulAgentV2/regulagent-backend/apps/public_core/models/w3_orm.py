@@ -272,7 +272,17 @@ class W3FormORM(models.Model):
         default='draft',
         db_index=True
     )
-    
+
+    # Tenant and workspace isolation
+    tenant_id = models.UUIDField(null=True, blank=True, db_index=True)
+    workspace = models.ForeignKey(
+        'tenants.ClientWorkspace',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='w3_forms',
+        db_index=True,
+    )
+
     # Plugs in this form
     plugs = models.ManyToManyField(W3PlugORM, related_name="w3_forms")
     
@@ -325,6 +335,9 @@ class W3FormORM(models.Model):
         indexes = [
             models.Index(fields=['api_number', 'status']),
             models.Index(fields=['well', '-created_at']),
+            models.Index(fields=['tenant_id']),
+            models.Index(fields=['workspace']),
+            models.Index(fields=['tenant_id', 'workspace']),
         ]
     
     def __str__(self):

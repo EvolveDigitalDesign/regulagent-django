@@ -15,6 +15,11 @@ from .public_facts import PublicFactsSerializer
 from .public_perforation import PublicPerforationSerializer
 from .public_casing_string import PublicCasingStringSerializer
 from .public_well_depths import PublicWellDepthsSerializer
+from .nm_well import (
+    NMWellDataSerializer,
+    NMDocumentSerializer,
+    NMCombinedPDFResponseSerializer,
+)
 
 __all__ = [
     'ExtractedDocumentListSerializer',
@@ -28,4 +33,7 @@ __all__ = [
     'PublicPerforationSerializer',
     'PublicCasingStringSerializer',
     'PublicWellDepthsSerializer',
+    'NMWellDataSerializer',
+    'NMDocumentSerializer',
+    'NMCombinedPDFResponseSerializer',
 ]

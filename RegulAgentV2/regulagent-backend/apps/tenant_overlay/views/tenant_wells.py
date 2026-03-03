@@ -163,7 +163,40 @@ def get_tenant_well_history(request):
             {"error": "Invalid limit or offset parameter"},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
+    # Check for workspace filter
+    workspace_id = request.query_params.get('workspace')
+
+    if workspace_id:
+        # Derive wells from work products in this workspace
+        from apps.public_core.models import PlanSnapshot, W3FormORM
+        from apps.public_core.models import WellRegistry
+        from django.db.models import Q
+
+        plan_wells = PlanSnapshot.objects.filter(
+            tenant_id=tenant_id, workspace_id=workspace_id
+        ).values_list('well_id', flat=True)
+
+        w3_wells = W3FormORM.objects.filter(
+            tenant_id=tenant_id, workspace_id=workspace_id
+        ).values_list('well_id', flat=True)
+
+        well_ids = set(plan_wells) | set(w3_wells)
+        wells = WellRegistry.objects.filter(id__in=well_ids).order_by('-updated_at')
+        total_count = wells.count()
+        wells_page = wells[offset:offset + limit]
+        wells_serializer = TenantWellSerializer(wells_page, many=True, context={'request': request})
+
+        return Response({
+            "wells": wells_serializer.data,
+            "pagination": {
+                "total": total_count,
+                "limit": limit,
+                "offset": offset,
+                "has_more": offset + limit < total_count
+            }
+        }, status=status.HTTP_200_OK)
+
     # Get all engagements for this tenant
     engagements_qs = get_tenant_engagement_list(tenant_id)
     total_count = engagements_qs.count()

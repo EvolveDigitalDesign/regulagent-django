@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
-    WellRegistry, 
-    ExtractedDocument, 
+    WellRegistry,
+    ExtractedDocument,
     DocumentVector,
     PlanSnapshot,
     PublicFacts,
@@ -10,6 +10,7 @@ from .models import (
     PublicCasingString,
     PublicPerforation,
     PublicWellDepths,
+    BulkJob,
 )
 
 
@@ -226,4 +227,47 @@ class PublicWellDepthsAdmin(admin.ModelAdmin):
     list_filter = ('created_at',)
     search_fields = ('well__api14',)
     readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(BulkJob)
+class BulkJobAdmin(admin.ModelAdmin):
+    """Admin interface for bulk job tracking."""
+    list_display = ('id', 'job_type', 'status', 'progress_display', 'created_by', 'created_at')
+    list_filter = ('job_type', 'status', 'created_at')
+    search_fields = ('id', 'created_by', 'celery_task_id')
+    readonly_fields = ('created_at', 'started_at', 'completed_at', 'progress_percentage', 'estimated_time_remaining_seconds')
+    date_hierarchy = 'created_at'
+
+    def progress_display(self, obj):
+        """Display progress with visual indicator."""
+        percentage = obj.progress_percentage
+        color = '#4caf50' if obj.status == 'completed' else '#2196f3' if obj.status == 'processing' else '#ff9800'
+        return format_html(
+            '<div style="width: 100px; background-color: #f0f0f0; border-radius: 3px;">'
+            '<div style="width: {}%; background-color: {}; height: 20px; border-radius: 3px; text-align: center; color: white; line-height: 20px;">{:.0f}%</div>'
+            '</div>',
+            percentage, color, percentage
+        )
+    progress_display.short_description = 'Progress'
+
+    fieldsets = (
+        ('Job Info', {
+            'fields': ('id', 'job_type', 'status', 'tenant_id', 'created_by')
+        }),
+        ('Progress', {
+            'fields': ('total_items', 'processed_items', 'failed_items', 'progress_percentage', 'estimated_time_remaining_seconds')
+        }),
+        ('Data', {
+            'fields': ('input_data', 'result_data', 'error_message'),
+            'classes': ('collapse',)
+        }),
+        ('Task Tracking', {
+            'fields': ('celery_task_id',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'started_at', 'completed_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
