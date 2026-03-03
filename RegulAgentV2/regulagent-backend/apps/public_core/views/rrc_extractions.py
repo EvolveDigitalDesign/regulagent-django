@@ -4,6 +4,7 @@ from rest_framework import status
 
 from apps.public_core.services.rrc_completions_extractor import extract_completions_all_documents
 from apps.public_core.services.openai_extraction import classify_document, extract_json_from_pdf, iter_json_sections_for_embedding
+from apps.public_core.services.api_normalization import normalize_api_14digit
 from apps.public_core.models import ExtractedDocument, DocumentVector, WellRegistry
 from django.db import transaction
 from pathlib import Path
@@ -11,8 +12,7 @@ import os
 
 
 class RRCCompletionsExtractView(APIView):
-    authentication_classes = []  # wire real auth later
-    permission_classes = []
+    """Extract and vectorize documents from RRC completion records."""
 
     def post(self, request):
         api14 = (request.data or {}).get("api14") or (request.query_params.get("api14") if request else None)
@@ -23,7 +23,8 @@ class RRCCompletionsExtractView(APIView):
             # After downloads, run extraction pipeline per file
             files = result.get("files") or []
             api = result.get("api") or str(api14)
-            well = WellRegistry.objects.filter(api14__icontains=api[-8:]).first()
+            api_normalized = normalize_api_14digit(api)
+            well = WellRegistry.objects.filter(api14=api_normalized).first() if api_normalized else None
             created: list[dict] = []
             for f in files:
                 path = f.get("path")

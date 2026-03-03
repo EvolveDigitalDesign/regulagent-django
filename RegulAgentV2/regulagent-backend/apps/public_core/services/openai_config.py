@@ -12,6 +12,8 @@ All OpenAI integrations should import from this module for consistency.
 """
 
 import os
+import time
+import threading
 from typing import Optional
 from openai import OpenAI
 
@@ -44,6 +46,76 @@ TEMPERATURE_BALANCED = 0.5  # General conversation
 TEMPERATURE_CREATIVE = 0.8  # Suggestions, explanations
 
 # =============================================================================
+# RATE LIMITING - Token Per Minute (TPM) aware throttling
+# =============================================================================
+
+class TokenRateLimiter:
+    """
+    Prevents hitting OpenAI's Token Per Minute (TPM) limit by tracking usage.
+    
+    GPT-4o limits:
+    - 30,000 TPM (tokens per minute)
+    - 500 RPM (requests per minute)
+    
+    When concurrent requests are made, TPM can be exhausted quickly.
+    This throttler ensures we stay under the TPM limit.
+    """
+    
+    def __init__(self, tokens_per_minute: int = 30000, window_seconds: int = 60):
+        self.tokens_per_minute = tokens_per_minute
+        self.window_seconds = window_seconds
+        self.tokens_used = 0
+        self.window_start = time.time()
+        self.lock = threading.Lock()
+    
+    def add_tokens(self, tokens: int):
+        """Record tokens used"""
+        with self.lock:
+            now = time.time()
+            elapsed = now - self.window_start
+            
+            # Reset window if expired
+            if elapsed >= self.window_seconds:
+                self.tokens_used = 0
+                self.window_start = now
+            
+            self.tokens_used += tokens
+    
+    def should_throttle(self, estimated_tokens: int) -> tuple[bool, float]:
+        """
+        Check if a request with estimated_tokens would exceed TPM limit.
+        
+        Returns:
+            (should_throttle: bool, wait_seconds: float)
+        """
+        with self.lock:
+            now = time.time()
+            elapsed = now - self.window_start
+            
+            # Reset window if expired
+            if elapsed >= self.window_seconds:
+                self.tokens_used = 0
+                self.window_start = now
+                return False, 0.0
+            
+            # Check if adding new tokens would exceed limit
+            if self.tokens_used + estimated_tokens > self.tokens_per_minute:
+                # Calculate how long to wait
+                tokens_over = self.tokens_used + estimated_tokens - self.tokens_per_minute
+                wait_time = (tokens_over / self.tokens_per_minute) * self.window_seconds
+                return True, wait_time
+            
+            return False, 0.0
+
+
+# Global rate limiter instance
+_token_limiter = TokenRateLimiter(
+    tokens_per_minute=int(os.getenv("OPENAI_TPM_LIMIT", "30000")),
+    window_seconds=60
+)
+
+
+# =============================================================================
 # API CONFIGURATION
 # =============================================================================
 
@@ -55,7 +127,7 @@ def get_openai_client(api_key: Optional[str] = None) -> OpenAI:
         api_key: Optional API key override. If None, uses OPENAI_API_KEY env var.
     
     Returns:
-        Configured OpenAI client
+        Configured OpenAI client with intelligent retry logic
     
     Raises:
         RuntimeError: If API key not configured
@@ -67,7 +139,13 @@ def get_openai_client(api_key: Optional[str] = None) -> OpenAI:
             "Set it in .env or pass api_key parameter."
         )
     
-    return OpenAI(api_key=key)
+    # Increase max_retries to handle rate limiting gracefully
+    # 429 errors will be automatically retried with exponential backoff
+    return OpenAI(
+        api_key=key,
+        max_retries=5,  # Retry up to 5 times for rate limits
+        timeout=120.0,  # Allow 2 minutes for retries to complete
+    )
 
 
 # =============================================================================
@@ -172,9 +250,39 @@ def build_cached_messages(
 # USAGE TRACKING (Optional)
 # =============================================================================
 
+def check_rate_limit(estimated_tokens: int = 15000) -> None:
+    """
+    Check and apply rate limiting before making OpenAI API calls.
+    
+    Prevents hitting the TPM (Tokens Per Minute) limit by throttling requests.
+    
+    Args:
+        estimated_tokens: Estimated tokens for the request (default: 15000 for chat)
+    
+    Raises:
+        None - will sleep if needed
+    
+    Example:
+        >>> check_rate_limit(estimated_tokens=12000)
+        >>> response = client.chat.completions.create(...)
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    should_throttle, wait_time = _token_limiter.should_throttle(estimated_tokens)
+    
+    if should_throttle:
+        logger.warning(
+            f"[Rate Limiter] TPM limit approaching. "
+            f"Waiting {wait_time:.1f}s before next request. "
+            f"Estimated tokens for next request: {estimated_tokens}"
+        )
+        time.sleep(wait_time)
+
+
 def log_openai_usage(response, operation: str):
     """
-    Log OpenAI API usage for cost tracking.
+    Log OpenAI API usage for cost tracking and update rate limiter.
     
     Args:
         response: OpenAI API response
@@ -189,6 +297,10 @@ def log_openai_usage(response, operation: str):
         if usage:
             import logging
             logger = logging.getLogger(__name__)
+            
+            # Track tokens for rate limiting
+            _token_limiter.add_tokens(usage.total_tokens)
+            
             logger.info(
                 f"OpenAI Usage [{operation}]: "
                 f"prompt={usage.prompt_tokens} "

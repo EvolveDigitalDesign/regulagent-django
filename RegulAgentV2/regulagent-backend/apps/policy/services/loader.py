@@ -1,5 +1,6 @@
 import os
 import yaml
+import json
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 import math
@@ -18,6 +19,56 @@ class PolicyIncomplete(Exception):
 def _load_yaml(path: str) -> Dict[str, Any]:
     with open(path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f) or {}
+
+
+def _load_formation_data(district: str, county: str, field: Optional[str] = None) -> Dict[str, Any]:
+    """Load formation data from JSON for districts that use hybrid approach (7C).
+    
+    Returns formations with their tops, use_when, and additional_requirements.
+    """
+    json_path = os.path.join(PACKS_DIR, 'tx', 'w3a', 'district_overlays', f'{district.lower()}_plugging_book.json')
+    
+    if not os.path.exists(json_path):
+        return {}
+    
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return {}
+    
+    counties = data.get('counties', {})
+    county_key = county.lower().replace(' ', '_').replace(' county', '')
+    county_data = counties.get(county_key, {})
+    
+    if not county_data:
+        # Try with "county" suffix
+        county_key_with_suffix = f"{county_key}_county"
+        county_data = counties.get(county_key_with_suffix, {})
+    
+    if not county_data:
+        return {}
+    
+    field_specs = county_data.get('fieldSpecs', [])
+    
+    # Filter by field if specified
+    if field:
+        field_norm = field.lower().strip()
+        field_specs = [fs for fs in field_specs if fs.get('field', '').lower().strip() == field_norm]
+    
+    # Convert to formations dict
+    formations = {}
+    for spec in field_specs:
+        formation = spec.get('formation')
+        if formation:
+            formations[formation] = {
+                'top_ft': spec.get('tops'),
+                'use_when': spec.get('use_when'),
+                'additional_requirements': spec.get('additional_requirements'),
+                'plug_required': True
+            }
+    
+    return {'formations': formations}
 
 
 def _merge(a: Dict[str, Any], b: Optional[Dict[str, Any]]) -> Dict[str, Any]:
@@ -146,7 +197,96 @@ def _normalize_field_name(name: str) -> str:
     return s
 
 
-def _normalize_county_key(name: str) -> tuple[str, str]:
+def _load_7c_formations_for_field(formation_json: Dict[str, Any], county: str, field: str) -> list[Dict[str, Any]]:
+    """
+    Load formation_tops from 7C plugging book JSON for a specific county and field.
+    
+    Returns list of formation_tops in the format expected by the kernel:
+    [
+        {
+            'formation': 'Penn',
+            'top_ft': 5100,
+            'plug_required': True,
+            'tag_required': True if additional_requirements == 'Tag',
+            'use_when': '10 East Silver',
+        },
+        ...
+    ]
+    """
+    counties = formation_json.get('counties', {})
+    
+    # Normalize county name for lookup
+    county_norm = str(county).lower().strip()
+    county_data = None
+    
+    # Try exact match first
+    for ck, cv in counties.items():
+        if str(cv.get('name', '')).lower().strip() == county_norm:
+            county_data = cv
+            break
+    
+    if not county_data:
+        # Try partial match
+        for ck, cv in counties.items():
+            name = str(cv.get('name', '')).lower().strip()
+            if county_norm in name or name in county_norm:
+                county_data = cv
+                break
+    
+    if not county_data:
+        print(f"⚠️  LOADER: County {county} not found in formation JSON", flush=True)
+        return []
+    
+    # Get field specs
+    field_specs = county_data.get('fieldSpecs', [])
+    field_norm = _normalize_field_name(field)
+    
+    print(f"🔍 _load_7c_formations: county={county}, field={field}, field_norm={field_norm}", flush=True)
+    print(f"🔍 _load_7c_formations: {len(field_specs)} total fieldSpecs for county", flush=True)
+    
+    formation_tops = []
+    matched_count = 0
+    for spec in field_specs:
+        spec_field = _normalize_field_name(spec.get('field', ''))
+        # Match field (exact or contains)
+        is_match = (spec_field == field_norm or field_norm in spec_field or spec_field in field_norm)
+        if is_match:
+            matched_count += 1
+        if not is_match:
+            continue
+        
+        formation = spec.get('formation')
+        tops = spec.get('tops')
+        use_when = spec.get('use_when', '')
+        additional_req = spec.get('additional_requirements', '')
+        
+        if not formation or tops is None:
+            print(f"⚠️  _load_7c_formations: Skipping spec - formation={formation}, tops={tops}", flush=True)
+            continue
+        
+        formation_top = {
+            'formation': formation,
+            'top_ft': float(tops),
+            'plug_required': True,  # All formations in 7C JSON require plugs
+        }
+        
+        if use_when:
+            formation_top['use_when'] = use_when
+        
+        if additional_req:
+            formation_top['additional_requirements'] = additional_req
+            # If additional_requirements == "Tag", set tag_required
+            if str(additional_req).strip().lower() == 'tag':
+                formation_top['tag_required'] = True
+        
+        formation_tops.append(formation_top)
+    
+    print(f"🔍 _load_7c_formations: {matched_count} specs matched field, {len(formation_tops)} formations extracted", flush=True)
+    
+    return formation_tops
+
+
+def _normalize_county_key(name: str) -> Tuple[str, str]:
     """Return (base, with_suffix) normalized county keys for lookups.
     Collapses whitespace and strips a trailing 'county'."""
     s = str(name or '').lower().strip()
@@ -226,17 +366,51 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
         d_normalized = _normalize_district(district)
         combined_name = f"{d_normalized}__auto.yml"
         combined_path = os.path.join(ext_dir, combined_name)
+        print(f"🔍 LOADER: district={district} → normalized={d_normalized}", flush=True)
+        print(f"🔍 LOADER: combined_path={combined_path}", flush=True)
+        print(f"🔍 LOADER: file exists={os.path.exists(combined_path)}", flush=True)
         combined: Dict[str, Any] | None = None
-        load_path = combined_path if os.path.exists(combined_path) else None
-        if load_path:
-            combined = _load_yaml(load_path)
-            # merge district-level requirements/preferences/overrides from plugging book
+        formation_json: Dict[str, Any] | None = None
+        
+        # For 7C districts, try hybrid approach: load both YAML procedures and JSON formations
+        is_7c_hybrid = d_normalized in ['07c']
+        if is_7c_hybrid:
+            yaml_procedures_path = os.path.join(ext_dir, f"{d_normalized}_county_procedures.yml")
+            json_formations_path = os.path.join(ext_dir, f"{d_normalized}_plugging_book.json")
+            print(f"🔍 LOADER: 7C Hybrid mode - checking for:")
+            print(f"  YAML procedures: {yaml_procedures_path} (exists={os.path.exists(yaml_procedures_path)})")
+            print(f"  JSON formations: {json_formations_path} (exists={os.path.exists(json_formations_path)})")
+            
+            if os.path.exists(yaml_procedures_path):
+                combined = _load_yaml(yaml_procedures_path)
+                print(f"🔍 LOADER: Loaded 7C procedures YAML, keys={list(combined.keys())}", flush=True)
+                load_path = yaml_procedures_path
+            
+            if os.path.exists(json_formations_path):
+                import json
+                with open(json_formations_path, 'r', encoding='utf-8') as f:
+                    formation_json = json.load(f)
+                print(f"🔍 LOADER: Loaded 7C formations JSON, {len(formation_json.get('counties', {}))} counties", flush=True)
+        else:
+            # Standard approach for 8A and others: single combined YAML
+            load_path = combined_path if os.path.exists(combined_path) else None
+            if load_path:
+                combined = _load_yaml(load_path)
+                print(f"🔍 LOADER: Loaded combined YAML, keys={list(combined.keys())}", flush=True)
+                print(f"🔍 LOADER: combined['overrides'] keys={list((combined.get('overrides') or {}).keys())}", flush=True)
+        
+        # Merge district-level data (works for both 8A and 7C)
+        if combined:
             if isinstance(combined.get('requirements'), dict):
                 merged = _merge(merged, {'requirements': combined['requirements']})
+                print(f"🔍 LOADER: Merged requirements", flush=True)
             if isinstance(combined.get('preferences'), dict):
                 merged = _merge(merged, {'preferences': combined['preferences']})
+                print(f"🔍 LOADER: Merged preferences", flush=True)
             if isinstance(combined.get('overrides'), dict):
                 merged = _merge(merged, {'district_overrides': combined['overrides']})
+                print(f"🔍 LOADER: Merged overrides into district_overrides", flush=True)
+                print(f"🔍 LOADER: After merge, merged['district_overrides'] keys={list((merged.get('district_overrides') or {}).keys())}", flush=True)
         if county:
             # Normalize county name to file-safe
             safe_county = county.lower().replace(' ', '_')
@@ -261,15 +435,19 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
                 # Fallback: combined overlay file per district (e.g., 7c__auto.yml)
                 if combined:
                     counties = combined.get('counties') or {}
+                    print(f"🔍 LOADER: Looking up county={county} in combined YAML", flush=True)
+                    print(f"🔍 LOADER: Available counties={list(counties.keys())[:5]}", flush=True)  # First 5 to avoid spam
                     # lookup by multiple aliases
                     aliases = [
                         str(county),
                         f"{county} County" if not str(county).lower().endswith(" county") else str(county)[:-7],
                     ]
+                    print(f"🔍 LOADER: Trying aliases={aliases}", flush=True)
                     cdata = None
                     for alias in aliases:
                         cdata = counties.get(alias) or counties.get(str(alias).strip())
                         if cdata:
+                            print(f"🔍 LOADER: Found county data via alias={alias}", flush=True)
                             break
                     if not cdata:
                         # fallback: case-insensitive contains/equals
@@ -279,13 +457,33 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
                             if kl == lc or kl.startswith(lc) or lc in kl:
                                 cdata = v
                                 break
+                    if not cdata:
+                        # final fallback: normalize county keys (handles odd spacing/casing)
+                        try:
+                            c_base, c_with = _normalize_county_key(str(county))
+                            for k, v in counties.items():
+                                kb, kw = _normalize_county_key(str(k))
+                                if kb == c_base or kw == c_base or kb == c_with or kw == c_with:
+                                    cdata = v
+                                    break
+                        except Exception:
+                            pass
                     if cdata:
+                        print(f"🔍 LOADER: County data found, keys={list(cdata.keys())}", flush=True)
                         county_req = (cdata.get('requirements') or {})
                         county_overrides = (cdata.get('overrides') or {})
                         county_prefs = (cdata.get('preferences') or {})
                         county_proposal = (cdata.get('proposal') or {})
+                        # 7C hybrid: county_procedures at top level (not under overrides)
+                        county_procedures = (cdata.get('county_procedures') or {})
+                        if county_procedures:
+                            county_overrides.setdefault('county_procedures', {})
+                            county_overrides['county_procedures'].update(county_procedures)
                         # combined overlay stores per-field specs commonly under overrides.fields
                         county_fields = (cdata.get('fields') or (cdata.get('overrides') or {}).get('fields') or {})
+                        print(f"🔍 LOADER: county_overrides keys={list(county_overrides.keys())}", flush=True)
+                        formation_tops_in_overrides = county_overrides.get('formation_tops') or []
+                        print(f"🔍 LOADER: formation_tops in county_overrides={len(formation_tops_in_overrides)}", flush=True)
             if county_req:
                 merged = _merge(merged, {'requirements': county_req})
             if county_overrides:
@@ -416,6 +614,21 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
                             field_resolution['method'] = 'nearest_county_occurrence'
                             field_resolution['nearest_distance_km'] = best_dist2
                 # Merge selected field config
+                # For 7C hybrid: load formation data from JSON instead of YAML
+                print(f"🔍 LOADER: Checking 7C formation loading: is_7c_hybrid={is_7c_hybrid}, has_formation_json={formation_json is not None}, field={field}", flush=True)
+                if is_7c_hybrid and formation_json and field:
+                    print(f"🔍 LOADER: Loading formations from JSON for county={county}, field={field}", flush=True)
+                    formation_tops_from_json = _load_7c_formations_for_field(
+                        formation_json, county, field
+                    )
+                    print(f"🔍 LOADER: _load_7c_formations_for_field returned {len(formation_tops_from_json)} formations", flush=True)
+                    if formation_tops_from_json:
+                        print(f"🔍 LOADER: Loaded {len(formation_tops_from_json)} formations from JSON for {field}", flush=True)
+                        merged.setdefault('district_overrides', {})
+                        merged['district_overrides']['formation_tops'] = formation_tops_from_json
+                    else:
+                        print(f"⚠️ LOADER: formation_tops_from_json is empty!", flush=True)
+                
                 if chosen_field_cfg:
                     if isinstance(chosen_field_cfg.get('requirements'), dict):
                         merged = _merge(merged, {'requirements': chosen_field_cfg['requirements']})
@@ -428,7 +641,8 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
                     if isinstance(chosen_field_cfg.get('steps_overrides'), dict):
                         merged = _merge(merged, {'steps_overrides': chosen_field_cfg['steps_overrides']})
                     # Surface field-level formation_tops into district_overrides so rules can see them
-                    if isinstance(chosen_field_cfg.get('formation_tops'), list):
+                    # For 8A and others (not 7C hybrid): read from YAML
+                    if isinstance(chosen_field_cfg.get('formation_tops'), list) and not is_7c_hybrid:
                         # Prefer field-level tops exclusively (do not mix with district-level defaults)
                         merged.setdefault('district_overrides', {})
                         merged['district_overrides']['formation_tops'] = list(chosen_field_cfg['formation_tops'])
@@ -464,6 +678,13 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
                         merged.setdefault('district_overrides', {})
                         merged['district_overrides']['formation_tops'] = list(chosen_field_cfg['formation_tops'])
 
+    # FINAL DEBUG: Check what's in merged before returning
+    final_district_overrides = merged.get('district_overrides') or {}
+    final_formation_tops = final_district_overrides.get('formation_tops') or []
+    print(f"🔍 LOADER FINAL: merged['district_overrides'] has {len(final_formation_tops)} formation_tops", flush=True)
+    if final_formation_tops:
+        print(f"🔍 LOADER FINAL: Formation names={[ft.get('formation') for ft in final_formation_tops[:5]]}", flush=True)
+    
     out = {
         'policy_id': policy.get('policy_id'),
         'policy_version': policy.get('policy_version'),
@@ -480,4 +701,11 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
     if field_resolution.get('requested_field'):
         out['field_resolution'] = field_resolution
     out = _validate_minimal(out)
+    
+    # ONE MORE CHECK: After validation
+    validated_effective = out.get('effective') or {}
+    validated_overrides = validated_effective.get('district_overrides') or {}
+    validated_ftops = validated_overrides.get('formation_tops') or []
+    print(f"🔍 LOADER POST-VALIDATION: out['effective']['district_overrides'] has {len(validated_ftops)} formation_tops", flush=True)
+    
     return out

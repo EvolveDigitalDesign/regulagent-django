@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
-    WellRegistry, 
-    ExtractedDocument, 
+    WellRegistry,
+    ExtractedDocument,
     DocumentVector,
     PlanSnapshot,
     PublicFacts,
@@ -10,19 +10,20 @@ from .models import (
     PublicCasingString,
     PublicPerforation,
     PublicWellDepths,
+    BulkJob,
 )
 
 
 @admin.register(WellRegistry)
 class WellRegistryAdmin(admin.ModelAdmin):
     """Admin interface for well registry data."""
-    list_display = ('api14', 'state', 'county', 'field', 'operator_name', 'created_at')
+    list_display = ('api14', 'state', 'county', 'field_name', 'operator_name', 'created_at')
     list_filter = ('state', 'county', 'created_at')
-    search_fields = ('api14', 'field', 'operator_name', 'county')
+    search_fields = ('api14', 'field_name', 'operator_name', 'county')
     readonly_fields = ('created_at', 'updated_at')
     fieldsets = (
         ('Well Identity', {
-            'fields': ('api14', 'state', 'county', 'district', 'field', 'lease')
+            'fields': ('api14', 'state', 'county', 'district', 'field_name', 'lease_name', 'well_number')
         }),
         ('Location', {
             'fields': ('lat', 'lon')
@@ -40,9 +41,9 @@ class WellRegistryAdmin(admin.ModelAdmin):
 @admin.register(ExtractedDocument)
 class ExtractedDocumentAdmin(admin.ModelAdmin):
     """Admin interface for extracted regulatory documents."""
-    list_display = ('api_number', 'document_type', 'source_type', 'status', 'is_validated', 'created_at')
+    list_display = ('api_number', 'document_type', 'tracking_no', 'source_type', 'status', 'is_validated', 'created_at')
     list_filter = ('document_type', 'source_type', 'status', 'is_validated', 'created_at')
-    search_fields = ('api_number', 'source_path', 'model_tag')
+    search_fields = ('api_number', 'tracking_no', 'source_path', 'model_tag')
     readonly_fields = ('created_at', 'updated_at', 'json_data_display')
     date_hierarchy = 'created_at'
     
@@ -59,7 +60,7 @@ class ExtractedDocumentAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Document Info', {
-            'fields': ('api_number', 'document_type', 'well')
+            'fields': ('api_number', 'document_type', 'tracking_no', 'well')
         }),
         ('Extraction Status', {
             'fields': ('status', 'errors', 'model_tag')
@@ -195,26 +196,26 @@ class PublicFactsAdmin(admin.ModelAdmin):
 @admin.register(PublicArtifacts)
 class PublicArtifactsAdmin(admin.ModelAdmin):
     """Admin interface for public artifacts (files, reports, etc.)."""
-    list_display = ('well', 'kind', 'file_path', 'created_at')
+    list_display = ('well', 'kind', 'title', 'url', 'created_at')
     list_filter = ('kind', 'created_at')
-    search_fields = ('well__api14', 'file_path')
+    search_fields = ('well__api14', 'title', 'url')
     readonly_fields = ('created_at', 'updated_at')
 
 
 @admin.register(PublicCasingString)
 class PublicCasingStringAdmin(admin.ModelAdmin):
     """Admin interface for casing string records."""
-    list_display = ('well', 'string_type', 'size_in', 'shoe_depth_ft', 'created_at')
-    list_filter = ('string_type', 'created_at')
-    search_fields = ('well__api14',)
+    list_display = ('well', 'string_no', 'outside_dia_in', 'shoe_ft', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('well__api14', 'grade')
     readonly_fields = ('created_at', 'updated_at')
 
 
 @admin.register(PublicPerforation)
 class PublicPerforationAdmin(admin.ModelAdmin):
     """Admin interface for perforation records."""
-    list_display = ('well', 'interval_top_ft', 'interval_bottom_ft', 'formation', 'status', 'created_at')
-    list_filter = ('status', 'formation', 'created_at')
+    list_display = ('well', 'top_ft', 'bottom_ft', 'formation', 'created_at')
+    list_filter = ('formation', 'created_at')
     search_fields = ('well__api14', 'formation')
     readonly_fields = ('created_at', 'updated_at')
 
@@ -222,8 +223,51 @@ class PublicPerforationAdmin(admin.ModelAdmin):
 @admin.register(PublicWellDepths)
 class PublicWellDepthsAdmin(admin.ModelAdmin):
     """Admin interface for well depth information."""
-    list_display = ('well', 'td_ft', 'kb_ft', 'surface_casing_shoe_ft', 'created_at')
+    list_display = ('well', 'td_ft', 'kb_elev_ft', 'surf_shoe_ft', 'created_at')
     list_filter = ('created_at',)
     search_fields = ('well__api14',)
     readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(BulkJob)
+class BulkJobAdmin(admin.ModelAdmin):
+    """Admin interface for bulk job tracking."""
+    list_display = ('id', 'job_type', 'status', 'progress_display', 'created_by', 'created_at')
+    list_filter = ('job_type', 'status', 'created_at')
+    search_fields = ('id', 'created_by', 'celery_task_id')
+    readonly_fields = ('created_at', 'started_at', 'completed_at', 'progress_percentage', 'estimated_time_remaining_seconds')
+    date_hierarchy = 'created_at'
+
+    def progress_display(self, obj):
+        """Display progress with visual indicator."""
+        percentage = obj.progress_percentage
+        color = '#4caf50' if obj.status == 'completed' else '#2196f3' if obj.status == 'processing' else '#ff9800'
+        return format_html(
+            '<div style="width: 100px; background-color: #f0f0f0; border-radius: 3px;">'
+            '<div style="width: {}%; background-color: {}; height: 20px; border-radius: 3px; text-align: center; color: white; line-height: 20px;">{:.0f}%</div>'
+            '</div>',
+            percentage, color, percentage
+        )
+    progress_display.short_description = 'Progress'
+
+    fieldsets = (
+        ('Job Info', {
+            'fields': ('id', 'job_type', 'status', 'tenant_id', 'created_by')
+        }),
+        ('Progress', {
+            'fields': ('total_items', 'processed_items', 'failed_items', 'progress_percentage', 'estimated_time_remaining_seconds')
+        }),
+        ('Data', {
+            'fields': ('input_data', 'result_data', 'error_message'),
+            'classes': ('collapse',)
+        }),
+        ('Task Tracking', {
+            'fields': ('celery_task_id',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'started_at', 'completed_at'),
+            'classes': ('collapse',)
+        }),
+    )
 

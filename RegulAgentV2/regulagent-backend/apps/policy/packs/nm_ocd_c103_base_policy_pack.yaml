@@ -1,0 +1,347 @@
+policy_id: nm.c103
+policy_version: 2026.02.0
+jurisdiction: NM
+form: C-103
+effective_from: '2018-06-26'
+citations:
+  source: NMAC 19.15.25
+  link: https://www.srca.nm.gov/parts/title19/19.015.0025.html
+metadata:
+  generatedAt: '2026-02-09T00:00:00.000000Z'
+  sourceFile: docs/research/nm-co-regulatory-research.md
+sections:
+  intro: ''
+  general:
+    title: General Plugging Requirements
+    text: 'General Plugging Requirements.
+
+      (1) All wells shall be plugged in a manner that protects all formations
+      bearing usable quality water, oil, gas, or other minerals.
+
+      (2) Cement plugs shall be placed by circulation or squeeze method through
+      tubing or drill pipe.
+
+      (3) All cement for plugging shall be conventional hard-setting cement mixed
+      in accordance with API standards.
+
+      (4) Minimum plug length shall be 100 feet OR 25 sacks of cement, whichever
+      is greater.
+
+      (5) All cement plugs shall have sufficient slurry volume to fill the calculated
+      height plus cement excess: 50% for cased hole, 100% for open hole.
+
+      (6) Maximum spacing between plugs: 3000 feet in cased hole, 2000 feet in
+      open hole.
+
+      (7) Cement shall stand for minimum 4 hours wait-on-cement time before disturbing.
+
+      (8) Cement shall stand 8-18 hours (minimum 8 hours, or until 500 psi compressive
+      strength is achieved in specific counties) before testing or drilling out.'
+  surface_casing:
+    title: Plugging Requirements for Wells with Surface Casing
+    text: 'Plugging Requirements for Wells with Surface Casing.
+
+      (1) When insufficient surface casing is set to protect all usable quality
+      water strata and such strata are exposed to the wellbore, a cement plug shall
+      extend at least 50 feet above and 50 feet below the base of the deepest usable
+      quality water stratum. Minimum plug length shall be 100 feet OR 25 sacks,
+      whichever is greater.
+
+      (2) A cement plug shall be set across the shoe of the surface casing. This
+      plug shall extend at least 50 feet above and below the shoe. Minimum plug
+      length shall be 100 feet OR 25 sacks, whichever is greater.
+
+      (3) If surface casing has been set deeper than 200 feet below the base of
+      the deepest usable quality water stratum, an additional cement plug shall
+      be placed inside the surface casing across the base of the deepest usable
+      quality water stratum. This plug shall extend at least 50 feet below and 50
+      feet above the base.
+
+      (4) Plugs shall be set as necessary to separate multiple usable quality water
+      strata.
+
+      (5) Surface casing may not be removed from a well at abandonment.'
+  intermediate_casing:
+    title: Plugging Requirements for Wells with Intermediate Casing
+    text: 'Plugging Requirements for Wells with Intermediate Casing.
+
+      (1) For wells in which the intermediate casing has been cemented through all
+      usable quality water strata and all productive horizons, a cement plug shall
+      be placed inside the casing and centered opposite the base of the deepest
+      usable quality water stratum. Minimum plug length shall be 100 feet OR 25
+      sacks, whichever is greater. The plug shall extend no less than 50 feet above
+      and below the base of the deepest usable quality water stratum.
+
+      (2) For wells in which intermediate casing is not cemented through all usable
+      quality water strata and all productive horizons, and if the casing will not
+      be pulled, the intermediate casing shall be perforated at the required depths
+      to place cement outside of the casing by squeeze cementing through casing
+      perforations.
+
+      (3) Plugs shall be set as necessary to separate multiple usable quality water
+      strata.
+
+      (4) Minimum cement standing time: 300 feet at bottom of intermediate casing
+      per NMAC 19.15.16.10(E).'
+  production_casing:
+    title: Plugging Requirements for Wells with Production Casing
+    text: 'Plugging Requirements for Wells with Production Casing.
+
+      (1) For wells in which the production casing has been cemented through all
+      usable quality water strata and all productive horizons, a cement plug shall
+      be placed inside the casing and centered opposite the base of the deepest
+      usable quality water stratum. Minimum plug length shall be 100 feet OR 25
+      sacks, whichever is greater. The plug shall extend at least 50 feet below
+      and 50 feet above the base of the deepest usable quality water stratum.
+
+      (2) For wells in which the production casing has not been cemented through
+      all usable quality water strata and all productive horizons and if the casing
+      will not be pulled, the production casing shall be perforated at the required
+      depths to place cement outside of the casing by squeeze cementing through
+      casing perforations.
+
+      (3) Cast iron bridge plugs may be placed immediately above each perforated
+      interval, provided at least 100 feet of cement is placed on top of each bridge
+      plug (or 35 feet if set with bailer). A bridge plug shall not be set at a
+      depth where the pressure or temperature exceeds the ratings recommended by
+      the manufacturer.
+
+      (4) Plugs shall be set as necessary to separate multiple usable quality water
+      strata.
+
+      (5) Production casing cement requirement: 500 feet above uppermost perforation
+      per NMAC 19.15.16.10(E).'
+  open_hole:
+    title: Plugging Requirements for Wells Without Production Casing and Open-Hole
+      Completions
+    text: 'Plugging Requirements for Wells Without Production Casing and Open-Hole
+      Completions.
+
+      (1) Any productive horizon or any formation in which a pressure or formation
+      water problem is known to exist shall be isolated by cement plugs centered
+      at the top and bottom of the formation. Minimum plug length shall be 100 feet
+      OR 25 sacks, whichever is greater.
+
+      (2) Each cement plug shall have sufficient slurry volume to fill the calculated
+      height plus 100% cement excess for open hole conditions.
+
+      (3) If the gross thickness of any such formation is less than 100 feet, the
+      tubing or drill pipe shall be suspended 50 feet below the base of the formation.
+      Sufficient slurry volume shall be pumped to fill the calculated height from
+      the bottom of the tubing or drill pipe up to a point at least 50 feet above
+      the top of the formation, plus 100% excess for open hole.'
+  marker:
+    title: Surface Marker Requirements
+    text: 'Surface Marker Requirements.
+
+      (1) Upon completion of plugging operations, a permanent marker shall be installed
+      at the well location.
+
+      (2) The marker shall be a four-inch steel post or pipe extending at least
+      four feet above ground surface.
+
+      (3) The marker shall be marked with the well name, API number, and date of
+      abandonment.'
+base:
+  citations:
+    source: NMAC 19.15.25
+    link: https://www.srca.nm.gov/parts/title19/19.015.0025.html
+  requirements:
+    surface_casing_shoe_plug_min_ft:
+      value: 100
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: 'Cement plug across surface casing shoe: minimum 100 ft OR 25 sacks (50
+        ft above and below).'
+      unit: ft
+    surface_casing_shoe_plug_min_sacks:
+      value: 25
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: 'Minimum plug: 100 ft OR 25 sacks, whichever is greater.'
+      unit: sacks
+    uqw_isolation_min_len_ft:
+      value: 100
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: 'Plug across base of deepest usable-quality water stratum: 50 ft above
+        and 50 ft below.'
+      unit: ft
+    uqw_isolation_min_sacks:
+      value: 25
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: 'Minimum plug: 100 ft OR 25 sacks, whichever is greater.'
+      unit: sacks
+    cement_above_cibp_min_ft:
+      value: 100
+      citation_keys:
+      - nm.nmac.19.15.25.14.A.1
+      text: At least 100 ft of cement must be placed on top of each cast-iron bridge
+        plug (or 35 ft if set with bailer).
+      unit: ft
+    cement_above_cibp_bailer_min_ft:
+      value: 35
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: Alternative CIBP cap if set with bailer.
+      unit: ft
+    cibp_placement_max_ft:
+      value: 100
+      citation_keys:
+      - nm.nmac.19.15.25.14.A.1
+      text: Cast iron bridge plug shall be placed within 100 ft of perforations.
+      unit: ft
+    plug_volume_excess_cased_percent:
+      value: 50
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: Cased hole cement plugs require 50% excess slurry volume above calculated
+        height.
+      unit: percent
+    plug_volume_excess_open_percent:
+      value: 100
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: Open hole cement plugs require 100% excess slurry volume above calculated
+        height.
+      unit: percent
+    casing_shoe_coverage_ft:
+      value: 100
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: Minimum cement coverage across surface casing shoe (50 ft above and below)
+      unit: ft
+    duqw_coverage_ft:
+      value: 100
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: Minimum length for UQW isolation plug (50 ft above and 50 ft below)
+      unit: ft
+    woc_time_hours:
+      value: 4
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: Minimum 4 hours wait-on-cement time before disturbing plug.
+      unit: h
+    cement_standing_min_hours:
+      value: 8
+      citation_keys:
+      - nm.nmac.19.15.16.10(G)
+      text: Minimum 8 hours standing time before testing or drilling out (or until
+        500 psi compressive in specific counties).
+      unit: h
+    cement_standing_max_hours:
+      value: 18
+      citation_keys:
+      - nm.nmac.19.15.16.10(G)
+      text: Maximum recommended standing time is 18 hours (Option 1).
+      unit: h
+    max_plug_spacing_cased_ft:
+      value: 3000
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: Maximum spacing between plugs in cased hole.
+      unit: ft
+    max_plug_spacing_open_ft:
+      value: 2000
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: Maximum spacing between plugs in open hole.
+      unit: ft
+    intermediate_casing_cement_min_ft:
+      value: 300
+      citation_keys:
+      - nm.nmac.19.15.16.10(E)
+      text: Minimum 300 ft cement at bottom of intermediate casing.
+      unit: ft
+    production_casing_cement_min_ft:
+      value: 500
+      citation_keys:
+      - nm.nmac.19.15.16.10(E)
+      text: Minimum 500 ft cement above uppermost perforation for production casing.
+      unit: ft
+    marker_post_diameter_in:
+      value: 4
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: Four-inch steel post or pipe required as permanent marker.
+      unit: in
+    marker_height_ft:
+      value: 4
+      citation_keys:
+      - nm.nmac.19.15.25
+      text: Marker shall extend at least 4 feet above ground surface.
+      unit: ft
+  cement_class:
+    cutoff_ft: 6500
+    shallow_class: C
+    deep_class: H
+# Formula Engine Configuration
+# Specifies which formula engine to use for regulatory calculations.
+# See: apps/policy/services/formula_engine.py
+formula_engine:
+  jurisdiction: NM
+  engine_class: NewMexicoFormulas
+  version: "2026.02.0"
+  # Configuration overrides (defaults from formula_engine.py)
+  config:
+    # NM uses flat excess, not depth-based like TX
+    # 50% for cased hole, 100% for open hole
+    cased_hole_excess: 0.50
+    open_hole_excess: 1.00
+    # Cement class cutoff depth (NM doesn't specify - using TX as default)
+    cement_class_cutoff_ft: 6500
+    shallow_class: C
+    deep_class: H
+    # Coverage requirements per plug type (in feet)
+    coverage_defaults:
+      casing_shoe: 50       # NMAC 19.15.25
+      duqw: 50              # NMAC 19.15.25
+      production_horizon: 50
+      intermediate_shoe: 50
+      top_plug: 0
+      cibp_cap: 100         # NMAC 19.15.25 (NM = 100 ft, TX = 20 ft)
+    # NM-specific parameters
+    min_sacks: 25
+    max_cased_spacing_ft: 3000
+    max_open_spacing_ft: 2000
+    woc_hours: 4
+    cement_standing_min_hours: 8
+    cement_standing_max_hours: 18
+preferences:
+  rounding_policy: nearest
+  default_recipe:
+    id: class_h_neat_15_8
+    class: H
+    density_ppg: 15.8
+    yield_ft3_per_sk: 1.18
+    water_gal_per_sk: 5.2
+    additives: []
+  operational:
+    mud_min_weight_ppg: 9.5
+    funnel_min_s: 40
+  # NM uses flat excess percentages instead of per-1000-ft
+  plug_volume_excess_cased_percent: 50
+  plug_volume_excess_open_percent: 100
+form_mappings:
+  c101:
+    name: Application to Drill
+    equivalent_tx: W-1
+    description: Application to drill, deepen, or plug back a well
+  c102:
+    name: Well Location Plat
+    equivalent_tx: W-1A
+    description: Well location and acreage plat
+  c103:
+    name: Sundry Notices
+    equivalent_tx: Sundry / G-1
+    description: Sundry notices and reports on well operations
+  c104:
+    name: Request for Allowable
+    equivalent_tx: P-1
+    description: Request for well production allowable
+  c105:
+    name: Completion Report
+    equivalent_tx: W-2
+    description: Completion or recompletion report (due within 45 days)

@@ -268,3 +268,136 @@ def _load_w3a_from_pdf_upload(w3a_reference: Dict[str, Any], request) -> Dict[st
         except Exception as e:
             logger.warning(f"Failed to delete temp file {tmp_path}: {e}")
 
+
+def get_w3a_geometry_from_database(api_number: str) -> Optional[Dict[str, Any]]:
+    """
+    Retrieve well geometry (casing, formations, perforations, duqw, etc.) 
+    from the most recent W-3A plan snapshot for the given API number.
+    
+    This is used by the W3 builder to populate w3a_well_geometry in the response
+    when a W-3A plan already exists in the database.
+    
+    Args:
+        api_number: Normalized or unnormalized API number (e.g., "42-003-01016" or "42003001")
+        
+    Returns:
+        Dictionary with well geometry including:
+        {
+            "casing_record": [...],
+            "formation_tops": [...],
+            "perforations": [...],
+            "duqw": {...},
+            "plugging_proposal": [...],
+            "operational_steps": [...]
+        }
+        Or None if no plan found.
+    """
+    try:
+        from apps.public_core.models import WellRegistry, PlanSnapshot
+        from apps.public_core.services.w3_utils import normalize_api_number
+        
+        logger.info("=" * 80)
+        logger.info("🔍 GET_W3A_GEOMETRY_FROM_DATABASE - Starting")
+        logger.info("=" * 80)
+        logger.info(f"📥 Input API number: {api_number}")
+        
+        # Normalize API number
+        normalized_api = normalize_api_number(api_number) if api_number else None
+        if not normalized_api:
+            logger.warning(f"❌ Could not normalize API number: {api_number}")
+            return None
+        
+        logger.info(f"✅ Normalized API: {normalized_api}")
+        
+        # Find well by API number (use last 8 digits for matching)
+        logger.info(f"🔎 Searching for well by API (last 8 digits: {normalized_api[-8:]})")
+        well = WellRegistry.objects.filter(
+            api14__icontains=normalized_api[-8:]
+        ).first()
+        
+        if not well:
+            logger.warning(f"❌ No well found in WellRegistry for API {api_number}")
+            return None
+        
+        logger.info(f"✅ Found well: {well.api14} ({well.operator_name or 'Unknown operator'}) - {well.well_number}")
+        
+        # Find most recent baseline W-3A plan snapshot
+        logger.info(f"🔎 Searching for baseline PlanSnapshot for well {well.id}")
+        snapshot = (
+            PlanSnapshot.objects
+            .filter(well=well, kind=PlanSnapshot.KIND_BASELINE)
+            .order_by('-created_at')
+            .first()
+        )
+        
+        if not snapshot:
+            logger.warning(f"❌ No W-3A baseline plan snapshot found for well {well.api14}")
+            logger.info("   (This means W-3A has never been generated for this well)")
+            return None
+        
+        logger.info(f"✅ Found W-3A plan snapshot:")
+        logger.info(f"   - Plan ID: {snapshot.plan_id}")
+        logger.info(f"   - Kind: {snapshot.kind}")
+        logger.info(f"   - Status: {snapshot.status}")
+        logger.info(f"   - Created: {snapshot.created_at}")
+        logger.info(f"   - Payload size: {len(str(snapshot.payload))} bytes")
+        
+        # Extract geometry from payload
+        payload = snapshot.payload or {}
+        
+        logger.info(f"🔍 Extracting geometry from payload...")
+        
+        # Build geometry response with all relevant well data
+        casing_record = payload.get("casing_record", [])
+        formation_tops = payload.get("formation_tops", []) or payload.get("header", {}).get("formation_record", [])
+        perforations = payload.get("perforations", [])
+        duqw = payload.get("duqw", {})
+        plugging_proposal = payload.get("plugging_proposal", [])
+        operational_steps = payload.get("operational_steps", [])
+        remarks = payload.get("remarks", "")
+        
+        logger.info(f"   ✅ Casing record: {len(casing_record)} strings")
+        for i, casing in enumerate(casing_record[:3]):
+            string_type = casing.get("string_type", "unknown")
+            size = casing.get("size_in", "?")
+            top = casing.get("top_ft", "?")
+            bottom = casing.get("bottom_ft", "?")
+            logger.debug(f"      [{i}] {string_type}: {size}\" @ {top}-{bottom} ft")
+        if len(casing_record) > 3:
+            logger.debug(f"      ... and {len(casing_record) - 3} more")
+        
+        logger.info(f"   ✅ Formation tops: {len(formation_tops)} entries")
+        for i, formation in enumerate(formation_tops[:3]):
+            name = formation.get("name") or formation.get("formation", "unknown")
+            depth = formation.get("depth_ft") or formation.get("top_ft", "?")
+            logger.debug(f"      [{i}] {name} @ {depth} ft")
+        if len(formation_tops) > 3:
+            logger.debug(f"      ... and {len(formation_tops) - 3} more")
+        
+        logger.info(f"   ✅ Perforations: {len(perforations)} intervals")
+        logger.info(f"   ✅ DUQW: {duqw.get('formation', 'unknown') if duqw else 'None'} @ {duqw.get('depth_ft', '?')} ft")
+        logger.info(f"   ✅ Plugging proposal: {len(plugging_proposal)} plugs")
+        logger.info(f"   ✅ Operational steps: {len(operational_steps)} steps")
+        logger.info(f"   ✅ Remarks: {len(remarks)} characters")
+        
+        geometry = {
+            "casing_record": casing_record,
+            "formation_tops": formation_tops,
+            "perforations": perforations,
+            "duqw": duqw,
+            "plugging_proposal": plugging_proposal,
+            "operational_steps": operational_steps,
+            "remarks": remarks,
+        }
+        
+        logger.info("=" * 80)
+        logger.info("✅ GET_W3A_GEOMETRY_FROM_DATABASE - SUCCESS")
+        logger.info("=" * 80)
+        
+        return geometry
+    
+    except Exception as e:
+        logger.error(f"❌ Exception in get_w3a_geometry_from_database: {e}", exc_info=True)
+        logger.warning(f"❌ Failed to retrieve W-3A geometry from database")
+        return None
+

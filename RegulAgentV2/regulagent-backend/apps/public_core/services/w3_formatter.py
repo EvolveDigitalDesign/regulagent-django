@@ -415,15 +415,24 @@ def format_perforations(
         }
         formatted_perfs.append(formatted_perf)
     
-    # Track new perforations from events
+    # Add new perforations from PNA events
     new_perfs = [e for e in w3_events if e.event_type == "perforate"]
     for perf_event in new_perfs:
         if perf_event.perf_depth_ft:
-            # Check if we should update existing or add new
-            # For now, just track the new perf depth
-            logger.info(f"Perforation event at {perf_event.perf_depth_ft} ft on {perf_event.date}")
+            # Add perforation from PNA event
+            # Note: PNA typically only provides a single depth, so we use it for top
+            # Bottom depth would need to be provided separately or defaulted
+            formatted_perf = {
+                "interval_top_ft": perf_event.perf_depth_ft,
+                "interval_bottom_ft": perf_event.perf_depth_ft,  # Same as top since PNA gives single depth
+                "formation": None,  # Not available from PNA events
+                "status": "perforated",  # Status from perforation event
+                "perforation_date": perf_event.date,
+            }
+            formatted_perfs.append(formatted_perf)
+            logger.info(f"Added perforation from PNA event at {perf_event.perf_depth_ft} ft on {perf_event.date}")
     
-    logger.info(f"Formatted {len(formatted_perfs)} perforation intervals")
+    logger.info(f"Formatted {len(formatted_perfs)} perforation intervals ({len(w3a_perforations)} from W-3A, {len(new_perfs)} from PNA events)")
     return formatted_perfs
 
 

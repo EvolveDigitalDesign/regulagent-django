@@ -1,1 +1,12 @@
 /.env
+
+# Markdown documentation files
+*.md
+
+# Temporary files and extraction cache
+tmp/
+**/tmp/
+
+# Media uploads and temporary PDFs
+ra_config/mediafiles/uploads/
+ra_config/tmp/

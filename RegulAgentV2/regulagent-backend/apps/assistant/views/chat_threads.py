@@ -54,12 +54,12 @@ class ChatThreadViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         user_tenant = user.tenants.first()
-        
+
         if not user_tenant:
             return ChatThread.objects.none()
-        
+
         # Threads user owns OR threads shared with user (within their tenant)
-        return ChatThread.objects.filter(
+        queryset = ChatThread.objects.filter(
             Q(created_by=user) | Q(shared_with=user),
             tenant_id=user_tenant.id
         ).distinct().select_related(
@@ -68,6 +68,15 @@ class ChatThreadViewSet(viewsets.ModelViewSet):
             'current_plan',
             'created_by'
         ).prefetch_related('shared_with')
+
+        # Add workspace filtering if provided
+        workspace_id = self.request.query_params.get('workspace')
+        if workspace_id:
+            queryset = queryset.filter(
+                Q(baseline_plan__workspace_id=workspace_id)
+            )
+
+        return queryset
     
     def create(self, request):
         """

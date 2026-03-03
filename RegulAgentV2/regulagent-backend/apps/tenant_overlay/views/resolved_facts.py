@@ -6,8 +6,7 @@ from apps.tenant_overlay.services.facts_resolver import resolve_engagement_facts
 
 
 class ResolvedFactsView(APIView):
-    authentication_classes = []  # wire real auth later
-    permission_classes = []
+    """Returns resolved facts for a well engagement, merging public and tenant data."""
 
     def get(self, request, engagement_id: int):
         data = resolve_engagement_facts(engagement_id)

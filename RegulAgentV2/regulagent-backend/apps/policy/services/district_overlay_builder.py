@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 
 _NUM_WORDS = {
@@ -18,6 +18,95 @@ def _to_int(token: str) -> int | None:
     if token.isdigit():
         return int(token)
     return _NUM_WORDS.get(token)
+
+
+def normalize_7c_to_standard(json_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert 7C JSON format to standard format expected by the builder.
+    
+    7C format differs from the standard (8A-style) format:
+    - County-level: has 'additionalRequirements' (free text) instead of 'notes' (list)
+    - Field specs: flat list with 'field', 'formation', 'tops' instead of 'field_name', 'formations', 'fm_tops'
+    - Field specs: optional 'use_when' (scope annotation) and 'additional_requirements' fields
+    
+    This normalizer converts 7C to standard format, preserving scoping annotations as separate fields
+    so the builder can handle them explicitly without parsing ambiguity.
+    """
+    normalized: Dict[str, Any] = {
+        "metadata": json_data.get("metadata", {}),
+        "generalProcedures": json_data.get("generalProcedures", []),
+        "pluggingChart": json_data.get("pluggingChart", {}),
+        "counties": {}
+    }
+    
+    for county_key, county_data in (json_data.get("counties") or {}).items():
+        # Convert additionalRequirements text → notes list by splitting on newlines
+        req_text: str = county_data.get("additionalRequirements", "")
+        notes: List[str] = []
+        if req_text:
+            # Split on newlines, keeping non-empty lines
+            lines = [s.strip() for s in req_text.split("\n") if s.strip()]
+            notes = lines
+        
+        # Process fieldSpecs: normalize key names, preserve optional fields separately
+        # IMPORTANT: Some counties use state machine structure where entries with ONLY use_when
+        # are headers that set context for subsequent formations
+        field_specs: List[Dict[str, Any]] = county_data.get("fieldSpecs", [])
+        normalized_specs: List[Dict[str, Any]] = []
+        
+        # State machine: track current use_when context
+        current_use_when = ""
+        
+        for spec in field_specs:
+            # Check if this is a use_when HEADER (has use_when but NO formations)
+            has_formation = bool(spec.get("formation") or spec.get("formations"))
+            has_use_when = bool(spec.get("use_when"))
+            
+            if has_use_when and not has_formation:
+                # This is a HEADER - update context for subsequent formations
+                current_use_when = spec.get("use_when", "")
+                print(f"🔍 NORMALIZER: use_when context switched to '{current_use_when}'", flush=True)
+                continue  # Don't create a formation entry for headers
+            
+            # Skip entries with no formation data
+            if not has_formation:
+                continue
+            
+            # Convert tops to string; handle both float and int inputs
+            tops_val = spec.get("tops", "")
+            if isinstance(tops_val, (int, float)) and tops_val != "":
+                fm_tops_str = str(int(tops_val))  # Convert float to int first, then string
+            else:
+                fm_tops_str = str(tops_val)
+            
+            # Handle both formats: some counties use "field"/"formation", others use "field_name"/"formations"
+            field_val = spec.get("field") or spec.get("field_name", "Unknown")
+            formation_val = spec.get("formation") or spec.get("formations", "")
+            
+            normalized_spec: Dict[str, Any] = {
+                "field_name": field_val,
+                "formations": formation_val,
+                "fm_tops": fm_tops_str,
+                "remarks": spec.get("remarks", ""),  # Standard remarks if present
+            }
+            
+            # use_when: prioritize explicit use_when on formation, else use current context
+            effective_use_when = spec.get("use_when") or current_use_when
+            if effective_use_when:
+                normalized_spec["use_when"] = effective_use_when
+            
+            # Preserve additional_requirements as a separate field (field-level requirements)
+            if spec.get("additional_requirements"):
+                normalized_spec["additional_requirements"] = spec["additional_requirements"]
+            
+            normalized_specs.append(normalized_spec)
+        
+        normalized["counties"][county_key] = {
+            "name": county_data.get("name", ""),
+            "notes": notes,
+            "fieldSpecs": normalized_specs
+        }
+    
+    return normalized
 
 
 def _derive_requirements_from_notes(notes: List[str]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
@@ -185,6 +274,204 @@ def _derive_overrides_from_notes(notes: List[str]) -> Dict[str, Any]:
     if re.search(r"Yates.*migrat.*Santa\s*Rosa", text, re.IGNORECASE):
         overrides["migration_risk"] = {"from_to": [{"from": "Yates", "to": "SA"}], "actions": ["separate_WBL_plugs", "require_tag"]}
 
+    # === County-Level Procedure Extractions (Patterns 1-24) ===
+    
+    # Pattern 1: cibp_required (CIBP plus 20 FT. cement)
+    if re.search(r"CIBP\s*plus\s*(\d+)\s*FT\.\s*cement", text, re.IGNORECASE):
+        m_cibp = re.search(r"CIBP\s*plus\s*(\d+)\s*FT\.\s*cement", text, re.IGNORECASE)
+        if m_cibp:
+            overrides.setdefault("county_procedures", {})["cibp_required"] = {
+                "offset_above_perf_ft": 50,
+                "cement_cap_ft": int(m_cibp.group(1))
+            }
+    
+    # Pattern 3 & 12: surface_shoe_straddle / surface_intermediate_casing_straddle
+    if re.search(r"50\s*FT\.\s*below the shoe.*?50\s*FT\.\s*above", text, re.IGNORECASE):
+        overrides.setdefault("county_procedures", {})["surface_shoe_straddle"] = {
+            "offset_below_ft": 50,
+            "offset_above_ft": 50
+        }
+    
+    # Pattern 4: straddle_uqw (200 FT. below DUQW)
+    m_duqw_threshold = re.search(r"surface casing.*?deeper than\s*(\d+)\s*FT\.\s*below.*?deepest.*?water.*?additional\s*(\d+)\s*FT\.\s*cement", text, re.IGNORECASE)
+    if m_duqw_threshold:
+        overrides.setdefault("county_procedures", {})["straddle_uqw"] = {
+            "threshold_below_duqw_ft": int(m_duqw_threshold.group(1)),
+            "plug_length_ft": int(m_duqw_threshold.group(2))
+        }
+    
+    # Pattern 5: coleman_junction_formation_required (200 FT. plug)
+    m_cj_plug = re.search(r"We require a\s*(\d+)\s*FT\.\s*plug above the Coleman Junction", text, re.IGNORECASE)
+    if m_cj_plug:
+        overrides.setdefault("county_procedures", {})["coleman_junction_formation_required"] = {
+            "plug_length_ft": int(m_cj_plug.group(1))
+        }
+    
+    # Pattern 6: coleman_junction_specs (3x3 matrix by section)
+    cj_sections = {}
+    for section_name in ["Northern", "Central", "Southern"]:
+        m_section = re.search(
+            rf"{section_name}:\s*Western[^0-9]*(\d+)\s*FT[.,]?\s*[,;]?\s*Middle[^0-9]*(\d+)\s*FT[.,]?\s*[,;]?\s*Eastern[^0-9]*(\d+)",
+            text, re.IGNORECASE
+        )
+        if m_section:
+            cj_sections[section_name.lower()] = {
+                "western": int(m_section.group(1)),
+                "central": int(m_section.group(2)),
+                "eastern": int(m_section.group(3))
+            }
+    if cj_sections:
+        overrides.setdefault("county_procedures", {})["coleman_junction_specs"] = cj_sections
+    
+    # Pattern 7: dry_holes_non_producing_procedures
+    if re.search(r"For dry holes in a non-producing", text, re.IGNORECASE):
+        dry_hole_procs = {}
+        m_shallow = re.search(r"well is\s*(\d+)-(\d+)'\s*deep\s+(.*?)(?:2\.|If the well)", text, re.IGNORECASE | re.DOTALL)
+        if m_shallow:
+            dry_hole_procs["shallow"] = {
+                "depth_range": f"{m_shallow.group(1)}-{m_shallow.group(2)}'",
+                "procedure": m_shallow.group(3).strip()
+            }
+        m_deep = re.search(r"well is\s*~(\d+)'\s*deep\s+(.*?)(?:\n|$)", text, re.IGNORECASE | re.DOTALL)
+        if m_deep:
+            dry_hole_procs["deep"] = {
+                "depth_range": f"~{m_deep.group(1)}'",
+                "procedure": m_deep.group(2).strip()
+            }
+        if dry_hole_procs:
+            overrides.setdefault("county_procedures", {})["dry_holes_non_producing_procedures"] = dry_hole_procs
+    
+    # Pattern 8: waterboard_letter_exception (cement to surface from Coleman Junction)
+    if re.search(r"do not require a waterboard letter if cement is brought to the surface from the Coleman Junction", text, re.IGNORECASE):
+        overrides.setdefault("county_procedures", {})["waterboard_letter_exception"] = {
+            "condition": "cement_to_surface_from_coleman_junction"
+        }
+    
+    # Pattern 8b: waterboard_letter_exception (cement to surface from problem zone)
+    if re.search(r"do not require a waterboard letter if cement is brought to the surface from the problem zone", text, re.IGNORECASE):
+        overrides.setdefault("county_procedures", {})["problem_zone_cement_exception"] = {
+            "condition": "cement_to_surface_from_problem_zone"
+        }
+    
+    # Pattern 9: waterboard_protection_depth_range
+    m_wbd = re.search(r"waterboard protection depth is between\s*(?:feet)?\s*(\d+)\s*(?:and|to)\s*(\d+)\s*feet?", text, re.IGNORECASE)
+    if m_wbd:
+        overrides.setdefault("county_procedures", {})["waterboard_protection_depth_range"] = {
+            "min_ft": int(m_wbd.group(1)),
+            "max_ft": int(m_wbd.group(2))
+        }
+    
+    # Pattern 10: specific_plug_volumes (sacks for dry holes)
+    if re.search(r"(\d+)\s*sks? above Coleman Junction", text, re.IGNORECASE):
+        plug_vols = {}
+        m_cj_sks = re.search(r"(\d+)\s*sks? above Coleman Junction", text, re.IGNORECASE)
+        if m_cj_sks:
+            plug_vols["above_coleman_junction_sks"] = int(m_cj_sks.group(1))
+        m_sc_sks = re.search(r"(\d+)\s*sks? plug across Surface Csg", text, re.IGNORECASE)
+        if m_sc_sks:
+            plug_vols["surface_casing_sks"] = int(m_sc_sks.group(1))
+        m_surf_sks = re.search(r"(\d+)\s*sks? at surface", text, re.IGNORECASE)
+        if m_surf_sks:
+            plug_vols["surface_sks"] = int(m_surf_sks.group(1))
+        if plug_vols:
+            overrides.setdefault("county_procedures", {})["specific_plug_volumes"] = plug_vols
+    
+    # Pattern 11: conditional_fill_procedure
+    if re.search(r"filling to surface from Coleman Junction should be acceptable", text, re.IGNORECASE):
+        overrides.setdefault("county_procedures", {})["conditional_fill_procedure"] = {
+            "condition": "no_water_flow",
+            "remedy": "fill_to_surface_from_coleman_junction"
+        }
+    
+    # Pattern 13: formation_specific_tagging (San Andres, Santa Rosa, San Angelo, etc.)
+    tagging_formations = []
+    for form in ["San Andres", "Santa Rosa", "San Angelo", "Yates", "Rustler"]:
+        if re.search(rf"Tag all.*?{form}\s+plugs", text, re.IGNORECASE):
+            tagging_formations.append(form.lower().replace(" ", "_"))
+    if tagging_formations:
+        overrides.setdefault("county_procedures", {})["formation_specific_tagging"] = tagging_formations
+    
+    # Pattern 15: san_andres_formation_required
+    m_sa_plug = re.search(r"We require a\s*(\d+)\s*FT\.\s*plug above the San Andres", text, re.IGNORECASE)
+    if m_sa_plug:
+        overrides.setdefault("county_procedures", {})["san_andres_formation_required"] = {
+            "plug_length_ft": int(m_sa_plug.group(1))
+        }
+    
+    # Pattern 18: problem_zone_formation_required
+    m_pz_plug = re.search(r"We require a\s*(\d+)\s*FT\.\s*plug above a.*?problem Zone", text, re.IGNORECASE)
+    if m_pz_plug:
+        overrides.setdefault("county_procedures", {})["problem_zone_formation_required"] = {
+            "plug_length_ft": int(m_pz_plug.group(1))
+        }
+    
+    # Pattern 19: problem_zone_description
+    m_pz_desc = re.search(r"The problem formation will produce a saltwater flow.*?The zone\s+is present in the (.+?)\.?(?:\n|$)", text, re.IGNORECASE)
+    if m_pz_desc:
+        overrides.setdefault("county_procedures", {})["problem_zone_description"] = {
+            "location": m_pz_desc.group(1).strip()
+        }
+    
+    # Pattern 20: localized_uqw_protection
+    m_loc_uqw = re.search(
+        r"About\s*(\d+)\s*miles\s*(.+?)\s+of\s+(\w+)\s+the\s+upper\s+(\w+)\s+from\s+(\d+)\s+to\s+(\d+)\s+is usable quality water",
+        text, re.IGNORECASE
+    )
+    if m_loc_uqw:
+        overrides.setdefault("county_procedures", {})["localized_uqw_protection"] = {
+            "location": f"{m_loc_uqw.group(1)} miles {m_loc_uqw.group(2)} of {m_loc_uqw.group(3)}",
+            "formation": m_loc_uqw.group(4),
+            "depth_range": {
+                "top_ft": int(m_loc_uqw.group(6)),
+                "bottom_ft": int(m_loc_uqw.group(5))
+            }
+        }
+    
+    # Pattern 22: hickory_formation_protection
+    if re.search(r"The Hickory must be protected if penetrated", text, re.IGNORECASE):
+        m_hickory = re.search(r"The Hickory is located immediately below the (\w+)", text, re.IGNORECASE)
+        below_formation = m_hickory.group(1) if m_hickory else "Ellen"
+        overrides.setdefault("county_procedures", {})["hickory_formation_protection"] = {
+            "located_below": below_formation
+        }
+    
+    # Pattern 23: localized_waterboard_zones
+    m_loc_zone = re.search(
+        r"A zone located\s*(\d+)\s*miles\s*(.+?)\s+of\s+(\w+)\s+between\s+(\d+)\s*FT\.\s+and\s+(\d+)\s*FT\.\s+must be\s+isolated.*?cement plug from\s*(\d+)\s*FT\.\s+to\s+(\d+)\s*FT\..*?and\s*(\d+)\s*FT\.\s+to\s+(\d+)\s*FT\.",
+        text, re.IGNORECASE | re.DOTALL
+    )
+    if m_loc_zone:
+        overrides.setdefault("county_procedures", {})["localized_waterboard_zones"] = {
+            "location": f"{m_loc_zone.group(1)} miles {m_loc_zone.group(2)} of {m_loc_zone.group(3)}",
+            "zone_depth_range": {
+                "top_ft": int(m_loc_zone.group(5)),
+                "bottom_ft": int(m_loc_zone.group(4))
+            },
+            "isolation_plugs": [
+                {
+                    "top_ft": int(m_loc_zone.group(6)),
+                    "bottom_ft": int(m_loc_zone.group(7)),
+                    "tag_required": True
+                },
+                {
+                    "top_ft": int(m_loc_zone.group(8)),
+                    "bottom_ft": int(m_loc_zone.group(9)),
+                    "tag_required": True
+                }
+            ]
+        }
+    
+    # Pattern 24: localized_protection_depth
+    m_loc_depth = re.search(
+        r"The protection depth\s*(\d+)\s*miles\s*(.+?)\s+of\s+(\w+)\s+is\s*(\d+)\s*FT\.",
+        text, re.IGNORECASE
+    )
+    if m_loc_depth:
+        overrides.setdefault("county_procedures", {})["localized_protection_depth"] = {
+            "location": f"{m_loc_depth.group(1)} miles {m_loc_depth.group(2)} of {m_loc_depth.group(3)}",
+            "protection_depth_ft": int(m_loc_depth.group(4))
+        }
+
     return overrides
 
 
@@ -282,6 +569,11 @@ def _derive_overrides_from_fields(field_specs: List[Dict[str, Any]]) -> Dict[str
         remarks = str(fs.get('remarks') or '')
         formations = str(fs.get('formations') or '')
         fm_top = fs.get('fm_tops') if fs.get('fm_tops') not in (None, "") else fs.get('tops')
+        
+        # Extract optional 7C-format fields (use_when, additional_requirements)
+        # These are preserved as separate fields for clear semantics
+        use_when: Optional[str] = fs.get('use_when')
+        additional_requirements: Optional[str] = fs.get('additional_requirements')
 
         # If this row has no formations, no fm_tops/tops, and no remarks, treat it
         # as a contentless header/remark line and attach to the previous valid field.
@@ -325,8 +617,19 @@ def _derive_overrides_from_fields(field_specs: List[Dict[str, Any]]) -> Dict[str
                 'tag_required': True,
             })
 
-        # Tagging
+        # Tagging (from remarks)
         if re.search(r"TAG\b", remarks, re.IGNORECASE):
+            fmatch = re.search(r"\b(SA|SR|Yates|Rustler)\b", formations, re.IGNORECASE)
+            if fmatch:
+                form = 'SA' if fmatch.group(1).upper() == 'SA' else fmatch.group(1).title()
+                per_field.setdefault('tag', {}).setdefault('formations', [])
+                if form not in per_field['tag']['formations']:
+                    per_field['tag']['formations'].append(form)
+            else:
+                per_field.setdefault('tag', {})['surface_shoe_in_oh'] = True
+        
+        # Tagging (from additional_requirements field, e.g. "Tag" annotation in 7C format)
+        if additional_requirements and additional_requirements.lower().strip() == 'tag':
             fmatch = re.search(r"\b(SA|SR|Yates|Rustler)\b", formations, re.IGNORECASE)
             if fmatch:
                 form = 'SA' if fmatch.group(1).upper() == 'SA' else fmatch.group(1).title()

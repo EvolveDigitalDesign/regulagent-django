@@ -1,27 +1,33 @@
+from django.http import Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from apps.public_core.models import PlanSnapshot, WellRegistry
+from apps.public_core.services.api_normalization import get_well_by_api, normalize_api_14digit
 from apps.tenant_overlay.models import TenantArtifact
 import re
 
 
 class PlanArtifactsView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    """List artifacts associated with a plan snapshot."""
 
     def get(self, request, api: str):
-        api_normalized = re.sub(r"\D+", "", str(api or ""))
-        if not api_normalized:
-            return Response({"detail": "API number is required"}, status=status.HTTP_400_BAD_REQUEST)
+        # Normalize API number for consistent lookup
+        api_14 = normalize_api_14digit(api)
+        if not api_14:
+            return Response({"detail": "Invalid API number format"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Prefer finding via WellRegistry, but fall back to plan_id and extracted_document
         snapshot = None
-        well = WellRegistry.objects.filter(api14__icontains=api_normalized[-8:]).first()
-        if well:
+        try:
+            well = get_well_by_api(api)
             snapshot = PlanSnapshot.objects.filter(well=well).order_by('-created_at').first()
+        except Http404:
+            # Well not found, try fallback lookups
+            pass
+
         if not snapshot:
-            expected_ids = [f"{api_normalized}:combined", f"{api_normalized}:isolated", f"{api_normalized}:both"]
+            expected_ids = [f"{api_14}:combined", f"{api_14}:isolated", f"{api_14}:both"]
             snapshot = (
                 PlanSnapshot.objects
                 .filter(plan_id__in=expected_ids)
@@ -36,7 +42,7 @@ class PlanArtifactsView(APIView):
             # Last resort: artifacts created from extracted docs for this API even without snapshots/well
             arts_qs = (
                 TenantArtifact.objects
-                .filter(extracted_document__api_number__icontains=api_normalized[-8:])
+                .filter(extracted_document__api_number=api_14)
                 .order_by('-created_at')
             )
 

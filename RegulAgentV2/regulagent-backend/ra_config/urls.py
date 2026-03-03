@@ -34,6 +34,16 @@ from apps.policy_ingest import urls as policy_urls
 from apps.kernel.views.advisory import AdvisorySanityCheckView
 from apps.public_core.views.rrc_extractions import RRCCompletionsExtractView
 from apps.public_core.views.w3a_from_api import W3AFromApiView
+from apps.public_core.views.w3a_segmented import (
+    W3AInitialView,
+    W3ACombinedPDFView,
+    W3AConfirmDocsView,
+    W3AConfirmExtractionsView,
+    W3AGeometryView,
+    W3AConfirmGeometryView,
+    W3AApplyEditsView,
+    W3ABrowseEditsView,
+)
 from apps.public_core.views.plan_history import PlanHistoryView
 from apps.public_core.views.plan_artifacts import PlanArtifactsView
 from apps.public_core.views.artifact_download import ArtifactDownloadView
@@ -50,7 +60,15 @@ from apps.public_core.views.plan_status import (
     get_plan_status,
 )
 from apps.public_core.views.w3_from_pna import BuildW3FromPNAView, W3HealthCheckView
-from apps.tenants.views import TenantInfoView
+from apps.public_core.views.well_filings import WellFilingsView
+from apps.public_core.views.all_filings import AllFilingsView
+from apps.public_core.views.filing_metrics import FilingMetricsView
+from apps.public_core.views.filing_breakdown import FilingBreakdownView
+from apps.public_core.views.filing_breakdown_timeline import FilingBreakdownTimelineView
+from apps.tenants.views import (
+    TenantInfoView, UserProfileView, ChangePasswordView,
+    ClientWorkspaceViewSet, UsageSummaryView, UsageRecordViewSet
+)
 from apps.tenant_overlay.views.tenant_wells import (
     get_well_by_api,
     bulk_get_wells,
@@ -62,6 +80,21 @@ from apps.tenant_overlay.views.guardrail_policy import (
     validate_policy_change,
 )
 from apps.assistant.urls import plan_version_urls
+from apps.public_core.views.bulk_operations import (
+    bulk_generate_plans_view,
+    bulk_update_plan_status_view,
+    get_bulk_job_status,
+    list_bulk_jobs,
+)
+from apps.public_core.views.nm_wells import (
+    NMWellDetailView,
+    NMWellDocumentsView,
+    NMWellCombinedPDFView,
+)
+from apps.public_core.views.nm_well_import import (
+    NMWellImportView,
+    NMWellBatchImportView,
+)
 
 router = DefaultRouter()
 router.register(r'public/wells', WellRegistryViewSet, basename='public-wells')
@@ -69,6 +102,8 @@ router.register(r'public/facts', PublicFactsViewSet, basename='public-facts')
 router.register(r'public/casing', PublicCasingStringViewSet, basename='public-casing')
 router.register(r'public/perforations', PublicPerforationViewSet, basename='public-perforations')
 router.register(r'public/depths', PublicWellDepthsViewSet, basename='public-depths')
+router.register(r'tenant/workspaces', ClientWorkspaceViewSet, basename='client-workspaces')
+router.register(r'tenant/usage/records', UsageRecordViewSet, basename='usage-records')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -86,9 +121,26 @@ urlpatterns = [
     path('api/rrc/extractions/completions', RRCCompletionsExtractView.as_view()),
     path('api/plans/w3a/from-api', W3AFromApiView.as_view()),
     
+    # Segmented W3A flow (multi-stage with user verification)
+    path('api/w3a/initial', W3AInitialView.as_view(), name='w3a-initial'),
+    path('api/w3a/<str:temp_plan_id>/combined.pdf', W3ACombinedPDFView.as_view(), name='w3a-combined-pdf'),
+    path('api/w3a/<str:temp_plan_id>/confirm-docs', W3AConfirmDocsView.as_view(), name='w3a-confirm-docs'),
+    path('api/w3a/<str:temp_plan_id>/extractions', W3AConfirmExtractionsView.as_view(), name='w3a-confirm-extractions'),
+    path('api/w3a/<str:temp_plan_id>/geometry', W3AGeometryView.as_view(), name='w3a-geometry'),
+    path('api/w3a/<str:temp_plan_id>/confirm-geometry', W3AConfirmGeometryView.as_view(), name='w3a-confirm-geometry'),
+    path('api/w3a/<str:plan_id>/apply-edits', W3AApplyEditsView.as_view(), name='w3a-apply-edits'),
+    path('api/w3a/edits', W3ABrowseEditsView.as_view(), name='w3a-browse-edits'),
+    
     # W-3 Form Generation from pnaexchange
     path('api/w3/health/', W3HealthCheckView.as_view(), name='w3-health'),
     path('api/w3/build-from-pna/', BuildW3FromPNAView.as_view(), name='w3-build-from-pna'),
+    
+    # Well Filings Unified Endpoints
+    path('api/filings/', AllFilingsView.as_view(), name='all-filings'),
+    path('api/filings/metrics/', FilingMetricsView.as_view(), name='filing-metrics'),
+    path('api/filings/breakdown/', FilingBreakdownView.as_view(), name='filing-breakdown'),
+    path('api/filings/breakdown-timeline/', FilingBreakdownTimelineView.as_view(), name='filing-breakdown-timeline'),
+    path('api/wells/<str:api14>/filings/', WellFilingsView.as_view(), name='well-filings'),
     
     path('api/plans/<str:api>/history', PlanHistoryView.as_view()),
     path('api/plans/<str:api>/artifacts', PlanArtifactsView.as_view()),
@@ -111,6 +163,13 @@ urlpatterns = [
     # Tenant info endpoint
     path('api/tenant/', TenantInfoView.as_view(), name='tenant_info'),
     
+    # User profile endpoints
+    path('api/user/profile/', UserProfileView.as_view(), name='user_profile'),
+    path('api/user/change-password/', ChangePasswordView.as_view(), name='change_password'),
+
+    # Usage tracking endpoints
+    path('api/tenant/usage/summary/', UsageSummaryView.as_view(), name='usage_summary'),
+    
     # Tenant wells endpoints (specific routes first, then generic)
     path('api/tenant/wells/history/', get_tenant_well_history, name='tenant_well_history'),
     path('api/tenant/wells/bulk/', bulk_get_wells, name='tenant_wells_bulk'),
@@ -120,7 +179,22 @@ urlpatterns = [
     path('api/tenant/settings/guardrails/', TenantGuardrailPolicyView.as_view(), name='tenant_guardrails'),
     path('api/tenant/settings/guardrails/risk-profiles/', get_risk_profiles, name='guardrail_profiles'),
     path('api/tenant/settings/guardrails/validate/', validate_policy_change, name='guardrail_validate'),
-    
+
+    # Bulk operations endpoints
+    path('api/wells/bulk/generate-plans/', bulk_generate_plans_view, name='bulk_generate_plans'),
+    path('api/plans/bulk/update-status/', bulk_update_plan_status_view, name='bulk_update_status'),
+    path('api/jobs/<uuid:job_id>/', get_bulk_job_status, name='bulk_job_status'),
+    path('api/jobs/', list_bulk_jobs, name='bulk_jobs_list'),
+
+    # NM well lookup endpoints
+    path('api/nm/wells/<str:api>/', NMWellDetailView.as_view(), name='nm_well_detail'),
+    path('api/nm/wells/<str:api>/documents/', NMWellDocumentsView.as_view(), name='nm_well_documents'),
+    path('api/nm/wells/<str:api>/documents/download/', NMWellCombinedPDFView.as_view(), name='nm_well_combined_pdf'),
+
+    # NM well import endpoints
+    path('api/nm/import/', NMWellImportView.as_view(), name='nm_well_import'),
+    path('api/nm/batch-import/', NMWellBatchImportView.as_view(), name='nm_well_batch_import'),
+
     # Chat and assistant endpoints
     path('api/chat/', include('apps.assistant.urls')),
     

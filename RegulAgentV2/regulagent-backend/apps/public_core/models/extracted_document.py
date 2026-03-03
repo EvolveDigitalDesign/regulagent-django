@@ -32,6 +32,13 @@ class ExtractedDocument(models.Model):
     # Raw identifiers for convenient lookup (may duplicate WellRegistry data for denormalized access)
     api_number = models.CharField(max_length=16, db_index=True)
     document_type = models.CharField(max_length=64, db_index=True)
+    tracking_no = models.CharField(
+        max_length=64,
+        db_index=True,
+        null=True,
+        blank=True,
+        help_text="Tracking No. from W-2 form header (used for revision tracking and consolidation)"
+    )
 
     # Provenance
     source_path = models.TextField(blank=True)  # absolute/relative path where the file was saved
@@ -78,9 +85,13 @@ class ExtractedDocument(models.Model):
         db_table = "public_core_extracted_documents"
         indexes = [
             models.Index(fields=["api_number", "document_type"]),
+            models.Index(fields=["api_number", "document_type", "tracking_no"]),
+            models.Index(fields=["tracking_no", "document_type"]),
             models.Index(fields=["created_at"]),
             models.Index(fields=["uploaded_by_tenant", "source_type"]),
             models.Index(fields=["is_validated", "document_type"]),
+            # Index for checking existing extractions (reuse optimization)
+            models.Index(fields=["api_number", "source_path", "document_type", "status"]),
         ]
 
     def __str__(self) -> str:  # pragma: no cover
@@ -89,20 +100,20 @@ class ExtractedDocument(models.Model):
     def is_public(self) -> bool:
         """
         Determine if this document should be visible to all tenants.
-        
+
         Rules:
         - RRC-sourced: always public
-        - Tenant uploads of W2/W15/GAU/W3/W3A: public if validated
+        - Tenant uploads of W2/W15/GAU/W3/W3A/C-103/C-105: public if validated
         - Tenant uploads of other types: never public (tenant-only)
         """
         if self.source_type == self.SOURCE_RRC:
             return True
-        
-        # Tenant uploads
-        PUBLIC_DOC_TYPES = ['w2', 'w15', 'gau', 'w3', 'w3a']
+
+        # Tenant uploads - use forms.py constants for consistency
+        from apps.public_core.forms import PUBLIC_DOC_TYPES
         if self.document_type.lower() in PUBLIC_DOC_TYPES and self.is_validated:
             return True
-        
+
         return False
 
 

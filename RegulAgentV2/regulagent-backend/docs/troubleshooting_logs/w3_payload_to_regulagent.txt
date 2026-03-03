@@ -1,0 +1,136 @@
+{status: "success", w3_form: {,…}, pre_w3_payload_id: 128}
+pre_w3_payload_id
+: 
+128
+status
+: 
+"success"
+w3_form
+: 
+{,…}
+events
+: 
+[{date: "2026-01-14", event_type: "Tag TOC", event_detail: "Tagged top of cement at 7158’",…},…]
+0
+: 
+{date: "2026-01-14", event_type: "Tag TOC", event_detail: "Tagged top of cement at 7158’",…}
+1
+: 
+{date: "2026-01-15", event_type: "Perforation", event_detail: "Perforated at 6500’ ft.",…}
+date
+: 
+"2026-01-15"
+duration_hours
+: 
+1
+end_time
+: 
+"11:15:00"
+event_detail
+: 
+"Perforated at 6500’ ft."
+event_type
+: 
+"Perforation"
+input_values
+: 
+{1: "6500’"}
+original_values
+: 
+{1: "6500’"}
+start_time
+: 
+"10:15:00"
+subproject_id
+: 
+2336
+transformation_rules
+: 
+{required_inputs: 1}
+work_assignment_id
+: 
+29753
+2
+: 
+{date: "2026-01-15", event_type: "Set Surface Plug",…}
+3
+: 
+{date: "2026-01-15", event_type: "Tag TOC", event_detail: "Tagged top of cement at 6353’",…}
+4
+: 
+{date: "2026-01-15", event_type: "Perforation", event_detail: "Perforated at 3600’ ft.",…}
+5
+: 
+{date: "2026-01-15", event_type: "Set Surface Plug",…}
+6
+: 
+{date: "2026-01-16", event_type: "Tag TOC", event_detail: "Tagged top of cement at 3369’",…}
+7
+: 
+{date: "2026-01-16", event_type: "Perforation", event_detail: "Perforated at 2345’ ft.",…}
+8
+: 
+{date: "2026-01-16", event_type: "Set Surface Plug",…}
+9
+: 
+{date: "2026-01-16", event_type: "Perforation", event_detail: "Perforated at 1000’ ft.",…}
+10
+: 
+{date: "2026-01-16", event_type: "Set Surface Plug",…}
+11
+: 
+{date: "2026-01-17", event_type: "Perforation", event_detail: "Perforated at 350’ ft.",…}
+12
+: 
+{date: "2026-01-17", event_type: "Set Surface Plug",…}
+generated_at
+: 
+"2026-01-20T18:54:44.343046+00:00"
+subproject
+: 
+{id: 570, name: "YATER - 1 - P&A - 01-13-2026", type: "P&A", status: "completed"}
+id
+: 
+570
+name
+: 
+"YATER - 1 - P&A - 01-13-2026"
+status
+: 
+"completed"
+type
+: 
+"P&A"
+summary
+: 
+{total_events: 13, date_range: {start: "2026-01-14", end: "2026-01-17"}, total_hours: 8.5}
+date_range
+: 
+{start: "2026-01-14", end: "2026-01-17"}
+end
+: 
+"2026-01-17"
+start
+: 
+"2026-01-14"
+total_events
+: 
+13
+total_hours
+: 
+8.5
+well
+: 
+{api_number: "42-317-31973", well_name: "YATER - 1", operator: "Cutbow Operating, LLC", well_id: 1108}
+api_number
+: 
+"42-317-31973"
+operator
+: 
+"Cutbow Operating, LLC"
+well_id
+: 
+1108
+well_name
+: 
+"YATER - 1"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -11,6 +12,8 @@ import mimetypes
 import requests
 from django.conf import settings
 from playwright.sync_api import sync_playwright
+
+logger = logging.getLogger(__name__)
 
 
 RRC_COMPLETIONS_SEARCH = (
@@ -52,13 +55,12 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
     if out_dir.exists():
         def _infer_kind_from_name(name: str) -> str:
             n = name.lower()
-            # Heuristics based on saved filename prefix (e.g., "W-2_", "W-15_", "L-1_", "GAU_LETTER_")
+            # Heuristics based on saved filename prefix (e.g., "W-2_", "W-15_")
+            # NOTE: GAU is NOT fetched from RRC site - only W-2 and W-15
             if any(k in n for k in ["w-2", "w_2", "w2"]):
                 return "w2"
             if any(k in n for k in ["w-15", "w15", "w_15"]):
                 return "w15"
-            if any(k in n for k in ["gau", "groundwater", "l-1", "l1"]):
-                return "gau"
             return "other"
 
         for p in out_dir.glob('*.pdf'):
@@ -100,7 +102,8 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
             page.click('input[type="button"][value="Search"][onclick="doSearch();"]')
             page.wait_for_load_state("networkidle")
 
-            # Find the latest row by submit date (table.DataGrid)
+            # Get all rows from the DataGrid table (not just latest)
+            # We need complete well history for proper analysis
             table = page.query_selector("table.DataGrid")
             if not table:
                 return {"status": "no_records", "api": api, "api_search": search_api, "files": []}
@@ -117,107 +120,179 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
                         continue
                 return (0, 0, 0)
 
-            best_row = None
-            best_key = (0, 0, 0)
-            for r in rows:
-                txt = (r.inner_text() or "")
-                key = parse_date(txt)
-                if key > best_key:
-                    best_key = key
-                    best_row = r
+            if not rows:
+                return {"status": "no_records", "api": api, "api_search": search_api, "files": []}
 
-            if not best_row:
-                return {"status": "no_records", "api14": api, "files": []}
-
-            link = best_row.query_selector("td:first-child a")
-            if not link:
-                return {"status": "error", "error": "tracking_link_not_found", "api": api, "api_search": search_api, "files": []}
-
-            link.click()
-            page.wait_for_load_state("networkidle")
-
-            # Find the Form/Attachment table
-            documents_table = None
-            for tbl in page.query_selector_all("table"):
-                cells = tbl.query_selector_all("th, td")
-                header = " ".join([c.inner_text().strip() for c in cells[:6]])
-                if "Form/Attachment" in header and "View Form/Attachment" in header:
-                    documents_table = tbl
-                    break
-            if not documents_table:
-                return {"status": "no_documents", "api": api, "api_search": search_api, "files": []}
-
+            # Extract row data BEFORE sorting/navigating (to avoid stale element references)
+            row_data: List[tuple] = []
+            for row in rows:
+                try:
+                    link = row.query_selector("td:first-child a")
+                    if not link:
+                        continue
+                    href = link.get_attribute("href")
+                    if not href:
+                        continue
+                    row_text = row.inner_text() or ""
+                    sort_key = parse_date(row_text)
+                    row_data.append((sort_key, href, row_text))
+                except Exception as e:
+                    logger.debug(f"   Failed to extract row data: {e}")
+                    continue
+            
+            if not row_data:
+                return {"status": "no_records", "api": api, "api_search": search_api, "files": []}
+            
+            sorted_row_data = sorted(row_data, key=lambda x: x[0])
+            
             files: List[DownloadRecord] = []
-            seen_types: set[str] = set()
             seen_hrefs: set[str] = set()
-            for row in documents_table.query_selector_all("tr"):
-                cols = row.query_selector_all("td, th")
-                if len(cols) < 3:
-                    continue
-                form_text = cols[0].inner_text().strip()
-                href = None
-                for a in row.query_selector_all("a"):
-                    h = a.get_attribute("href")
-                    if h and ("viewPdfReportFormAction.do" in h or "dpimages/r/" in h):
-                        href = h
-                        break
-                if not href:
-                    continue
-                # dedupe by type and href
-                doc_type = form_text.split("\n")[0][:64]
-                # Skip directional survey files per product guidance
-                if "directional survey" in doc_type.lower():
-                    continue
-                if href in seen_hrefs or doc_type in seen_types:
-                    continue
-                seen_hrefs.add(href)
-                seen_types.add(doc_type)
-
-                if href.startswith("/"):
-                    url = f"https://webapps.rrc.texas.gov{href}"
-                elif href.startswith("http"):
-                    url = href
-                else:
-                    url = f"https://webapps.rrc.texas.gov/{href}"
-
-                # Normalize document name from URL when possible (e.g., W-2 PDF endpoint)
-                lower_href = (href or url).lower()
-                # Determine a normalized kind for filtering
-                kind = "other"
-                if "viewpdfreportformaction.do" in lower_href and "cmplw2formpdf" in lower_href:
-                    doc_type = "W-2"  # normalize label
-                    kind = "w2"
-                elif "viewpdfreportformaction.do" in lower_href and "cmplw15formpdf" in lower_href:
-                    # Heuristic for W-15 endpoint (if present in URL patterns)
-                    kind = "w15"
-                else:
-                    dt_low = doc_type.lower()
-                    if ("w-2" in dt_low) or ("w2" in dt_low):
-                        kind = "w2"
-                    elif ("w-15" in dt_low) or ("w15" in dt_low) or ("cement" in dt_low):
-                        kind = "w15"
-                    elif any(x in dt_low for x in ["gau", "groundwater", "l-1", "l1"]):
-                        kind = "gau"
-
-                # If allowlist provided, skip non-allowed kinds
-                if allowed_kinds and kind not in set(k.lower() for k in allowed_kinds):
-                    continue
-
-                safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", doc_type.replace(" ", "_"))[:64] or "document"
-                filename = f"{safe_name}_{api}.pdf"
-                file_path = out_dir / filename
+            
+            logger.info(f"🔍 Processing {len(sorted_row_data)} rows from RRC search results (in chronological order)")
+            for idx, (_sort_key, href, row_text) in enumerate(sorted_row_data, 1):
+                logger.info(f"   • row[{idx}] href={href} text_snippet={row_text[:60]}")
+            
+            # Base URL for the RRC completions action (needed for proper navigation)
+            RRC_CMPL_BASE = "https://webapps.rrc.texas.gov/CMPL/publicSearchAction.do"
+            
+            for row_idx, (sort_key, href, row_text) in enumerate(sorted_row_data, 1):
+                logger.info(f"\n📋 Processing row {row_idx}/{len(sorted_row_data)}")
+                logger.debug(f"   Row content: {row_text[:100]}...")
 
                 try:
-                    resp = requests.get(url, timeout=30)
-                    if resp.status_code == 200:
-                        with open(file_path, "wb") as f:
-                            f.write(resp.content)
-                        size = file_path.stat().st_size if file_path.exists() else 0
-                        ctype = resp.headers.get("content-type", "")
-                        files.append(DownloadRecord(name=doc_type, url=url, path=str(file_path), size_bytes=size, content_type=ctype))
-                except Exception:
+                    # The href from search results is a query string like "?packetSummaryId=..."
+                    # We need to append it to the correct base path, not the root
+                    if href.startswith("?"):
+                        full_url = f"{RRC_CMPL_BASE}{href}"
+                    elif href.startswith("/"):
+                        full_url = f"https://webapps.rrc.texas.gov{href}"
+                    elif href.startswith("http"):
+                        full_url = href
+                    else:
+                        full_url = f"{RRC_CMPL_BASE}?{href}"
+                    
+                    logger.debug(f"   Navigating to: {full_url}")
+                    page.goto(full_url, wait_until="networkidle")
+                    logger.info(f"   ✅ Opened detail page for row {row_idx}")
+                except Exception as e:
+                    logger.warning(f"   ⚠️  Failed to navigate to detail page for row {row_idx}: {e}")
                     continue
 
+                # Find the Form/Attachment table (using original working logic)
+                documents_table = None
+                for tbl in page.query_selector_all("table"):
+                    cells = tbl.query_selector_all("th, td")
+                    header = " ".join([c.inner_text().strip() for c in cells[:6]])
+                    if "Form/Attachment" in header and "View Form/Attachment" in header:
+                        documents_table = tbl
+                        break
+
+                fallback_links = []
+                if not documents_table:
+                    logger.warning(f"   ⚠️  No Form/Attachment table found in row {row_idx}, page={page.url}")
+                    logger.debug(page.content()[:400])
+                    fallback_links = page.query_selector_all(
+                        "a[href*='viewPdfReportFormAction.do'], a[href*='dpimages/r/']"
+                    )
+                    if fallback_links:
+                        logger.warning(f"   ⚠️  Falling back to anchor scan ({len(fallback_links)} links)")
+                    else:
+                        continue
+                else:
+                    logger.info(f"   📄 Found Form/Attachment table, extracting documents...")
+
+                entries = documents_table.query_selector_all("tr") if documents_table else fallback_links
+
+                for entry in entries:
+                    if documents_table:
+                        cols = entry.query_selector_all("td, th")
+                        if len(cols) < 3:
+                            continue
+                        form_text = cols[0].inner_text().strip()
+                        href_candidate = None
+                        for a in entry.query_selector_all("a"):
+                            h = a.get_attribute("href")
+                            if h and ("viewPdfReportFormAction.do" in h or "dpimages/r/" in h):
+                                href_candidate = h
+                                break
+                        if not href_candidate:
+                            continue
+                    else:
+                        href_candidate = entry.get_attribute("href") or ""
+                        form_text = entry.inner_text().strip() or "document"
+                    
+                    doc_type = form_text.split("\n")[0][:64]
+                    if "directional survey" in doc_type.lower():
+                        logger.debug(f"      Skipping directional survey: {doc_type}")
+                        continue
+                    
+                    href_link = href_candidate
+                    if href_link in seen_hrefs:
+                        logger.debug(f"      Skipping duplicate href: {doc_type}")
+                        continue
+                    seen_hrefs.add(href_link)
+
+                    url = (
+                        f"https://webapps.rrc.texas.gov{href_link}"
+                        if href_link.startswith("/")
+                        else href_link
+                        if href_link.startswith("http")
+                        else f"https://webapps.rrc.texas.gov/{href_link}"
+                    )
+
+                    lower_href = (href_link or url).lower()
+                    kind = "other"
+                    if "viewpdfreportformaction.do" in lower_href and "cmplw2formpdf" in lower_href:
+                        doc_type = "W-2"
+                        kind = "w2"
+                    elif "viewpdfreportformaction.do" in lower_href and "cmplw15formpdf" in lower_href:
+                        kind = "w15"
+                    else:
+                        dt_low = doc_type.lower()
+                        if ("w-2" in dt_low) or ("w2" in dt_low):
+                            kind = "w2"
+                        elif ("w-15" in dt_low) or ("w15" in dt_low) or ("cement" in dt_low):
+                            kind = "w15"
+                        elif any(x in dt_low for x in ["gau", "groundwater", "l-1", "l1"]):
+                            logger.debug(f"Skipping GAU document: {doc_type} (not fetched from RRC)")
+                            continue
+
+                    if allowed_kinds and kind not in set(k.lower() for k in allowed_kinds):
+                        continue
+
+                    import datetime as _dt
+                    timestamp = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+                    safe_type = re.sub(r"[^A-Za-z0-9_.-]", "_", doc_type.replace(" ", "_"))[:32]
+                    filename = f"{safe_type}_{api}_{timestamp}.pdf"
+                    file_path = out_dir / filename
+
+                    try:
+                        logger.debug(f"      Downloading: {doc_type}")
+                        resp = requests.get(url, timeout=30)
+                        if resp.status_code == 200:
+                            with open(file_path, "wb") as f:
+                                f.write(resp.content)
+                            size = file_path.stat().st_size if file_path.exists() else 0
+                            ctype = resp.headers.get("content-type", "")
+                            files.append(DownloadRecord(name=doc_type, url=url, path=str(file_path), size_bytes=size, content_type=ctype))
+                            logger.info(f"      ✅ Downloaded: {doc_type} ({size:,} bytes)")
+                        else:
+                            logger.warning(f"      ⚠️  Failed to download (status {resp.status_code}): {doc_type}")
+                    except Exception as e:
+                        logger.warning(f"      ⚠️  Failed to download {doc_type}: {e}")
+                        continue
+
+                try:
+                    logger.info(f"   ↩️  Returning to search results")
+                    page.go_back()
+                    page.wait_for_load_state("networkidle")
+                except Exception as e:
+                    logger.warning(f"   ⚠️  Failed to go back to search results: {e}")
+                    break
+
+            logger.info(f"\n✅ Completed processing all {len(sorted_row_data)} rows")
+            logger.info(f"📊 Total files downloaded: {len(files)}")
+            
             return {
                 "status": "success" if files else "no_documents",
                 "api": api,
