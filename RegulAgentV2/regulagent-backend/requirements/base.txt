@@ -52,6 +52,7 @@ google-auth>=2.29
 
 # Web automation (RRC connector)
 playwright>=1.46
+2captcha-python>=1.5
 
 # HTML parsing for policy ingestion
 beautifulsoup4>=4.12

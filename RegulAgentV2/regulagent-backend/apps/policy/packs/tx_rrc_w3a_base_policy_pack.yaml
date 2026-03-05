@@ -630,6 +630,30 @@ base:
     cutoff_ft: 6500
     shallow_class: C
     deep_class: H
+# Formula Engine Configuration (POL-002)
+# Specifies which formula engine to use for regulatory calculations.
+# See: apps/policy/services/formula_engine.py
+formula_engine:
+  jurisdiction: TX
+  engine_class: TexasFormulas
+  version: "2026.02.0"
+  # Configuration overrides (optional - defaults to values from formula_engine.py)
+  config:
+    # Depth excess formula: 1.0 + (depth_excess_per_kft * depth_in_thousands)
+    # Per TAC 3.14(d)(11): +10% per 1000 ft
+    depth_excess_per_kft: 0.10
+    # Cement class cutoff depth
+    cement_class_cutoff_ft: 6500
+    shallow_class: C
+    deep_class: H
+    # Coverage requirements per plug type (in feet)
+    coverage_defaults:
+      casing_shoe: 50       # TAC 3.14(e)(2)
+      duqw: 50              # TAC 3.14(g)(1)
+      production_horizon: 50 # TAC 3.14(k)
+      intermediate_shoe: 50  # TAC 3.14(f)(1)
+      top_plug: 0           # Surface plug
+      cibp_cap: 0           # Bridge plug cap
 preferences:
   rounding_policy: nearest
   default_recipe:

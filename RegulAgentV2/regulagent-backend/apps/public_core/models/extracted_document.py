@@ -100,20 +100,20 @@ class ExtractedDocument(models.Model):
     def is_public(self) -> bool:
         """
         Determine if this document should be visible to all tenants.
-        
+
         Rules:
         - RRC-sourced: always public
-        - Tenant uploads of W2/W15/GAU/W3/W3A: public if validated
+        - Tenant uploads of W2/W15/GAU/W3/W3A/C-103/C-105: public if validated
         - Tenant uploads of other types: never public (tenant-only)
         """
         if self.source_type == self.SOURCE_RRC:
             return True
-        
-        # Tenant uploads
-        PUBLIC_DOC_TYPES = ['w2', 'w15', 'gau', 'w3', 'w3a']
+
+        # Tenant uploads - use forms.py constants for consistency
+        from apps.public_core.forms import PUBLIC_DOC_TYPES
         if self.document_type.lower() in PUBLIC_DOC_TYPES and self.is_validated:
             return True
-        
+
         return False
 
 

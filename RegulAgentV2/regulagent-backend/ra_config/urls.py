@@ -65,7 +65,10 @@ from apps.public_core.views.all_filings import AllFilingsView
 from apps.public_core.views.filing_metrics import FilingMetricsView
 from apps.public_core.views.filing_breakdown import FilingBreakdownView
 from apps.public_core.views.filing_breakdown_timeline import FilingBreakdownTimelineView
-from apps.tenants.views import TenantInfoView, UserProfileView, ChangePasswordView
+from apps.tenants.views import (
+    TenantInfoView, UserProfileView, ChangePasswordView,
+    ClientWorkspaceViewSet, UsageSummaryView, UsageRecordViewSet
+)
 from apps.tenant_overlay.views.tenant_wells import (
     get_well_by_api,
     bulk_get_wells,
@@ -77,6 +80,21 @@ from apps.tenant_overlay.views.guardrail_policy import (
     validate_policy_change,
 )
 from apps.assistant.urls import plan_version_urls
+from apps.public_core.views.bulk_operations import (
+    bulk_generate_plans_view,
+    bulk_update_plan_status_view,
+    get_bulk_job_status,
+    list_bulk_jobs,
+)
+from apps.public_core.views.nm_wells import (
+    NMWellDetailView,
+    NMWellDocumentsView,
+    NMWellCombinedPDFView,
+)
+from apps.public_core.views.nm_well_import import (
+    NMWellImportView,
+    NMWellBatchImportView,
+)
 
 router = DefaultRouter()
 router.register(r'public/wells', WellRegistryViewSet, basename='public-wells')
@@ -84,6 +102,8 @@ router.register(r'public/facts', PublicFactsViewSet, basename='public-facts')
 router.register(r'public/casing', PublicCasingStringViewSet, basename='public-casing')
 router.register(r'public/perforations', PublicPerforationViewSet, basename='public-perforations')
 router.register(r'public/depths', PublicWellDepthsViewSet, basename='public-depths')
+router.register(r'tenant/workspaces', ClientWorkspaceViewSet, basename='client-workspaces')
+router.register(r'tenant/usage/records', UsageRecordViewSet, basename='usage-records')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -146,6 +166,9 @@ urlpatterns = [
     # User profile endpoints
     path('api/user/profile/', UserProfileView.as_view(), name='user_profile'),
     path('api/user/change-password/', ChangePasswordView.as_view(), name='change_password'),
+
+    # Usage tracking endpoints
+    path('api/tenant/usage/summary/', UsageSummaryView.as_view(), name='usage_summary'),
     
     # Tenant wells endpoints (specific routes first, then generic)
     path('api/tenant/wells/history/', get_tenant_well_history, name='tenant_well_history'),
@@ -156,7 +179,22 @@ urlpatterns = [
     path('api/tenant/settings/guardrails/', TenantGuardrailPolicyView.as_view(), name='tenant_guardrails'),
     path('api/tenant/settings/guardrails/risk-profiles/', get_risk_profiles, name='guardrail_profiles'),
     path('api/tenant/settings/guardrails/validate/', validate_policy_change, name='guardrail_validate'),
-    
+
+    # Bulk operations endpoints
+    path('api/wells/bulk/generate-plans/', bulk_generate_plans_view, name='bulk_generate_plans'),
+    path('api/plans/bulk/update-status/', bulk_update_plan_status_view, name='bulk_update_status'),
+    path('api/jobs/<uuid:job_id>/', get_bulk_job_status, name='bulk_job_status'),
+    path('api/jobs/', list_bulk_jobs, name='bulk_jobs_list'),
+
+    # NM well lookup endpoints
+    path('api/nm/wells/<str:api>/', NMWellDetailView.as_view(), name='nm_well_detail'),
+    path('api/nm/wells/<str:api>/documents/', NMWellDocumentsView.as_view(), name='nm_well_documents'),
+    path('api/nm/wells/<str:api>/documents/download/', NMWellCombinedPDFView.as_view(), name='nm_well_combined_pdf'),
+
+    # NM well import endpoints
+    path('api/nm/import/', NMWellImportView.as_view(), name='nm_well_import'),
+    path('api/nm/batch-import/', NMWellBatchImportView.as_view(), name='nm_well_batch_import'),
+
     # Chat and assistant endpoints
     path('api/chat/', include('apps.assistant.urls')),
     

@@ -187,48 +187,50 @@ class W3AReference(serializers.Serializer):
 
 class BuildW3FromPNARequestSerializer(serializers.Serializer):
     """Request payload for POST /api/w3/build-from-pna/"""
-    
+
     subproject_id = serializers.IntegerField(
         required=False,
         allow_null=True,
         help_text="Subproject ID (RegulAgent identifier for this W-3 run)"
     )
-    
+
     dwr_id = serializers.IntegerField(
         required=False,
         allow_null=True,
         help_text="Deprecated (was previously subproject ID). Provided for backwards compatibility."
     )
-    
+
     api_number = serializers.CharField(
         required=True,
         max_length=20,
         help_text="RRC API number (10-digit format, e.g., '42-501-70575' - will be normalized to 8-digit and attached to all events)"
     )
-    
+
     well_name = serializers.CharField(
         required=False,
         allow_blank=True,
         max_length=500,
         help_text="Well name/lease name"
     )
-    
+
     w3a_reference = W3AReference(
         required=True,
         help_text="Reference to W-3A form"
     )
-    
+
     pna_events = PNAEventSerializer(
         many=True,
         required=True,
         help_text="List of operational events from pnaexchange"
     )
-    
+
     tenant_id = serializers.IntegerField(
         required=False,
         allow_null=True,
         help_text="Multi-tenant support: tenant ID"
     )
+
+    workspace_id = serializers.IntegerField(required=False, allow_null=True)
     
     def validate(self, data):
         """

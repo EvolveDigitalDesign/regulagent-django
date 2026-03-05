@@ -16,6 +16,17 @@ class WellRegistry(models.Model):
     lease_name = models.CharField(max_length=128, blank=True)
     well_number = models.CharField(max_length=32, blank=True)
 
+    # Client workspace assignment (optional for backward compatibility)
+    workspace = models.ForeignKey(
+        'tenants.ClientWorkspace',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='wells',
+        help_text="Client workspace this well belongs to (optional)",
+        db_index=True
+    )
+
     # Store as Decimal for portability; PostGIS PointField can replace later
     lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     lon = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -31,6 +42,7 @@ class WellRegistry(models.Model):
             models.Index(fields=['district']),  # Critical for district-specific compliance queries
             models.Index(fields=['operator_name']),
             models.Index(fields=['field_name']),
+            models.Index(fields=['workspace']),  # For filtering by client workspace
         ]
 
     def __str__(self) -> str:  # pragma: no cover

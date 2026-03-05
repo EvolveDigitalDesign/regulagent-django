@@ -5,6 +5,9 @@ import sys
 
 logger = logging.getLogger(__name__)
 
+# Import formula engine for jurisdiction-specific calculations
+from apps.policy.services.formula_engine import RegulatoryFormulas
+
 from .violations import VCodes, MAJOR, make_violation
 
 # Import Redbook pipe spec lookup for accurate ID resolution
@@ -295,7 +298,8 @@ def _get_uncmented_annuli(facts: Dict[str, Any], target_depth_ft: float) -> List
 def _calculate_perf_squeeze_volume(
     facts: Dict[str, Any],
     target_depth_ft: float,
-    interval_length_ft: float
+    interval_length_ft: float,
+    formula_engine: RegulatoryFormulas
 ) -> Tuple[float, List[Dict[str, Any]]]:
     """
     Calculate total volume needed to fill all uncmented annuli via perf & squeeze.
@@ -403,15 +407,14 @@ def _calculate_perf_squeeze_volume(
         print(f"   Subtotal (annuli): {total_bbl - inside_bbl:.2f} bbl")
         print(f"   Subtotal (inside): {inside_bbl:.2f} bbl")
         print(f"   Subtotal (total):  {total_bbl:.2f} bbl")
-        
-        # Apply ONLY Texas depth excess (§3.14(d)(11)): 10% per 1000 ft
+
+        # Apply jurisdiction-specific depth excess multiplier
         # NOTE: NO squeeze factor for perf & squeeze - only depth excess
-        # Use EXACT depth in thousands of feet (not rounded)
-        depth_kft = target_depth_ft / 1000.0
-        texas_multiplier = 1.0 + (0.10 * depth_kft)
-        total_bbl = total_bbl * texas_multiplier
-        
-        print(f"   × Texas excess: {texas_multiplier:.4f}x (+{(texas_multiplier-1)*100:.1f}% @ {depth_kft:.2f} kft) → {total_bbl:.2f} bbl")
+        depth_excess_multiplier = formula_engine.cement_depth_excess(target_depth_ft)
+        total_bbl = total_bbl * depth_excess_multiplier
+
+        depth_kft = target_depth_ft / 1000.0  # Keep for display
+        print(f"   × Depth excess ({formula_engine.jurisdiction}): {depth_excess_multiplier:.4f}x (+{(depth_excess_multiplier-1)*100:.1f}% @ {depth_kft:.2f} kft) → {total_bbl:.2f} bbl")
         print(f"   ═════════════════════════════════════════════════")
         print(f"   ✓ TOTAL VOLUME: {total_bbl:.2f} bbl")
         print("="*80)
@@ -789,8 +792,9 @@ def _requires_perforation_at_depth(
     return True, reason, casing_context
 
 
-def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> Dict[str, Any]:
+def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any], formula_engine: RegulatoryFormulas) -> Dict[str, Any]:
     logger.critical(f"🚨🚨🚨 KERNEL GENERATE_STEPS CALLED - facts has annular_gaps: {bool(facts.get('annular_gaps'))}, count: {len(facts.get('annular_gaps', []))}")
+    logger.info(f"Using formula engine: {formula_engine.jurisdiction} ({formula_engine.__class__.__name__})")
     violations: List[Dict[str, Any]] = []
     steps: List[Dict[str, Any]] = []
 

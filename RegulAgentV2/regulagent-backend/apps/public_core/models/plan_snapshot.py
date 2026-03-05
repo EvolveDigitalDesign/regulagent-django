@@ -83,7 +83,16 @@ class PlanSnapshot(models.Model):
         db_index=True,
         help_text="Tenant who created this snapshot (null for RRC-baseline plans)"
     )
-    
+
+    workspace = models.ForeignKey(
+        'tenants.ClientWorkspace',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='plan_snapshots',
+        db_index=True,
+        help_text="Workspace this plan belongs to (null = visible in all workspaces)"
+    )
+
     visibility = models.CharField(
         max_length=10,
         choices=VISIBILITY_CHOICES,
@@ -113,6 +122,8 @@ class PlanSnapshot(models.Model):
             models.Index(fields=["created_at"]),
             models.Index(fields=["tenant_id", "visibility"]),
             models.Index(fields=["visibility", "kind"]),
+            models.Index(fields=["workspace"]),
+            models.Index(fields=["tenant_id", "workspace"]),
         ]
 
     def __str__(self) -> str:  # pragma: no cover

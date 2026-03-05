@@ -88,22 +88,31 @@ class W3AInitialView(APIView):
     
     def post(self, request):
         logger.info("🚀 W3A INITIAL - Starting document sourcing")
-        
+
         serializer = W3AInitialRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         api10 = serializer.validated_data["api10"]
         input_mode = serializer.validated_data.get("input_mode", "extractions")
-        
+        jurisdiction = serializer.validated_data.get("jurisdiction", "TX")
+
         # Normalize API
         api_normalized = re.sub(r"\D+", "", api10)
-        
+
+        logger.info(f"📍 API: {api_normalized}, Jurisdiction: {jurisdiction}")
+
         try:
-            # 1. Source documents
+            # Route to NM-specific flow if jurisdiction is NM
+            if jurisdiction == "NM":
+                return self._handle_nm_initial(request, api_normalized, input_mode, serializer)
+
+            # Continue with TX (RRC) flow below...
+
+            # 1. Source documents (TX/RRC)
             pdf_paths = []
             source_file_metadata = []
-            
+
             # RRC extractions
             if input_mode in ("extractions", "hybrid"):
                 logger.info(f"📥 Sourcing RRC extractions for API {api_normalized}")
@@ -174,13 +183,22 @@ class W3AInitialView(APIView):
             
             # 3. Create temporary plan snapshot to track this session
             temp_plan_id = f"temp_{api_normalized}_{uuid4().hex[:8]}"
-            
+
             # Find or create WellRegistry
             well, _ = WellRegistry.objects.get_or_create(
                 api14=api_normalized,
                 defaults={"state": "TX"}
             )
-            
+
+            # Resolve workspace
+            workspace = None
+            workspace_id = request.data.get('workspace_id')
+            if workspace_id:
+                from apps.tenants.models import ClientWorkspace
+                user_tenant = request.user.tenants.first()
+                if user_tenant:
+                    workspace = ClientWorkspace.objects.filter(id=workspace_id, tenant=user_tenant).first()
+
             # Create temp snapshot
             snapshot = PlanSnapshot.objects.create(
                 well=well,
@@ -198,6 +216,7 @@ class W3AInitialView(APIView):
                 policy_id="tx.w3a",
                 overlay_id="",
                 tenant_id=request.user.tenants.first().id if request.user.tenants.exists() else None,
+                workspace=workspace,
                 visibility=PlanSnapshot.VISIBILITY_PRIVATE,
             )
             
@@ -233,16 +252,212 @@ class W3AInitialView(APIView):
         ts = str(int(__import__("time").time()))
         base_dir = os.path.join(root, "uploads", "temp", api)
         os.makedirs(base_dir, exist_ok=True)
-        
+
         filename = getattr(file_obj, "name", "upload.bin")
         safe_name = os.path.basename(filename)
         dest = os.path.join(base_dir, f"{ts}__{safe_name}")
-        
+
         with open(dest, "wb") as outfp:
             chunk = file_obj.read()
             outfp.write(chunk if isinstance(chunk, (bytes, bytearray)) else str(chunk).encode("utf-8"))
-        
+
         return dest
+
+    def _handle_nm_initial(self, request, api_normalized: str, input_mode: str, serializer) -> Response:
+        """
+        Handle NM-specific initial document sourcing.
+
+        For NM wells:
+        1. Scrape well data from NM OCD portal
+        2. Get document list and combined PDF URL (not downloaded)
+        3. Create pseudo-extraction from scraped data
+        4. Return scraped data + combined PDF URL for user review
+
+        Unlike TX, we don't download and combine PDFs because NM combined files
+        are too large (100+ pages) for practical use.
+        """
+        from apps.public_core.services.nm_well_scraper import fetch_nm_well
+        from apps.public_core.services.nm_document_fetcher import NMDocumentFetcher
+        from apps.public_core.services.nm_extraction_mapper import (
+            map_nm_well_to_extractions,
+            map_nm_well_to_geometry,
+            create_nm_extracted_document_data,
+        )
+        from apps.public_core.services.nm_well_import import import_nm_well
+
+        logger.info(f"🆕 NM INITIAL - Starting NM document sourcing for {api_normalized}")
+
+        try:
+            # 1. Import well from NM OCD
+            logger.info("   📥 Importing NM well...")
+            try:
+                import_result = import_nm_well(api_normalized)
+                well = import_result.get("well")
+                scraped_data = import_result.get("scraped_data", {})
+                logger.info(f"   ✅ Well imported: {scraped_data.get('well_name', 'Unknown')}")
+            except Exception as e:
+                logger.warning(f"   ⚠️ Well import failed: {e}")
+                # Create minimal well entry
+                api14 = api_normalized + "0000" if len(api_normalized) == 10 else api_normalized
+                well, _ = WellRegistry.objects.get_or_create(
+                    api14=api14,
+                    defaults={"state": "NM"}
+                )
+                scraped_data = {}
+
+            # 2. Get document list from NM OCD
+            documents = []
+            combined_pdf_url = None
+            try:
+                with NMDocumentFetcher() as fetcher:
+                    doc_list = fetcher.list_documents(api_normalized)
+                    documents = [
+                        {
+                            "filename": d.filename,
+                            "url": d.url,
+                            "file_size": d.file_size,
+                            "date": d.date,
+                            "doc_type": d.doc_type,
+                        }
+                        for d in doc_list
+                    ]
+                    combined_pdf_url = fetcher.get_combined_pdf_url(api_normalized)
+                    logger.info(f"   📄 Found {len(documents)} documents")
+            except Exception as e:
+                logger.warning(f"   ⚠️ Document list fetch failed: {e}")
+
+            # 3. Create extraction from scraped data
+            extraction = map_nm_well_to_extractions(scraped_data)
+
+            # 4. Create temp plan snapshot
+            temp_plan_id = f"temp_nm_{api_normalized}_{uuid4().hex[:8]}"
+
+            # Resolve workspace
+            workspace = None
+            workspace_id = request.data.get('workspace_id')
+            if workspace_id:
+                from apps.tenants.models import ClientWorkspace
+                user_tenant = request.user.tenants.first()
+                if user_tenant:
+                    workspace = ClientWorkspace.objects.filter(id=workspace_id, tenant=user_tenant).first()
+
+            snapshot = PlanSnapshot.objects.create(
+                well=well,
+                plan_id=temp_plan_id,
+                kind=PlanSnapshot.KIND_BASELINE,
+                status=PlanSnapshot.STATUS_DRAFT,
+                payload={
+                    "stage": "document_sourcing",
+                    "jurisdiction": "NM",
+                    "api": api_normalized,
+                    "combined_pdf_url": combined_pdf_url,  # External URL, not local path
+                    "source_files": documents,
+                    "input_mode": input_mode,
+                    "scraped_data": scraped_data,
+                    "extraction": extraction,
+                },
+                kernel_version="",
+                policy_id="nm.plugging",
+                overlay_id="",
+                tenant_id=request.user.tenants.first().id if request.user.tenants.exists() else None,
+                workspace=workspace,
+                visibility=PlanSnapshot.VISIBILITY_PRIVATE,
+            )
+
+            logger.info(f"✅ Created NM temp plan {temp_plan_id}")
+
+            # 5. Get geometry mapping for debug output
+            geometry = map_nm_well_to_geometry(scraped_data)
+
+            # 6. Return NM-specific response
+            response_data = {
+                "temp_plan_id": temp_plan_id,
+                "jurisdiction": "NM",
+                "combined_pdf_url": combined_pdf_url,  # External NM OCD URL
+                "source_files": documents,
+                "api": api_normalized,
+                "well_data": scraped_data,
+                "extraction": extraction,
+                # NM doesn't have local combined PDF, so page_count/file_size are N/A
+                "page_count": 0,
+                "file_size": 0,
+                "ttl_expires_at": "",
+                "requires_manual_entry": True,
+                "message": "NM well data scraped. Review documents at OCD portal and enter casing data manually.",
+                # Debug output showing all extracted and mapped data
+                "nm_debug": {
+                    "raw_scraper_output": {
+                        "identifiers": {
+                            "api10": scraped_data.get("api10"),
+                            "api14": scraped_data.get("api14"),
+                            "well_name": scraped_data.get("well_name"),
+                            "well_number": scraped_data.get("well_number"),
+                        },
+                        "operator": {
+                            "name": scraped_data.get("operator_name"),
+                            "number": scraped_data.get("operator_number"),
+                        },
+                        "classification": {
+                            "status": scraped_data.get("status"),
+                            "well_type": scraped_data.get("well_type"),
+                            "work_type": scraped_data.get("work_type"),
+                            "direction": scraped_data.get("direction"),
+                            "multi_lateral": scraped_data.get("multi_lateral"),
+                        },
+                        "ownership": {
+                            "mineral_owner": scraped_data.get("mineral_owner"),
+                            "surface_owner": scraped_data.get("surface_owner"),
+                        },
+                        "location": {
+                            "surface_location": scraped_data.get("surface_location"),
+                            "latitude": scraped_data.get("latitude"),
+                            "longitude": scraped_data.get("longitude"),
+                            "datum": scraped_data.get("datum"),
+                        },
+                        "elevations": {
+                            "gl_elevation_ft": scraped_data.get("gl_elevation_ft"),
+                            "kb_elevation_ft": scraped_data.get("kb_elevation_ft"),
+                            "df_elevation_ft": scraped_data.get("df_elevation_ft"),
+                        },
+                        "formation": {
+                            "formation": scraped_data.get("formation"),
+                            "proposed_formation": scraped_data.get("proposed_formation"),
+                        },
+                        "depths": {
+                            "proposed_depth_ft": scraped_data.get("proposed_depth_ft"),
+                            "measured_vertical_depth_ft": scraped_data.get("measured_vertical_depth_ft"),
+                            "true_vertical_depth_ft": scraped_data.get("true_vertical_depth_ft"),
+                            "plugback_measured_ft": scraped_data.get("plugback_measured_ft"),
+                        },
+                        "completion_type": {
+                            "sing_mult_compl": scraped_data.get("sing_mult_compl"),
+                            "potash_waiver": scraped_data.get("potash_waiver"),
+                        },
+                        "event_dates": scraped_data.get("event_dates", {}),
+                        "casing_records": scraped_data.get("casing_records", []),
+                        "completions": scraped_data.get("completions", []),
+                    },
+                    "mapped_extraction": extraction,
+                    "mapped_geometry": geometry,
+                    "field_counts": {
+                        "casing_records": len(scraped_data.get("casing_records", [])),
+                        "completions": len(scraped_data.get("completions", [])),
+                        "perforations": sum(
+                            len(c.get("perforations", []))
+                            for c in scraped_data.get("completions", [])
+                        ),
+                    },
+                },
+            }
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.exception("NM Initial - error")
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class W3ACombinedPDFView(APIView):
@@ -344,10 +559,10 @@ class W3AConfirmDocsView(APIView):
     
     def post(self, request, temp_plan_id: str):
         logger.info(f"📋 W3A CONFIRM DOCS - {temp_plan_id}")
-        
+
         # Get user's tenant for isolation
         user_tenant_id = request.user.tenants.first().id if request.user.tenants.exists() else None
-        
+
         try:
             # Tenant-isolated query
             snapshot = PlanSnapshot.objects.get(
@@ -359,27 +574,36 @@ class W3AConfirmDocsView(APIView):
                 {"detail": "Plan not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
         serializer = W3AConfirmDocsRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
+        # Check if this is an NM well
+        jurisdiction = snapshot.payload.get("jurisdiction", "TX")
+
         try:
+            if jurisdiction == "NM":
+                # NM flow: Use scraped data as "extraction", no PDF processing needed
+                return self._handle_nm_confirm_docs(request, snapshot, serializer)
+
+            # TX flow below...
+
             # Get source files from snapshot
             source_files = snapshot.payload.get("source_files", [])
             combined_pdf_path = snapshot.payload.get("combined_pdf_path")
-            
+
             # Process user overrides (accept/reject/replace)
             final_files = self._process_document_overrides(
                 source_files,
                 serializer.validated_data.get("document_overrides", []),
                 serializer.validated_data.get("additional_uploads", [])
             )
-            
+
             # Delete combined PDF (no longer needed)
             if combined_pdf_path:
                 cleanup_temp_pdf(combined_pdf_path)
-            
+
             # Extract each confirmed document
             extractions = []
             for file_meta in final_files:
@@ -538,7 +762,7 @@ class W3AConfirmDocsView(APIView):
             "document_type": doc_type,
             "preview": str(json_data)[:500] + "..." if len(str(json_data)) > 500 else str(json_data)
         }
-        
+
         if doc_type == "w2":
             well_info = json_data.get("well_info", {})
             casing_record = json_data.get("casing_record", [])
@@ -549,8 +773,109 @@ class W3AConfirmDocsView(APIView):
                 "county": well_info.get("county"),
             }
             summary["casing_strings"] = len(casing_record)
-        
+
         return summary
+
+    def _handle_nm_confirm_docs(self, request, snapshot, serializer) -> Response:
+        """
+        Handle NM-specific document confirmation.
+
+        For NM wells, we don't extract from PDFs. Instead:
+        1. Use the scraped data from the initial step as our "extraction"
+        2. Create an ExtractedDocument record from the scraped data
+        3. Return the extraction for user review/editing
+
+        The user will need to manually enter casing data since it's not
+        available from the NM OCD scraper.
+        """
+        from apps.public_core.services.nm_extraction_mapper import (
+            create_nm_extracted_document_data,
+        )
+
+        logger.info(f"🆕 NM CONFIRM DOCS - {snapshot.plan_id}")
+
+        try:
+            scraped_data = snapshot.payload.get("scraped_data", {})
+            extraction_data = snapshot.payload.get("extraction", {})
+            api = snapshot.payload.get("api")
+
+            # Create ExtractedDocument from scraped data if not already created
+            ed = ExtractedDocument.objects.filter(
+                well=snapshot.well,
+                api_number=api,
+                model_tag="nm_ocd_scraper_v1"
+            ).first()
+
+            if not ed:
+                # Create new extraction document
+                doc_data = create_nm_extracted_document_data(
+                    well_data=scraped_data,
+                    documents=snapshot.payload.get("source_files", []),
+                    combined_pdf_url=snapshot.payload.get("combined_pdf_url"),
+                )
+
+                with transaction.atomic():
+                    ed = ExtractedDocument.objects.create(
+                        well=snapshot.well,
+                        api_number=api,
+                        document_type=doc_data["document_type"],
+                        source_path=doc_data["source_path"],
+                        model_tag=doc_data["model_tag"],
+                        status=doc_data["status"],
+                        errors=doc_data["errors"],
+                        json_data=doc_data["json_data"],
+                    )
+                    logger.info(f"   ✅ Created NM ExtractedDocument: {ed.id}")
+
+            # Build extraction result in same format as TX
+            c105_data = extraction_data.get("c105", {})
+            human_summary = {
+                "document_type": "c105",
+                "well_info": {
+                    "api": scraped_data.get("api10"),
+                    "operator": scraped_data.get("operator_name"),
+                    "field": scraped_data.get("formation"),
+                    "well_name": scraped_data.get("well_name"),
+                },
+                "casing_strings": 0,  # Not available from scraper
+                "requires_manual_entry": True,
+                "missing_fields": ["casing_record", "perforations", "formation_record"],
+            }
+
+            extractions = [{
+                "extracted_document_id": ed.id,
+                "document_type": "c105",
+                "filename": f"nm_ocd_scrape_{api}.json",
+                "extraction_status": "success",
+                "errors": [],
+                "json_data": c105_data,
+                "human_readable_summary": human_summary,
+            }]
+
+            # Update snapshot
+            snapshot.payload["stage"] = "extraction_complete"
+            snapshot.payload["extractions"] = extractions
+            snapshot.save()
+
+            logger.info(f"✅ NM extraction ready for review")
+
+            response_data = {
+                "temp_plan_id": snapshot.plan_id,
+                "jurisdiction": "NM",
+                "extractions": extractions,
+                "extraction_count": len(extractions),
+                "requires_manual_entry": True,
+                "message": "NM well data ready for review. Please enter casing data manually.",
+            }
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.exception("NM Confirm Docs - error")
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class W3AConfirmExtractionsView(APIView):
@@ -1024,6 +1349,7 @@ class W3AConfirmGeometryView(APIView):
                 if existing_snapshot:
                     # Update existing snapshot
                     existing_snapshot.tenant_id = snapshot.tenant_id
+                    existing_snapshot.workspace = snapshot.workspace
                     existing_snapshot.visibility = "public"
                     existing_snapshot.status = "draft"
                     existing_snapshot.payload = plan_result
@@ -1038,6 +1364,7 @@ class W3AConfirmGeometryView(APIView):
                         plan_id=plan_id,
                         kind="baseline",
                         tenant_id=snapshot.tenant_id,
+                        workspace=snapshot.workspace,
                         visibility="public",
                         status="draft",
                         payload=plan_result,

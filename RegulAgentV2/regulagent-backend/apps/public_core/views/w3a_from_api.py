@@ -27,10 +27,13 @@ from apps.public_core.serializers.w3a_plan import (
 )
 from apps.public_core.services.rrc_completions_extractor import extract_completions_all_documents
 from apps.public_core.services.openai_extraction import classify_document, extract_json_from_pdf, vectorize_extracted_document
+from apps.public_core.services.api_normalization import normalize_api_14digit
 from apps.public_core.models import ExtractedDocument, WellRegistry, PlanSnapshot
 from apps.public_core.services.well_registry_enrichment import enrich_well_registry_from_documents
 from apps.tenant_overlay.models import TenantArtifact, WellEngagement
 from apps.tenant_overlay.services.engagement_tracker import track_well_interaction
+from apps.tenants.models import UsageRecord
+from apps.tenants.services.usage_tracker import track_usage
 from apps.policy.services.loader import get_effective_policy
 from apps.kernel.services.policy_kernel import plan_from_facts
 
@@ -123,6 +126,7 @@ class W3AFromApiView(APIView):
         w15_file = req.validated_data.get("w15_file")
         schematic_file = req.validated_data.get("schematic_file")
         formation_tops_file = req.validated_data.get("formation_tops_file")
+        jurisdiction: str = req.validated_data.get("jurisdiction", "TX")
 
         # Normalize 10-digit API into a flexible key; downstream extractor/DB matching uses last 8 digits
         def _normalize_api(val: str) -> str:
@@ -134,6 +138,32 @@ class W3AFromApiView(APIView):
             return s
 
         api_in = _normalize_api(api10)
+
+        logger.info(f"📍 API: {api_in}, Jurisdiction: {jurisdiction}")
+
+        # Route to NM-specific flow if jurisdiction is NM
+        if jurisdiction == "NM":
+            from apps.public_core.services.w3a_orchestrator import _generate_w3a_for_nm_api
+
+            result = _generate_w3a_for_nm_api(
+                api_number=api_in,
+                plugs_mode=plugs_mode,
+                input_mode=input_mode,
+                merge_threshold_ft=merge_threshold_ft,
+                request=request,
+                confirm_fact_updates=confirm_fact_updates,
+                w2_file=w2_file,
+                w15_file=w15_file,
+                schematic_file=schematic_file,
+                formation_tops_file=formation_tops_file,
+            )
+
+            if result.get("success"):
+                return Response(result, status=status.HTTP_200_OK)
+            else:
+                return Response(result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Continue with TX (RRC) flow below...
 
         try:
             # 1) Acquire documents: RRC extractions, user uploads, or hybrid
@@ -195,7 +225,8 @@ class W3AFromApiView(APIView):
                 dl = extract_completions_all_documents(api_in, allowed_kinds=["w2", "w15", "gau"])
                 files = dl.get("files") or []
                 api = dl.get("api") or api_in
-            well = WellRegistry.objects.filter(api14__icontains=str(api)[-8:]).first()
+            api_normalized = normalize_api_14digit(str(api))
+            well = WellRegistry.objects.filter(api14=api_normalized).first() if api_normalized else None
             if input_mode in ("extractions", "hybrid"):
                 for f in files:
                     path = f.get("path")
@@ -555,7 +586,8 @@ class W3AFromApiView(APIView):
                 # Persist baseline snapshot (variants payload) if well available
                 plan_id = f"{api}:combined"  # Default to combined variant for navigation
                 try:
-                    well_for_snapshot = well or WellRegistry.objects.filter(api14__icontains=str(api)[-8:]).first()
+                    api_norm = normalize_api_14digit(str(api))
+                    well_for_snapshot = well or (WellRegistry.objects.filter(api14=api_norm).first() if api_norm else None)
                     if well_for_snapshot is not None:
                         snapshot = PlanSnapshot.objects.create(
                             well=well_for_snapshot,
@@ -620,7 +652,8 @@ class W3AFromApiView(APIView):
                 variant_label = "combined" if merge_enabled else "isolated"
                 plan_id = f"{api}:{variant_label}"
                 try:
-                    well_for_snapshot = well or WellRegistry.objects.filter(api14__icontains=str(api)[-8:]).first()
+                    api_norm = normalize_api_14digit(str(api))
+                    well_for_snapshot = well or (WellRegistry.objects.filter(api14=api_norm).first() if api_norm else None)
                     if well_for_snapshot is not None:
                         snapshot = PlanSnapshot.objects.create(
                             well=well_for_snapshot,
@@ -660,6 +693,25 @@ class W3AFromApiView(APIView):
                                             'plugs_mode': plugs_mode
                                         }
                                     )
+
+                                    # Track usage for billing and analytics
+                                    try:
+                                        track_usage(
+                                            tenant=user_tenant,
+                                            event_type=UsageRecord.EVENT_PLAN_GENERATED,
+                                            resource_type='well',
+                                            resource_id=well_for_snapshot.api14,
+                                            user=request.user,
+                                            metadata={
+                                                'plan_id': snapshot.plan_id,
+                                                'snapshot_id': str(snapshot.id),
+                                                'plan_type': 'W3A',
+                                                'plugs_mode': plugs_mode,
+                                                'kernel_version': snapshot.kernel_version,
+                                            }
+                                        )
+                                    except Exception:
+                                        logger.exception("Failed to track usage for plan generation")
                         except Exception:
                             logger.exception("Failed to track well engagement (single)")
                 except Exception:

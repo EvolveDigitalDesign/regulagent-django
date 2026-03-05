@@ -1,0 +1,79 @@
+# New Mexico Oil Conservation Division Jurisdiction Configuration
+jurisdiction_id: NM
+jurisdiction_name: New Mexico
+agency_name: Oil Conservation Division
+agency_acronym: OCD
+parent_department: Energy, Minerals and Natural Resources Department
+website: https://www.emnrd.nm.gov/ocd/
+
+# Regulatory framework
+regulatory_code:
+  title: "New Mexico Administrative Code"
+  abbreviation: NMAC
+  chapter: "Title 19, Chapter 15"
+  primary_rules:
+    plugging: "19.15.25"
+    drilling: "19.15.16"
+    casing: "19.15.16.10"
+    forms: "19.15.7"
+
+# Administrative districts (NM uses numbered districts)
+districts:
+  - id: "1"
+    name: "District 1 - Hobbs"
+    office: "1625 N. French Dr., Hobbs, NM 88240"
+    counties: [Lea, Eddy, Chaves, Roosevelt]
+  - id: "2"
+    name: "District 2 - Artesia"
+    office: "1000 Fairgrounds Rd, Artesia, NM 88210"
+    counties: [Eddy, Lea]
+  - id: "3"
+    name: "District 3 - Aztec"
+    office: "116 N. Main Ave., Aztec, NM 87410"
+    counties: [San Juan, Rio Arriba, McKinley, Sandoval]
+  - id: "4"
+    name: "District 4 - Santa Fe"
+    office: "1220 South St. Francis Dr., Santa Fe, NM 87505"
+    counties: [All others - statewide]
+
+# Form mappings
+forms:
+  drilling_permit:
+    form_id: C-101
+    name: "Application for Permit to Drill"
+    tx_equivalent: W-1
+  location_plat:
+    form_id: C-102
+    name: "Well Location and Acreage Dedication Plat"
+    tx_equivalent: W-1A
+  sundry_notice:
+    form_id: C-103
+    name: "Sundry Notices and Reports on Wells"
+    tx_equivalent: G-1
+  allowable_request:
+    form_id: C-104
+    name: "Request for Allowable"
+    tx_equivalent: P-1
+  completion_report:
+    form_id: C-105
+    name: "Well Completion or Recompletion Report"
+    tx_equivalent: W-2
+    filing_deadline_days: 45
+
+# Terminology mapping (NM term -> TX equivalent)
+terminology:
+  fresh_water: "usable quality water"  # NM uses same term as TX
+  plugging_form: "C-103"  # vs TX W-3A
+  completion_form: "C-105"  # vs TX W-2
+  district: "district"  # same term
+
+# Contact information
+contacts:
+  main_office:
+    address: "1220 South St. Francis Drive, Santa Fe, NM 87505"
+    phone: "(505) 476-3460"
+    fax: "(505) 476-3462"
+  permitting:
+    url: "https://wwwapps.emnrd.nm.gov/OCD/OCDPermitting/"
+  forms:
+    url: "https://www.emnrd.nm.gov/ocd/ocd-forms/"

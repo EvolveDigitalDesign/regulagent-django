@@ -117,7 +117,7 @@ class AllFilingsView(APIView):
 
         # Get tenant ID from request user
         tenant_id = getattr(request.user, "tenant_id", None)
-        
+
         if tenant_id:
             # User can see public filings or their own tenant's filings
             w3a_filter &= Q(
@@ -127,8 +127,13 @@ class AllFilingsView(APIView):
             # Anonymous users only see public filings
             w3a_filter &= Q(visibility="public")
 
+        # Add workspace filtering if provided
+        workspace_id = request.query_params.get('workspace')
+        if workspace_id:
+            w3a_filter &= Q(workspace_id=workspace_id)
+
         # Get W-3A plans (order by created_at since PlanSnapshot doesn't have updated_at)
-        w3a_plans = PlanSnapshot.objects.filter(w3a_filter).select_related("well").order_by("-created_at")
+        w3a_plans = PlanSnapshot.objects.filter(w3a_filter).select_related("well", "workspace").order_by("-created_at")
 
         # Serialize
         for plan in w3a_plans:
@@ -143,6 +148,10 @@ class AllFilingsView(APIView):
                     "county": plan.well.county,
                     "state": plan.well.state,
                 })
+
+            # Add workspace information
+            filing_data["workspace_id"] = plan.workspace_id
+            filing_data["workspace_name"] = plan.workspace.name if plan.workspace else None
             
             # Add creator from history
             try:
@@ -157,16 +166,31 @@ class AllFilingsView(APIView):
 
     def _get_w3_filings(self, request) -> List[Dict[str, Any]]:
         """Get W-3 forms from W3FormORM"""
-        
+
         filings: List[Dict[str, Any]] = []
 
-        # Get W-3 forms (all for now, tenant isolation to be added when tenant_id field exists)
-        w3_forms = W3FormORM.objects.filter().select_related("well").order_by("-updated_at")
+        # Build query with tenant isolation and workspace filtering
+        w3_filter = Q()
+        tenant_id = getattr(request.user, "tenant_id", None)
+        if not tenant_id:
+            user_tenant = request.user.tenants.first()
+            tenant_id = user_tenant.id if user_tenant else None
+
+        if tenant_id:
+            w3_filter &= Q(tenant_id=tenant_id)
+        else:
+            return []  # W-3 forms are always private
+
+        workspace_id = request.query_params.get('workspace')
+        if workspace_id:
+            w3_filter &= Q(workspace_id=workspace_id)
+
+        w3_forms = W3FormORM.objects.filter(w3_filter).select_related("well", "workspace").order_by("-updated_at")
 
         # Serialize
         for form in w3_forms:
             filing_data = W3FilingSerializer(form).data
-            
+
             # Add well information
             if form.well:
                 filing_data.update({
@@ -177,6 +201,10 @@ class AllFilingsView(APIView):
                     "county": form.well.county,
                     "state": form.well.state,
                 })
+
+            # Add workspace information
+            filing_data["workspace_id"] = form.workspace_id
+            filing_data["workspace_name"] = form.workspace.name if form.workspace else None
             
             # Add creator from history
             try:
