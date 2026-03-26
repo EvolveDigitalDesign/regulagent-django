@@ -1,0 +1,424 @@
+{
+  "metadata": {
+    "title": "NM COA Figures D1/D2 - South Hobbs Region Plugging Book",
+    "jurisdiction": "NM",
+    "region": "south_hobbs",
+    "coa_figure": "Figures D1/D2",
+    "effective_date": "2018-06-26",
+    "authority": "NMOCD - Oil Conservation Division",
+    "citation": "NMAC 19.15.25",
+    "summary": {
+      "totalProcedures": 13,
+      "totalSubAreas": 3,
+      "totalFormations": 16
+    }
+  },
+  "generalProcedures": [
+    {
+      "number": 1,
+      "text": "The OCD district office must be given a minimum of 24 hours notice prior to setting any plugs. Contact the Hobbs OCD office at (575) 391-2000."
+    },
+    {
+      "number": 2,
+      "text": "The operator of a well must have a representative on location during the setting of all plugs. The operator's representative cannot be an employee of the plugging contractor unless the contractor and the operator are the same entity."
+    },
+    {
+      "number": 3,
+      "text": "All cement plugs shall be placed by circulation or squeeze method through tubing or drill pipe. Casing alone may not be used as a conduit for cement."
+    },
+    {
+      "number": 4,
+      "text": "All cement for plugging shall be conventional hard-setting cement mixed in accordance with API standards. Class C cement shall be used above 6,500 ft; Class H cement shall be used at or below 6,500 ft. Slurry weight: Class C = 14.8 lbs/gal, Class H = 16.4 lbs/gal."
+    },
+    {
+      "number": 5,
+      "text": "Minimum plug length shall be 100 feet OR 25 sacks of cement, whichever is greater."
+    },
+    {
+      "number": 6,
+      "text": "All cement plugs shall have sufficient slurry volume to fill the calculated height plus cement excess: 50% for cased hole, 100% for open hole."
+    },
+    {
+      "number": 7,
+      "text": "Maximum spacing between plugs shall not exceed 3,000 feet in cased hole or 2,000 feet in open hole."
+    },
+    {
+      "number": 8,
+      "text": "All cement plugs shall be tagged and tested to verify placement. Plugs across usable quality water, surface casing shoe, and productive formations must be tagged."
+    },
+    {
+      "number": 9,
+      "text": "A cast iron bridge plug (CIBP) used as a plug base shall have a minimum of 100 feet of cement on top of the plug. If set with a bailer, 35 feet of cement on top is acceptable."
+    },
+    {
+      "number": 10,
+      "text": "A cement plug shall extend at least 50 feet above and 50 feet below each zone requiring isolation (usable quality water base, surface casing shoe, productive horizons)."
+    },
+    {
+      "number": 11,
+      "text": "Cement shall stand for a minimum wait-on-cement (WOC) time of 4 hours before disturbing. A minimum of 8 hours WOC is recommended before testing or drilling out cement."
+    },
+    {
+      "number": 12,
+      "text": "Figure D1 applies to the Northwest Shelf sub-area (west Lea County). Figure D2 applies to the Central Basin Platform sub-area (central and east Lea County and east Eddy County portions). Formation requirements differ between sub-areas - confirm applicable figure before planning plugging operations."
+    },
+    {
+      "number": 13,
+      "text": "Formation isolation is mandatory for every NM well. In this region, San Andres, Glorieta, Yeso, Abo, Bone Spring, Wolfcamp, and all Delaware Mountain Group formations must be isolated by separate cement plugs where penetrated."
+    }
+  ],
+  "regionDetection": {
+    "method": "county_township_range",
+    "counties": [
+      "Lea",
+      "Eddy"
+    ],
+    "township_range_boundaries": {
+      "note": "Figure D covers Lea County (outside potash enclave) and east Eddy County portions (outside potash enclave and outside Figure B Artesia district). Sub-figure D1 vs D2 determined by location within county.",
+      "lea": {
+        "description": "All of Lea County except the potash enclave (Figure C) in west Lea County",
+        "d1_northwest_shelf": "West Lea County portions outside potash enclave - approximately west of Range 35E",
+        "d2_central_basin_platform": "Central and east Lea County - approximately east of Range 35E through county line"
+      },
+      "eddy_east": {
+        "description": "East Eddy County portions not in Figure B (Artesia) or Figure C (Potash) districts",
+        "approximate_boundary": "East portions of Eddy County bordering Lea County, south of Carlsbad city limits"
+      }
+    }
+  },
+  "subAreas": [
+    {
+      "name": "D1 - Northwest Shelf",
+      "description": "Northwest Shelf sub-area in west Lea County. Classic carbonate oil plays on the shallow shelf. Permian carbonates (San Andres, Glorieta, Yeso, Abo) are primary targets at moderate depths.",
+      "applicableFigure": "D1",
+      "formations": [
+        {
+          "name": "San Andres",
+          "isolationOrder": 1,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 2500, "max_ft": 5500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Glorieta",
+          "isolationOrder": 2,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3000, "max_ft": 6000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Yeso",
+          "isolationOrder": 3,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3500, "max_ft": 6500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "notes": "Below 6500 ft use Class H cement"
+          }
+        },
+        {
+          "name": "Abo",
+          "isolationOrder": 4,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 4500, "max_ft": 7500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Bone Spring",
+          "isolationOrder": 5,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 6000, "max_ft": 10000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        }
+      ]
+    },
+    {
+      "name": "D2 - Central Basin Platform",
+      "description": "Central Basin Platform sub-area in central and east Lea County and east Eddy County. The platform is a structural high with deep Permian carbonate oil production. Wolfcamp and Bone Spring increasingly important as unconventional targets. Deepest wells in the Hobbs region.",
+      "applicableFigure": "D2",
+      "formations": [
+        {
+          "name": "San Andres",
+          "isolationOrder": 1,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 4000, "max_ft": 7500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "notes": "Class C above 6500 ft; Class H below"
+          }
+        },
+        {
+          "name": "Glorieta",
+          "isolationOrder": 2,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 4500, "max_ft": 8000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Yeso",
+          "isolationOrder": 3,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 5000, "max_ft": 8500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Abo",
+          "isolationOrder": 4,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 6000, "max_ft": 9000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Bone Spring (1st, 2nd, 3rd)",
+          "isolationOrder": 5,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 7000, "max_ft": 12000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50,
+            "notes": "Each Bone Spring member (1st/2nd/3rd) must be separately isolated if penetrated"
+          }
+        },
+        {
+          "name": "Wolfcamp",
+          "isolationOrder": 6,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 9000, "max_ft": 14000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Bell Canyon (Delaware Mountain Group)",
+          "isolationOrder": 7,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 8000, "max_ft": 12500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Cherry Canyon (Delaware Mountain Group)",
+          "isolationOrder": 8,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 9000, "max_ft": 13500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Brushy Canyon (Delaware Mountain Group)",
+          "isolationOrder": 9,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 9500, "max_ft": 14500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        }
+      ]
+    },
+    {
+      "name": "East Eddy County - Hobbs District Transition",
+      "description": "East Eddy County portions within the Hobbs OCD district boundary. Transition between Delaware Basin and Central Basin Platform. Formation depths intermediate between D1 and D2 sub-areas.",
+      "applicableFigure": "D2",
+      "formations": [
+        {
+          "name": "San Andres",
+          "isolationOrder": 1,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3000, "max_ft": 6500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Carlsbad Group",
+          "isolationOrder": 2,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3500, "max_ft": 7000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "notes": "Class H below 6500 ft"
+          }
+        },
+        {
+          "name": "Bone Spring",
+          "isolationOrder": 3,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 6500, "max_ft": 11000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Wolfcamp",
+          "isolationOrder": 4,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 8500, "max_ft": 13000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Delaware Mountain Group (undifferentiated)",
+          "isolationOrder": 5,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 8000, "max_ft": 14000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50,
+            "notes": "Differentiate Bell Canyon / Cherry Canyon / Brushy Canyon where possible"
+          }
+        }
+      ]
+    }
+  ],
+  "pluggingChart": {
+    "casing": {
+      "description": "NM cement sack requirements for cased hole - 50% excess factor (flat, not depth-based). Applies to both D1 and D2 sub-areas.",
+      "excess_factor": 0.50,
+      "min_sacks": 25,
+      "diameters": ["4.5", "5.5", "7", "8.625", "9.625", "10.75", "13.375"],
+      "data": [
+        { "depth_ft": 1000,  "values": [25, 25, 30, 35, 40, 45, 55] },
+        { "depth_ft": 2000,  "values": [25, 30, 40, 50, 55, 65, 80] },
+        { "depth_ft": 3000,  "values": [25, 35, 45, 55, 65, 75, 95] },
+        { "depth_ft": 4000,  "values": [25, 40, 50, 65, 75, 85, 110] },
+        { "depth_ft": 5000,  "values": [30, 45, 55, 70, 85, 95, 130] },
+        { "depth_ft": 6000,  "values": [30, 50, 60, 80, 90, 105, null] },
+        { "depth_ft": 7000,  "values": [35, 55, 65, 85, 100, 115, null] },
+        { "depth_ft": 8000,  "values": [35, 60, 70, 90, 110, 125, null] },
+        { "depth_ft": 9000,  "values": [40, 60, 75, 100, 115, 130, null] },
+        { "depth_ft": 10000, "values": [40, 65, 80, 105, 125, null, null] },
+        { "depth_ft": 12000, "values": [45, 70, 90, 115, null, null, null] },
+        { "depth_ft": 14000, "values": [50, 75, 95, null, null, null, null] }
+      ]
+    },
+    "openHole": {
+      "description": "NM cement sack requirements for open hole - 100% excess factor (flat, not depth-based). Applies to both D1 and D2 sub-areas.",
+      "excess_factor": 1.00,
+      "min_sacks": 25,
+      "diameters": ["6.75", "7.875", "8.75", "11", "12.25"],
+      "data": [
+        { "depth_ft": 1000,  "values": [40, 50, 55, 70, 80] },
+        { "depth_ft": 2000,  "values": [40, 50, 60, 75, 90] },
+        { "depth_ft": 3000,  "values": [40, 55, 65, 80, 100] },
+        { "depth_ft": 4000,  "values": [45, 55, 65, 90, 110] },
+        { "depth_ft": 5000,  "values": [45, 60, 70, 95, 115] },
+        { "depth_ft": 6000,  "values": [45, 60, 75, 100, null] },
+        { "depth_ft": 7000,  "values": [50, 65, 80, null, null] },
+        { "depth_ft": 8000,  "values": [50, 70, 85, null, null] },
+        { "depth_ft": 9000,  "values": [55, 70, 90, null, null] },
+        { "depth_ft": 10000, "values": [60, 75, 95, null, null] },
+        { "depth_ft": 12000, "values": [65, 85, 105, null, null] },
+        { "depth_ft": 14000, "values": [70, 90, null, null, null] }
+      ]
+    }
+  },
+  "specialRequirements": {
+    "figure_selection": {
+      "d1_northwest_shelf": {
+        "description": "Figure D1 applies to wells on the Northwest Shelf (west Lea County, outside potash enclave). Primary targets are San Andres, Glorieta, Yeso, Abo at moderate depths (2500-7500 ft).",
+        "typical_td_range_ft": "2500 - 9000"
+      },
+      "d2_central_basin_platform": {
+        "description": "Figure D2 applies to wells on the Central Basin Platform (central/east Lea County and east Eddy County). Deeper targets include Bone Spring, Wolfcamp, and Delaware Mountain Group.",
+        "typical_td_range_ft": "5000 - 15000"
+      }
+    },
+    "woc_time": {
+      "minimum_hours": 4,
+      "recommended_hours": 8,
+      "description": "Minimum 4 hours wait-on-cement before any disturbance. Recommend 8 hours or until 500 psi compressive strength achieved."
+    },
+    "max_plug_spacing": {
+      "cased_hole_ft": 3000,
+      "open_hole_ft": 2000,
+      "description": "Plugs must be set at intervals not exceeding 3000 ft (cased) or 2000 ft (open hole) per NMAC 19.15.25."
+    },
+    "formation_isolation": {
+      "required": true,
+      "description": "Formation isolation is mandatory for every NM well. All productive horizons and usable quality water zones must be isolated. In D2 sub-area, each Bone Spring member must be separately isolated where productive."
+    },
+    "surface_casing": {
+      "required": true,
+      "pull_allowed": false,
+      "description": "Surface casing may not be removed from a well at abandonment per NMAC 19.15.25."
+    },
+    "potash_exclusion": {
+      "description": "Wells within the potash enclave (west Lea County potash mining area) must use Figure C, not Figure D, regardless of township/range. Verify potash enclave boundary before applying Figure D requirements."
+    },
+    "unconventional_wells": {
+      "description": "Horizontal/unconventional wells targeting Bone Spring or Wolfcamp in the D2 sub-area may have multiple productive laterals. Each productive interval must be isolated per NMAC 19.15.25 requirements regardless of completion method."
+    }
+  }
+}

@@ -5,10 +5,13 @@ from typing import Any, Dict, List, Optional
 import logging
 import re
 
+from apps.kernel.services.jurisdiction_registry import detect_jurisdiction
+
 logger = logging.getLogger(__name__)
 
 KERNEL_VERSION = "0.1.0"
 from .w3a_rules import generate_steps as generate_w3a_steps
+from .c103_step_generator import generate_c103_steps
 
 
 def _get_jurisdiction(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> str:
@@ -48,14 +51,7 @@ def _get_jurisdiction(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) ->
         api14 = api14_val
 
     if api14:
-        state_code = str(api14)[:2]
-        # Map API state codes to jurisdiction codes
-        api_state_map = {
-            "42": "TX",  # Texas
-            "30": "NM",  # New Mexico
-        }
-        if state_code in api_state_map:
-            return api_state_map[state_code]
+        return detect_jurisdiction(str(api14))
 
     # Default to Texas (backward compatibility)
     logger.warning("Could not determine jurisdiction, defaulting to TX")
@@ -150,6 +146,10 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
     logger.info(f"Using formula engine for jurisdiction: {jurisdiction} ({formula_engine.__class__.__name__})")
 
     # Deterministic step generation (scaffold for W-3A)
+    # Initialize TX-specific variables to safe defaults for non-TX jurisdictions
+    mech_set: set = set()
+    existing_cibp_ft = None
+    steps: List[Dict[str, Any]] = []
     if is_complete and policy.get("policy_id") == "tx.w3a":
         logger.debug("kernel.plan_from_facts: generating W3A steps")
         generated = generate_w3a_steps(resolved_facts, policy.get("effective") or {}, formula_engine)
@@ -530,272 +530,278 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
         except Exception:
             logger.exception("cibp-detector: failed")
 
-        logger.debug("kernel.plan_from_facts: generated %d steps", len(steps))
-        steps = _dedup_step_citations(steps)
-        # Apply default geometry/recipe from preferences when present
-        plan_steps = _apply_step_defaults(steps, policy.get("preferences") if isinstance(policy.get("preferences"), dict) else {}, resolved_facts)
-        # Apply district/county overrides (e.g., 08A tagging; 7C operational instructions)
-        print(f"🔍 KERNEL MAIN: About to call _apply_district_overrides with {len(plan_steps)} steps", flush=True)
-        print(f"🔍 KERNEL MAIN: policy.get('effective') type={type(policy.get('effective'))}", flush=True)
-        print(f"🔍 KERNEL MAIN: district={district}, county={policy.get('county')}", flush=True)
-        plan_steps = _apply_district_overrides(
+    elif is_complete and policy.get("policy_id") == "nm.c103":
+        logger.debug("kernel.plan_from_facts: generating C-103 steps for NM")
+        generated = generate_c103_steps(resolved_facts, policy, formula_engine)
+        plan["violations"] = generated.get("violations", [])
+        steps = generated.get("steps", [])
+
+    logger.debug("kernel.plan_from_facts: generated %d steps", len(steps))
+    steps = _dedup_step_citations(steps)
+    # Apply default geometry/recipe from preferences when present
+    plan_steps = _apply_step_defaults(steps, policy.get("preferences") if isinstance(policy.get("preferences"), dict) else {}, resolved_facts)
+    # Apply district/county overrides (e.g., 08A tagging; 7C operational instructions)
+    print(f"🔍 KERNEL MAIN: About to call _apply_district_overrides with {len(plan_steps)} steps", flush=True)
+    print(f"🔍 KERNEL MAIN: policy.get('effective') type={type(policy.get('effective'))}", flush=True)
+    print(f"🔍 KERNEL MAIN: district={district}, county={policy.get('county')}", flush=True)
+    plan_steps = _apply_district_overrides(
+        plan_steps,
+        policy.get("effective") or {},
+        policy.get("preferences") or {},
+        district,
+        policy.get("county"),
+        resolved_facts,  # CRITICAL FIX: Pass resolved_facts so formation plugs can determine plug_type
+    )
+    print(f"🔍 KERNEL MAIN: After _apply_district_overrides, got {len(plan_steps)} steps back", flush=True)
+    
+    # Apply county procedures (data-driven from policy YAML)
+    county_procedures = (policy.get("effective") or {}).get("district_overrides", {}).get("county_procedures", {})
+    if not county_procedures:
+        # Fallback: try top-level county_procedures
+        county_procedures = (policy.get("effective") or {}).get("county_procedures", {})
+    if county_procedures:
+        print(f"🔍 KERNEL MAIN: Applying county procedures: {list(county_procedures.keys())}", flush=True)
+        plan_steps = _apply_county_procedures(
             plan_steps,
-            policy.get("effective") or {},
-            policy.get("preferences") or {},
+            county_procedures,
+            resolved_facts,
             district,
             policy.get("county"),
-            resolved_facts,  # CRITICAL FIX: Pass resolved_facts so formation plugs can determine plug_type
         )
-        print(f"🔍 KERNEL MAIN: After _apply_district_overrides, got {len(plan_steps)} steps back", flush=True)
-        
-        # Apply county procedures (data-driven from policy YAML)
-        county_procedures = (policy.get("effective") or {}).get("district_overrides", {}).get("county_procedures", {})
-        if not county_procedures:
-            # Fallback: try top-level county_procedures
-            county_procedures = (policy.get("effective") or {}).get("county_procedures", {})
-        if county_procedures:
-            print(f"🔍 KERNEL MAIN: Applying county procedures: {list(county_procedures.keys())}", flush=True)
-            plan_steps = _apply_county_procedures(
-                plan_steps,
-                county_procedures,
-                resolved_facts,
-                district,
-                policy.get("county"),
-            )
-            print(f"🔍 KERNEL MAIN: After _apply_county_procedures, got {len(plan_steps)} steps back", flush=True)
-        
-        # Apply explicit step overrides provided by caller/payload (cap length, squeeze intervals, etc.)
-        plan_steps = _apply_steps_overrides(
-            plan_steps,
-            policy.get("effective") or {},
-            policy.get("preferences") or {},
-        )
-        logger.debug("kernel.plan_from_facts: after overrides %d steps", len(plan_steps))
-        # Suppress formation/cement plugs fully contained within perf_circulate cemented intervals
-        try:
-            perf_intervals: List[Tuple[float, float]] = []
+        print(f"🔍 KERNEL MAIN: After _apply_county_procedures, got {len(plan_steps)} steps back", flush=True)
+    
+    # Apply explicit step overrides provided by caller/payload (cap length, squeeze intervals, etc.)
+    plan_steps = _apply_steps_overrides(
+        plan_steps,
+        policy.get("effective") or {},
+        policy.get("preferences") or {},
+    )
+    logger.debug("kernel.plan_from_facts: after overrides %d steps", len(plan_steps))
+    # Suppress formation/cement plugs fully contained within perf_circulate cemented intervals
+    try:
+        perf_intervals: List[Tuple[float, float]] = []
+        for s in plan_steps:
+            if s.get("type") == "perf_circulate" and s.get("top_ft") is not None and s.get("bottom_ft") is not None:
+                t, b = float(s.get("top_ft")), float(s.get("bottom_ft"))
+                low, high = min(t, b), max(t, b)
+                perf_intervals.append((low, high))
+        if perf_intervals:
+            filtered: List[Dict[str, Any]] = []
             for s in plan_steps:
-                if s.get("type") == "perf_circulate" and s.get("top_ft") is not None and s.get("bottom_ft") is not None:
+                if s.get("type") in ("formation_top_plug", "cement_plug") and s.get("top_ft") is not None and s.get("bottom_ft") is not None:
                     t, b = float(s.get("top_ft")), float(s.get("bottom_ft"))
                     low, high = min(t, b), max(t, b)
-                    perf_intervals.append((low, high))
-            if perf_intervals:
-                filtered: List[Dict[str, Any]] = []
-                for s in plan_steps:
-                    if s.get("type") in ("formation_top_plug", "cement_plug") and s.get("top_ft") is not None and s.get("bottom_ft") is not None:
-                        t, b = float(s.get("top_ft")), float(s.get("bottom_ft"))
-                        low, high = min(t, b), max(t, b)
-                        covered = any(low >= pl and high <= ph for (pl, ph) in perf_intervals)
-                        if covered:
-                            # Skip subsumed plug; annotate if needed (dropped from execution)
-                            continue
-                    filtered.append(s)
-                plan_steps = filtered
-        except Exception:
-            logger.exception("kernel.plan_from_facts: perf overlap suppression failed")
-        # Annotate cement class based on base pack cutoff (shallow vs deep)
-        try:
-            base_pack = policy.get("base") or {}
-            cement_cls = base_pack.get("cement_class") or {}
-            cutoff = float(cement_cls.get("cutoff_ft")) if cement_cls.get("cutoff_ft") not in (None, "") else None
-            shallow = str(cement_cls.get("shallow_class") or "").strip()
-            deep = str(cement_cls.get("deep_class") or "").strip()
-            if cutoff is not None and (shallow or deep):
-                annotated: List[Dict[str, Any]] = []
-                for s in plan_steps:
-                    t = s.get("type")
-                    if t in ("cement_plug", "surface_casing_shoe_plug", "uqw_isolation_plug", "cibp_cap", "bridge_plug_cap", "squeeze", "top_plug", "perforate_and_squeeze_plug"):
-                        top_v = s.get("top_ft")
-                        bot_v = s.get("bottom_ft")
-                        mid = None
-                        try:
-                            if top_v is not None and bot_v is not None:
-                                mid = (float(top_v) + float(bot_v)) / 2.0
-                            elif top_v is not None and s.get("min_length_ft") not in (None, ""):
-                                mid = float(top_v) - float(s.get("min_length_ft")) / 2.0
-                        except Exception:
-                            mid = None
-                        if mid is not None:
-                            cls = deep if mid >= cutoff else shallow if shallow else deep
-                            s2 = dict(s)
-                            s2.setdefault("details", {})["cement_class"] = cls
-                            s2["details"]["depth_mid_ft"] = mid
-                            annotated.append(s2)
-                            continue
-                    annotated.append(s)
-                plan_steps = annotated
-        except Exception:
-            logger.exception("cement-class annotation failed")
-        # Inject tagging/verification details where required
-        try:
-            tag_wait = None
-            try:
-                eff = policy.get("effective") or {}
-                op = (eff.get("preferences") or {}).get("operational") or {}
-                tag_wait = op.get("tag_wait_hours")
-            except Exception:
-                tag_wait = None
-            if tag_wait in (None, ""):
-                tag_wait = 4  # default field practice
-            enriched: List[Dict[str, Any]] = []
+                    covered = any(low >= pl and high <= ph for (pl, ph) in perf_intervals)
+                    if covered:
+                        # Skip subsumed plug; annotate if needed (dropped from execution)
+                        continue
+                filtered.append(s)
+            plan_steps = filtered
+    except Exception:
+        logger.exception("kernel.plan_from_facts: perf overlap suppression failed")
+    # Annotate cement class based on base pack cutoff (shallow vs deep)
+    try:
+        base_pack = policy.get("base") or {}
+        cement_cls = base_pack.get("cement_class") or {}
+        cutoff = float(cement_cls.get("cutoff_ft")) if cement_cls.get("cutoff_ft") not in (None, "") else None
+        shallow = str(cement_cls.get("shallow_class") or "").strip()
+        deep = str(cement_cls.get("deep_class") or "").strip()
+        if cutoff is not None and (shallow or deep):
+            annotated: List[Dict[str, Any]] = []
             for s in plan_steps:
-                s2 = dict(s)
-                if s2.get("tag_required") is True:
-                    s2.setdefault("details", {})["verification"] = {"action": "TAG", "required_wait_hr": tag_wait}
-                enriched.append(s2)
-            plan_steps = enriched
+                t = s.get("type")
+                if t in ("cement_plug", "surface_casing_shoe_plug", "uqw_isolation_plug", "cibp_cap", "bridge_plug_cap", "squeeze", "top_plug", "perforate_and_squeeze_plug"):
+                    top_v = s.get("top_ft")
+                    bot_v = s.get("bottom_ft")
+                    mid = None
+                    try:
+                        if top_v is not None and bot_v is not None:
+                            mid = (float(top_v) + float(bot_v)) / 2.0
+                        elif top_v is not None and s.get("min_length_ft") not in (None, ""):
+                            mid = float(top_v) - float(s.get("min_length_ft")) / 2.0
+                    except Exception:
+                        mid = None
+                    if mid is not None:
+                        cls = deep if mid >= cutoff else shallow if shallow else deep
+                        s2 = dict(s)
+                        s2.setdefault("details", {})["cement_class"] = cls
+                        s2["details"]["depth_mid_ft"] = mid
+                        annotated.append(s2)
+                        continue
+                annotated.append(s)
+            plan_steps = annotated
+    except Exception:
+        logger.exception("cement-class annotation failed")
+    # Inject tagging/verification details where required
+    try:
+        tag_wait = None
+        try:
+            eff = policy.get("effective") or {}
+            op = (eff.get("preferences") or {}).get("operational") or {}
+            tag_wait = op.get("tag_wait_hours")
         except Exception:
-            logger.exception("tagging/verification enrichment failed")
+            tag_wait = None
+        if tag_wait in (None, ""):
+            tag_wait = 4  # default field practice
+        enriched: List[Dict[str, Any]] = []
+        for s in plan_steps:
+            s2 = dict(s)
+            if s2.get("tag_required") is True:
+                s2.setdefault("details", {})["verification"] = {"action": "TAG", "required_wait_hr": tag_wait}
+            enriched.append(s2)
+        plan_steps = enriched
+    except Exception:
+        logger.exception("tagging/verification enrichment failed")
 
-        # Plan-level notes (existing conditions and operations)
+    # Plan-level notes (existing conditions and operations)
+    try:
+        notes: Dict[str, Any] = {}
+        cond: List[str] = []
+        if "CIBP" in mech_set and existing_cibp_ft not in (None, ""):
+            cond.append(f"Existing CIBP at {existing_cibp_ft} ft; cap required")
+        pk = resolved_facts.get("packer_ft") or {}
+        dv = resolved_facts.get("dv_tool_ft") or {}
+        pval = pk.get("value") if isinstance(pk, dict) else pk
+        dval = dv.get("value") if isinstance(dv, dict) else dv
+        if pval not in (None, ""):
+            cond.append(f"Packer present at {pval} ft")
+        if dval not in (None, ""):
+            cond.append(f"DV tool present at {dval} ft")
+        if cond:
+            notes["existing_conditions"] = cond
+        # Operations summary derived from steps
+        ops_list: List[str] = []
         try:
-            notes: Dict[str, Any] = {}
-            cond: List[str] = []
-            if "CIBP" in mech_set and existing_cibp_ft not in (None, ""):
-                cond.append(f"Existing CIBP at {existing_cibp_ft} ft; cap required")
-            pk = resolved_facts.get("packer_ft") or {}
-            dv = resolved_facts.get("dv_tool_ft") or {}
-            pval = pk.get("value") if isinstance(pk, dict) else pk
-            dval = dv.get("value") if isinstance(dv, dict) else dv
-            if pval not in (None, ""):
-                cond.append(f"Packer present at {pval} ft")
-            if dval not in (None, ""):
-                cond.append(f"DV tool present at {dval} ft")
-            if cond:
-                notes["existing_conditions"] = cond
-            # Operations summary derived from steps
-            ops_list: List[str] = []
-            try:
-                for s in plan_steps:
-                    t = s.get("type")
-                    if t == "surface_casing_shoe_plug":
-                        top = s.get("top_ft"); bot = s.get("bottom_ft")
-                        if top is not None and bot is not None:
-                            ops_list.append(f"Set surface shoe plug from {bot} to {top} ft")
-                    elif t == "cibp_cap":
-                        cap = s.get("cap_length_ft") or 20
-                        ops_list.append(f"Place {cap} ft cement cap above CIBP")
-                    elif t == "uqw_isolation_plug":
-                        top = s.get("top_ft"); bot = s.get("bottom_ft")
-                        if top is not None and bot is not None:
-                            ops_list.append(f"Isolate UQW from {bot} to {top} ft; tag after wait")
-                    elif t == "formation_top_plug":
-                        fm = s.get("formation") or "formation"
-                        top = s.get("top_ft")
-                        if top is not None:
-                            ops_list.append(f"Spot 100 ft plug at {fm} top around {int(float(top))} ft")
-                    elif t == "cement_plug":
-                        top = s.get("top_ft"); bot = s.get("bottom_ft")
-                        if top is not None and bot is not None:
-                            ops_list.append(f"Spot cement plug from {bot} to {top} ft")
-                    elif t == "squeeze":
-                        top = s.get("top_ft"); bot = s.get("bottom_ft")
-                        if top is not None and bot is not None:
-                            ops_list.append(f"Perform squeeze from {bot} to {top} ft")
-                    elif t == "top_plug":
-                        ops_list.append("Set 10 ft top plug")
-                    elif t == "cut_casing_below_surface":
-                        depth = s.get("depth_ft") or 3
-                        ops_list.append(f"Cut casing {depth} ft below surface")
-            except Exception:
-                pass
-            if ops_list:
-                notes["operations"] = ops_list
-            
-            # Check if no formation plugs were generated - warn user to add them manually
-            has_formation_plugs = any(s.get("type") == "formation_top_plug" for s in plan_steps)
-            if not has_formation_plugs:
-                county_name = resolved_facts.get("county") or {}
-                county_val = county_name.get("value") if isinstance(county_name, dict) else county_name
-                field_name = resolved_facts.get("field") or {}
-                field_val = field_name.get("value") if isinstance(field_name, dict) else field_name
-                
-                warning_msg = f"⚠️ No formation plugs generated for {county_val or 'this'} County"
-                if field_val:
-                    warning_msg += f" / {field_val} field"
-                warning_msg += ". Formation tops may not be available in the policy database for this location. "
-                warning_msg += "You can add formation plugs manually using the chat: "
-                warning_msg += "'Add formation plugs for [Formation Name] at [depth] ft, [Formation 2] at [depth] ft'"
-                
-                notes.setdefault("warnings", []).append(warning_msg)
-                logger.warning(f"No formation plugs generated for {county_val} County, {field_val} field")
-            
-            if notes:
-                plan["notes"] = notes
+            for s in plan_steps:
+                t = s.get("type")
+                if t == "surface_casing_shoe_plug":
+                    top = s.get("top_ft"); bot = s.get("bottom_ft")
+                    if top is not None and bot is not None:
+                        ops_list.append(f"Set surface shoe plug from {bot} to {top} ft")
+                elif t == "cibp_cap":
+                    cap = s.get("cap_length_ft") or 20
+                    ops_list.append(f"Place {cap} ft cement cap above CIBP")
+                elif t == "uqw_isolation_plug":
+                    top = s.get("top_ft"); bot = s.get("bottom_ft")
+                    if top is not None and bot is not None:
+                        ops_list.append(f"Isolate UQW from {bot} to {top} ft; tag after wait")
+                elif t == "formation_top_plug":
+                    fm = s.get("formation") or "formation"
+                    top = s.get("top_ft")
+                    if top is not None:
+                        ops_list.append(f"Spot 100 ft plug at {fm} top around {int(float(top))} ft")
+                elif t == "cement_plug":
+                    top = s.get("top_ft"); bot = s.get("bottom_ft")
+                    if top is not None and bot is not None:
+                        ops_list.append(f"Spot cement plug from {bot} to {top} ft")
+                elif t == "squeeze":
+                    top = s.get("top_ft"); bot = s.get("bottom_ft")
+                    if top is not None and bot is not None:
+                        ops_list.append(f"Perform squeeze from {bot} to {top} ft")
+                elif t == "top_plug":
+                    ops_list.append("Set 10 ft top plug")
+                elif t == "cut_casing_below_surface":
+                    depth = s.get("depth_ft") or 3
+                    ops_list.append(f"Cut casing {depth} ft below surface")
         except Exception:
-            logger.exception("plan-level notes aggregation failed")
-
-        # CRITICAL: Assign plug_type BEFORE merge so incompatibility checks work!
-        prod_toc_val = resolved_facts.get('production_casing_toc_ft') or {}
-        production_toc_ft = prod_toc_val.get('value') if isinstance(prod_toc_val, dict) else prod_toc_val
-        try:
-            production_toc_ft = float(production_toc_ft) if production_toc_ft not in (None, "") else None
-        except (ValueError, TypeError):
-            production_toc_ft = None
-        logger.debug("kernel.plan_from_facts: assigning plug_type and plug_purpose BEFORE merge")
-        plan_steps = _assign_plug_types_and_purposes(plan_steps, production_toc_ft)
-
-        # Optionally merge adjacent formation plugs into longer plugs to minimize wait cycles
-        try:
-            prefs = policy.get("preferences") or {}
-            lp = (prefs.get("long_plug_merge") or {}) if isinstance(prefs, dict) else {}
-            enabled = bool(lp.get("enabled"))
-            threshold_ft = float(lp.get("threshold_ft", 0) or 0)  # Deprecated, kept for backward compat
-            types = lp.get("types") or ["formation_top_plug"]
-            preserve_tagging = True if lp.get("preserve_tagging", True) is not False else False
+            pass
+        if ops_list:
+            notes["operations"] = ops_list
+        
+        # Check if no formation plugs were generated - warn user to add them manually
+        has_formation_plugs = any(s.get("type") == "formation_top_plug" for s in plan_steps)
+        if not has_formation_plugs:
+            county_name = resolved_facts.get("county") or {}
+            county_val = county_name.get("value") if isinstance(county_name, dict) else county_name
+            field_name = resolved_facts.get("field") or {}
+            field_val = field_name.get("value") if isinstance(field_name, dict) else field_name
             
-            # Extract sack limits from policy (NEW: sack-based merging)
-            sack_limit_no_tag = float(lp.get("sack_limit_no_tag", 50.0) or 50.0)
-            sack_limit_with_tag = float(lp.get("sack_limit_with_tag", 150.0) or 150.0)
+            warning_msg = f"⚠️ No formation plugs generated for {county_val or 'this'} County"
+            if field_val:
+                warning_msg += f" / {field_val} field"
+            warning_msg += ". Formation tops may not be available in the policy database for this location. "
+            warning_msg += "You can add formation plugs manually using the chat: "
+            warning_msg += "'Add formation plugs for [Formation Name] at [depth] ft, [Formation 2] at [depth] ft'"
             
-            logger.info(
-                f"Long plug merge config: enabled={enabled}, types={types}, "
-                f"sack_limit_no_tag={sack_limit_no_tag}, sack_limit_with_tag={sack_limit_with_tag}"
+            notes.setdefault("warnings", []).append(warning_msg)
+            logger.warning(f"No formation plugs generated for {county_val} County, {field_val} field")
+        
+        if notes:
+            plan["notes"] = notes
+    except Exception:
+        logger.exception("plan-level notes aggregation failed")
+
+    # CRITICAL: Assign plug_type BEFORE merge so incompatibility checks work!
+    prod_toc_val = resolved_facts.get('production_casing_toc_ft') or {}
+    production_toc_ft = prod_toc_val.get('value') if isinstance(prod_toc_val, dict) else prod_toc_val
+    try:
+        production_toc_ft = float(production_toc_ft) if production_toc_ft not in (None, "") else None
+    except (ValueError, TypeError):
+        production_toc_ft = None
+    logger.debug("kernel.plan_from_facts: assigning plug_type and plug_purpose BEFORE merge")
+    plan_steps = _assign_plug_types_and_purposes(plan_steps, production_toc_ft)
+
+    # Optionally merge adjacent formation plugs into longer plugs to minimize wait cycles
+    try:
+        prefs = policy.get("preferences") or {}
+        lp = (prefs.get("long_plug_merge") or {}) if isinstance(prefs, dict) else {}
+        enabled = bool(lp.get("enabled"))
+        threshold_ft = float(lp.get("threshold_ft", 0) or 0)  # Deprecated, kept for backward compat
+        types = lp.get("types") or ["formation_top_plug"]
+        preserve_tagging = True if lp.get("preserve_tagging", True) is not False else False
+        
+        # Extract sack limits from policy (NEW: sack-based merging)
+        sack_limit_no_tag = float(lp.get("sack_limit_no_tag", 50.0) or 50.0)
+        sack_limit_with_tag = float(lp.get("sack_limit_with_tag", 150.0) or 150.0)
+        
+        logger.info(
+            f"Long plug merge config: enabled={enabled}, types={types}, "
+            f"sack_limit_no_tag={sack_limit_no_tag}, sack_limit_with_tag={sack_limit_with_tag}"
+        )
+        
+        if enabled:
+            plan_steps = _merge_adjacent_plugs(
+                plan_steps,
+                types=types,
+                threshold_ft=threshold_ft,  # Deprecated but kept for compat
+                preserve_tagging=preserve_tagging,
+                sack_limit_no_tag=sack_limit_no_tag,
+                sack_limit_with_tag=sack_limit_with_tag,
             )
-            
-            if enabled:
-                plan_steps = _merge_adjacent_plugs(
-                    plan_steps,
-                    types=types,
-                    threshold_ft=threshold_ft,  # Deprecated but kept for compat
-                    preserve_tagging=preserve_tagging,
-                    sack_limit_no_tag=sack_limit_no_tag,
-                    sack_limit_with_tag=sack_limit_with_tag,
-                )
-        except Exception:
-            logger.exception("kernel.long_plug_merge: merge failed; continuing with unmerged steps")
+    except Exception:
+        logger.exception("kernel.long_plug_merge: merge failed; continuing with unmerged steps")
 
-        plan["steps"] = plan_steps
-        # If steps exist, compute materials
-        if plan["steps"]:
-            logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
-            
-            # Update recipe yields based on cement class annotations (must happen AFTER class annotation, BEFORE materials)
-            for s in plan["steps"]:
-                if isinstance(s.get("recipe"), dict):
-                    cement_class = s.get("details", {}).get("cement_class")
-                    if cement_class:
-                        correct_yield = get_cement_yield(cement_class)
-                        s["recipe"]["yield_ft3_per_sk"] = correct_yield
-                        s["recipe"]["class"] = cement_class
-                        logger.debug(f"Updated recipe for {s.get('type')} at depth {s.get('details', {}).get('depth_mid_ft')} ft: class={cement_class}, yield={correct_yield} ft³/sk")
-            
-            logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
-            plan["steps"] = _compute_materials_for_steps(plan["steps"], resolved_facts=resolved_facts)  # type: ignore
-            
-            # Final validation and cleanup pass
-            logger.debug("kernel.plan_from_facts: running final validation")
-            plan["steps"] = _validate_and_cleanup_steps(plan["steps"], resolved_facts, policy)
-        # plan-level rounding policy and safety stock
-        rounding_pref = None
-        try:
-            prefs = policy.get("preferences") or {}
-            rounding_pref = (prefs.get("rounding_policy") or "nearest") if isinstance(prefs, dict) else "nearest"
-        except Exception:
-            rounding_pref = "nearest"
-        plan["rounding_policy"] = {"sacks": rounding_pref}
-        plan["materials_policy"] = {"rounding": rounding_pref}
-        plan["safety_stock_sacks"] = int(policy.get("preferences", {}).get("safety_stock_sacks", 0)) if isinstance(policy.get("preferences"), dict) else 0
+    plan["steps"] = plan_steps
+    # If steps exist, compute materials
+    if plan["steps"]:
+        logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
+        
+        # Update recipe yields based on cement class annotations (must happen AFTER class annotation, BEFORE materials)
+        for s in plan["steps"]:
+            if isinstance(s.get("recipe"), dict):
+                cement_class = s.get("details", {}).get("cement_class")
+                if cement_class:
+                    correct_yield = get_cement_yield(cement_class)
+                    s["recipe"]["yield_ft3_per_sk"] = correct_yield
+                    s["recipe"]["class"] = cement_class
+                    logger.debug(f"Updated recipe for {s.get('type')} at depth {s.get('details', {}).get('depth_mid_ft')} ft: class={cement_class}, yield={correct_yield} ft³/sk")
+        
+        logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
+        plan["steps"] = _compute_materials_for_steps(plan["steps"], resolved_facts=resolved_facts, formula_engine=formula_engine)  # type: ignore
+        
+        # Final validation and cleanup pass
+        logger.debug("kernel.plan_from_facts: running final validation")
+        plan["steps"] = _validate_and_cleanup_steps(plan["steps"], resolved_facts, policy)
+    # plan-level rounding policy and safety stock
+    rounding_pref = None
+    try:
+        prefs = policy.get("preferences") or {}
+        rounding_pref = (prefs.get("rounding_policy") or "nearest") if isinstance(prefs, dict) else "nearest"
+    except Exception:
+        rounding_pref = "nearest"
+    plan["rounding_policy"] = {"sacks": rounding_pref}
+    plan["materials_policy"] = {"rounding": rounding_pref}
+    plan["safety_stock_sacks"] = int(policy.get("preferences", {}).get("safety_stock_sacks", 0)) if isinstance(policy.get("preferences"), dict) else 0
     logger.debug("Steps generated: %s", plan.get("steps"))
     return plan
 
@@ -1089,7 +1095,15 @@ def _estimate_sacks_for_merged_interval(
         return None
 
 
-def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Dict[str, Any] = None, formula_engine=None) -> List[Dict[str, Any]]:
+    if formula_engine is None:
+        try:
+            from apps.policy.services.formula_engine import get_formula_engine
+            jurisdiction = (resolved_facts or {}).get("jurisdiction", "TX")
+            formula_engine = get_formula_engine(jurisdiction)
+            logger.info("_compute_materials_for_steps: created fallback formula_engine for %s", jurisdiction)
+        except Exception:
+            logger.warning("_compute_materials_for_steps: could not create formula_engine fallback")
     out: List[Dict[str, Any]] = []
     
     # Debug: Log all step types being processed
@@ -1141,11 +1155,24 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                 }
                 materials["fluids"]["displacement_bbl"] = disp_bbl
             elif step_type in ("bridge_plug_cap", "cibp_cap"):
-                # Require casing/stinger geometry to compute; otherwise, leave materials empty
-                if step.get("casing_id_in") is not None and step.get("stinger_od_in") is not None:
-                    cap_len = float(step.get("cap_length_ft"))
-                    casing_id = float(step.get("casing_id_in"))
-                    stinger_od = float(step.get("stinger_od_in"))
+                # Resolve casing geometry from step or fall back to casing strings at depth
+                cibp_casing_id = step.get("casing_id_in")
+                cibp_stinger_od = step.get("stinger_od_in")
+                if (cibp_casing_id is None or cibp_stinger_od is None) and resolved_facts:
+                    from .w3a_rules import _get_casing_strings_at_depth
+                    cap_depth = step.get("bottom_ft") or step.get("top_ft") or 0
+                    ctx = _get_casing_strings_at_depth(resolved_facts, float(cap_depth))
+                    inner = ctx.get("inner_string") or {}
+                    if inner.get("id_in"):
+                        cibp_casing_id = cibp_casing_id or float(inner["id_in"])
+                        # Default stinger OD: 2-3/8" tubing (common dump bail string)
+                        cibp_stinger_od = cibp_stinger_od or 2.375
+                        logger.info("bridge_plug_cap: resolved casing_id=%.3f stinger_od=%.3f from casing strings at %.0f ft",
+                                    cibp_casing_id, cibp_stinger_od, cap_depth)
+                if cibp_casing_id is not None and cibp_stinger_od is not None:
+                    cap_len = float(step.get("cap_length_ft") or abs((step.get("bottom_ft") or 0) - (step.get("top_ft") or 0)) or 20.0)
+                    casing_id = float(cibp_casing_id)
+                    stinger_od = float(cibp_stinger_od)
                     ann_excess = float(step.get("annular_excess", 0))
                     vols = bridge_plug_cap_bbl(cap_len, casing_id, stinger_od, ann_excess)
                     vb = compute_sacks(vols["total_bbl"], recipe)
@@ -1157,6 +1184,7 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                         "additives": vb.additives,
                         "explain": vb.explain,
                     }
+                    step["sacks"] = int(vb.sacks)
             elif step_type in ("cement_plug",):
                 # Generic cement plug over an interval. Supports optional segmentation.
                 # CRITICAL: If this is a merged perf_and_squeeze plug, use perf_and_squeeze calculation!
@@ -1767,6 +1795,16 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                 if not cement_aware_success:
                     casing_id = step.get("casing_id_in")
                     stinger_od = step.get("stinger_od_in")
+                    # Fallback: resolve geometry from casing strings at this depth
+                    if (casing_id is None or stinger_od is None) and resolved_facts and bottom_ft is not None:
+                        from .w3a_rules import _get_casing_strings_at_depth
+                        ctx = _get_casing_strings_at_depth(resolved_facts, float(bottom_ft))
+                        inner = ctx.get("inner_string") or {}
+                        if inner.get("id_in"):
+                            casing_id = casing_id or float(inner["id_in"])
+                            stinger_od = stinger_od or 2.375  # Default dump bail stinger OD
+                            logger.info("%s: resolved casing_id=%.3f stinger_od=%.3f from casing strings at %.0f ft",
+                                        step_type, casing_id, stinger_od, float(bottom_ft))
                     if top_ft is not None and bottom_ft is not None and casing_id is not None and stinger_od is not None:
                         t = float(top_ft)
                         b = float(bottom_ft)
@@ -1825,7 +1863,7 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                         print(f"      Length: {interval_ft:.0f} ft")
                         print(f"      Base volume: {interval_ft * cap:.2f} bbl")
                         print(f"      × Annular excess: {(1.0 + ex):.2f}x (+{ex*100:.0f}%) → {base_volume_bbl:.2f} bbl")
-                        print(f"      × Texas excess: {texas_excess_factor:.4f}x (+{(texas_excess_factor-1)*100:.1f}% @ {depth_kft:.2f} kft) → {total_bbl:.2f} bbl")
+                        print(f"      × Depth excess: {depth_excess_factor:.4f}x (+{(depth_excess_factor-1)*100:.1f}% @ {b/1000.0:.2f} kft) → {total_bbl:.2f} bbl")
                         print(f"")
                         print(f"   ✓ TOTAL VOLUME: {total_bbl:.2f} bbl")
                         print(f"   ✓ SACKS REQUIRED: {int(vb.sacks)} sacks")
@@ -1918,7 +1956,7 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                     from .w3a_rules import _get_casing_strings_at_depth, casing_capacity_bbl_per_ft
                     
                     casing_context = _get_casing_strings_at_depth(resolved_facts, bottom_ft)
-                    prod_casing = casing_context.get("production_casing")
+                    prod_casing = casing_context.get("inner_string")
                     
                     if prod_casing:
                         prod_id = prod_casing.get("id_in")
@@ -1944,7 +1982,7 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                             
                             step["sacks"] = int(vb.sacks)
                             
-                            step.setdefault("details", {})["cement_class"] = recipe.get("class", "C")
+                            step.setdefault("details", {})["cement_class"] = getattr(recipe, "cement_class", "C")
                             step.setdefault("details", {})["depth_mid_ft"] = (top_ft + bottom_ft) / 2.0
                             
                             logger.info(
@@ -1984,6 +2022,36 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                         float(sp.get("pump_rate_bpm")) if sp.get("pump_rate_bpm") is not None else None,
                     )
                     materials["fluids"]["spacer_bbl"] = spacer_bbl
+            # --- NM C-103 step types ---
+            # The C103 rules engine pre-computes sacks_required in step details.
+            # Surface that into the materials dict so the frontend can display it.
+            elif step_type in ("formation_plug", "shoe_plug", "surface_plug",
+                               "fill_plug", "duqw_plug", "mechanical_plug"):
+                details = step.get("details") or {}
+                pre_sacks = details.get("sacks_required")
+                if pre_sacks is not None and pre_sacks > 0:
+                    try:
+                        sacks = float(pre_sacks)
+                        # Use recipe yield to back-calculate volume if available
+                        yield_val = recipe.yield_ft3_per_sk
+                        if yield_val and yield_val > 0:
+                            ft3 = sacks * yield_val
+                            # 1 bbl = 5.6146 ft³
+                            total_bbl = ft3 / 5.6146
+                        else:
+                            ft3 = sacks * 1.15  # Default Class H yield
+                            total_bbl = ft3 / 5.6146
+                        materials["slurry"] = {
+                            "total_bbl": round(total_bbl, 2),
+                            "ft3": round(ft3, 2),
+                            "sacks": int(sacks),
+                            "water_bbl": 0,  # Not computed for NM pre-calculated steps
+                            "additives": [],
+                            "explain": f"Pre-computed by C-103 rules engine: {int(sacks)} sacks",
+                        }
+                        step["sacks"] = int(sacks)
+                    except (ValueError, TypeError):
+                        pass
         except Exception as e:  # pragma: no cover - defensive; return step unchanged on error
             logger.exception("materials.compute: error type=%s err=%s", step_type, e)
             step.setdefault("errors", []).append(str(e))

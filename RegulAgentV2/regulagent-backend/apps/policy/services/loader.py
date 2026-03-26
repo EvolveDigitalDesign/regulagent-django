@@ -707,5 +707,23 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
     validated_overrides = validated_effective.get('district_overrides') or {}
     validated_ftops = validated_overrides.get('formation_tops') or []
     print(f"🔍 LOADER POST-VALIDATION: out['effective']['district_overrides'] has {len(validated_ftops)} formation_tops", flush=True)
-    
+
     return out
+
+
+def get_effective_policy_for_jurisdiction(jurisdiction: str, **kwargs) -> dict:
+    """Route policy loading to the correct handler based on jurisdiction.
+
+    For TX: delegates to get_effective_policy() with district/county/field.
+    For NM and others: delegates to the jurisdiction handler via registry.
+    """
+    if jurisdiction == "TX":
+        return get_effective_policy(**kwargs)
+
+    from apps.kernel.services.jurisdiction_registry import get_handler
+    handler = get_handler(jurisdiction)
+    if handler:
+        return handler.load_effective_policy(kwargs)
+
+    logger.warning("No handler for jurisdiction %s, falling back to TX policy", jurisdiction)
+    return get_effective_policy(**kwargs)

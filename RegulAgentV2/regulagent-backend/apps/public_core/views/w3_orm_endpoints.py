@@ -402,3 +402,40 @@ class W3FormViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+    @action(detail=True, methods=['get'], url_path='export-pdf')
+    def export_pdf(self, request, pk=None):
+        """Export this W-3 form as a filled PDF."""
+        import os
+        from django.http import FileResponse
+        from apps.public_core.services.w3_pdf_generator import (
+            generate_w3_pdf,
+            W3PDFGeneratorError,
+        )
+
+        form_orm = self.get_object()
+
+        if not form_orm.form_data:
+            return Response(
+                {'error': 'No form data available for PDF export'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            result = generate_w3_pdf(form_orm.form_data)
+            temp_path = result["temp_path"]
+            api_number = result.get("api_number", "unknown")
+            filename = f"W3_{api_number}.pdf"
+
+            return FileResponse(
+                open(temp_path, "rb"),
+                as_attachment=True,
+                filename=filename,
+                content_type="application/pdf",
+            )
+        except W3PDFGeneratorError as e:
+            logger.error(f"W-3 PDF generation failed: {e}")
+            return Response(
+                {'error': f'PDF generation failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+

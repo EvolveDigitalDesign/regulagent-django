@@ -14,8 +14,11 @@ All OpenAI integrations should import from this module for consistency.
 import os
 import time
 import threading
+import logging
 from typing import Optional
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # MODEL SELECTION
@@ -33,7 +36,8 @@ DEFAULT_CLASSIFIER_MODEL = os.getenv("OPENAI_CLASSIFIER_MODEL", "gpt-4o-mini")
 DEFAULT_BATCH_MODEL = os.getenv("OPENAI_BATCH_MODEL", "gpt-4o")
 
 # Embeddings
-DEFAULT_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+DEFAULT_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+DEFAULT_EMBEDDING_DIMENSIONS = int(os.getenv("OPENAI_EMBEDDING_DIMENSIONS", "3072"))
 
 # =============================================================================
 # TEMPERATURE SETTINGS
@@ -44,6 +48,29 @@ TEMPERATURE_FACTUAL = 0.0  # Document extraction, compliance checks
 TEMPERATURE_LOW = 0.1  # Chat responses, plan modifications
 TEMPERATURE_BALANCED = 0.5  # General conversation
 TEMPERATURE_CREATIVE = 0.8  # Suggestions, explanations
+
+# =============================================================================
+# MODEL PRICING (per 1M tokens, USD)
+# =============================================================================
+
+MODEL_PRICING = {
+    "gpt-4o": {"prompt": 2.50, "completion": 10.00},
+    "gpt-4o-2024-11-20": {"prompt": 2.50, "completion": 10.00},
+    "gpt-4o-2024-08-06": {"prompt": 2.50, "completion": 10.00},
+    "gpt-4o-mini": {"prompt": 0.15, "completion": 0.60},
+    "gpt-4o-mini-2024-07-18": {"prompt": 0.15, "completion": 0.60},
+    "o1": {"prompt": 15.00, "completion": 60.00},
+    "o1-2024-12-17": {"prompt": 15.00, "completion": 60.00},
+    "text-embedding-3-large": {"prompt": 0.13, "completion": 0.0},
+    "text-embedding-3-small": {"prompt": 0.02, "completion": 0.0},
+}
+
+
+def calculate_cost_usd(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    """Calculate estimated cost in USD for an OpenAI API call."""
+    pricing = MODEL_PRICING.get(model, MODEL_PRICING.get("gpt-4o", {"prompt": 2.50, "completion": 10.00}))
+    return (prompt_tokens * pricing["prompt"] + completion_tokens * pricing["completion"]) / 1_000_000
+
 
 # =============================================================================
 # RATE LIMITING - Token Per Minute (TPM) aware throttling
@@ -116,19 +143,184 @@ _token_limiter = TokenRateLimiter(
 
 
 # =============================================================================
+# TRACKED OPENAI CLIENT WRAPPER
+# =============================================================================
+
+class _TrackedCompletions:
+    """Proxy for chat.completions that records usage after each create() call."""
+
+    def __init__(self, completions, operation: str):
+        self._completions = completions
+        self._operation = operation
+
+    def create(self, **kwargs):
+        response = self._completions.create(**kwargs)
+        self._record_usage(response, kwargs.get("model", "unknown"))
+        return response
+
+    def _record_usage(self, response, requested_model: str):
+        try:
+            usage = getattr(response, 'usage', None)
+            if not usage:
+                return
+
+            model = getattr(response, 'model', requested_model) or requested_model
+            prompt_tokens = getattr(usage, 'prompt_tokens', 0) or 0
+            completion_tokens = getattr(usage, 'completion_tokens', 0) or 0
+            total_tokens = getattr(usage, 'total_tokens', 0) or 0
+
+            # Update rate limiter
+            _token_limiter.add_tokens(total_tokens)
+
+            # Record to database if tenant context is available
+            from apps.tenants.context import get_current_tenant
+            tenant = get_current_tenant()
+            if tenant:
+                from apps.tenants.services.usage_tracker import track_usage
+                from apps.tenants.models import UsageRecord
+                cost_usd = calculate_cost_usd(model, prompt_tokens, completion_tokens)
+                track_usage(
+                    tenant=tenant,
+                    event_type=UsageRecord.EVENT_API_CALL,
+                    resource_type='openai',
+                    tokens_used=total_tokens,
+                    metadata={
+                        'model': model,
+                        'prompt_tokens': prompt_tokens,
+                        'completion_tokens': completion_tokens,
+                        'cost_usd': round(cost_usd, 6),
+                        'operation': self._operation,
+                    },
+                )
+            else:
+                logger.debug(
+                    f"OpenAI usage [{self._operation}]: model={model} "
+                    f"tokens={total_tokens} (no tenant context, skipping DB write)"
+                )
+        except Exception:
+            logger.exception("Failed to record OpenAI usage (non-fatal)")
+
+    def __getattr__(self, name):
+        return getattr(self._completions, name)
+
+
+class _TrackedChat:
+    """Proxy for client.chat that wraps completions."""
+
+    def __init__(self, chat, operation: str):
+        self._chat = chat
+        self._operation = operation
+
+    @property
+    def completions(self):
+        return _TrackedCompletions(self._chat.completions, self._operation)
+
+    def __getattr__(self, name):
+        return getattr(self._chat, name)
+
+
+class _TrackedResponses:
+    """Proxy for client.responses that intercepts create() to record usage."""
+
+    def __init__(self, responses, operation: str):
+        self._responses = responses
+        self._operation = operation
+
+    def create(self, **kwargs):
+        response = self._responses.create(**kwargs)
+        self._record_usage(response, kwargs.get("model", "unknown"))
+        return response
+
+    def _record_usage(self, response, requested_model: str):
+        try:
+            usage = getattr(response, 'usage', None)
+            if not usage:
+                return
+
+            model = getattr(response, 'model', requested_model) or requested_model
+            input_tokens = getattr(usage, 'input_tokens', 0) or 0
+            output_tokens = getattr(usage, 'output_tokens', 0) or 0
+            total_tokens = getattr(usage, 'total_tokens', 0) or (input_tokens + output_tokens)
+
+            # Update rate limiter
+            _token_limiter.add_tokens(total_tokens)
+
+            # Record to database if tenant context is available
+            from apps.tenants.context import get_current_tenant
+            tenant = get_current_tenant()
+            if tenant:
+                from apps.tenants.services.usage_tracker import track_usage
+                from apps.tenants.models import UsageRecord
+                cost_usd = calculate_cost_usd(model, input_tokens, output_tokens)
+                track_usage(
+                    tenant=tenant,
+                    event_type=UsageRecord.EVENT_API_CALL,
+                    resource_type='openai',
+                    tokens_used=total_tokens,
+                    metadata={
+                        'model': model,
+                        'input_tokens': input_tokens,
+                        'output_tokens': output_tokens,
+                        'cost_usd': round(cost_usd, 6),
+                        'operation': self._operation,
+                    },
+                )
+            else:
+                logger.debug(
+                    f"OpenAI usage [{self._operation}]: model={model} "
+                    f"tokens={total_tokens} (no tenant context, skipping DB write)"
+                )
+        except Exception:
+            logger.exception("Failed to record OpenAI responses usage (non-fatal)")
+
+    def __getattr__(self, name):
+        return getattr(self._responses, name)
+
+
+class TrackedOpenAI:
+    """
+    Wraps an OpenAI client to automatically record token usage per tenant.
+
+    All chat.completions.create() calls are intercepted to:
+    1. Record tokens and cost in UsageRecord (if tenant context is set)
+    2. Update the in-memory rate limiter
+    3. Log usage for debugging
+
+    Other API methods (embeddings, beta, etc.) are proxied unchanged.
+    """
+
+    def __init__(self, client: OpenAI, operation: str = "unknown"):
+        self._client = client
+        self._operation = operation
+
+    @property
+    def chat(self):
+        return _TrackedChat(self._client.chat, self._operation)
+
+    @property
+    def responses(self):
+        return _TrackedResponses(self._client.responses, self._operation)
+
+    def __getattr__(self, name):
+        return getattr(self._client, name)
+
+
+# =============================================================================
 # API CONFIGURATION
 # =============================================================================
 
-def get_openai_client(api_key: Optional[str] = None) -> OpenAI:
+def get_openai_client(api_key: Optional[str] = None, operation: str = "unknown") -> OpenAI:
     """
-    Get OpenAI client instance with proper configuration.
-    
+    Get OpenAI client instance with proper configuration and usage tracking.
+
     Args:
         api_key: Optional API key override. If None, uses OPENAI_API_KEY env var.
-    
+        operation: Label for this operation (e.g., "dwr_parse", "chat_assistant").
+                   Used in usage records to identify what triggered the API call.
+
     Returns:
-        Configured OpenAI client with intelligent retry logic
-    
+        Configured OpenAI client (TrackedOpenAI wrapper if tracking is enabled)
+
     Raises:
         RuntimeError: If API key not configured
     """
@@ -138,14 +330,16 @@ def get_openai_client(api_key: Optional[str] = None) -> OpenAI:
             "OPENAI_API_KEY not configured. "
             "Set it in .env or pass api_key parameter."
         )
-    
-    # Increase max_retries to handle rate limiting gracefully
-    # 429 errors will be automatically retried with exponential backoff
-    return OpenAI(
+
+    client = OpenAI(
         api_key=key,
-        max_retries=5,  # Retry up to 5 times for rate limits
-        timeout=120.0,  # Allow 2 minutes for retries to complete
+        max_retries=5,
+        timeout=120.0,
     )
+
+    if os.getenv("TRACK_OPENAI_USAGE", "true").lower() == "true":
+        return TrackedOpenAI(client, operation=operation)
+    return client
 
 
 # =============================================================================
@@ -266,9 +460,6 @@ def check_rate_limit(estimated_tokens: int = 15000) -> None:
         >>> check_rate_limit(estimated_tokens=12000)
         >>> response = client.chat.completions.create(...)
     """
-    import logging
-    logger = logging.getLogger(__name__)
-    
     should_throttle, wait_time = _token_limiter.should_throttle(estimated_tokens)
     
     if should_throttle:
@@ -283,11 +474,15 @@ def check_rate_limit(estimated_tokens: int = 15000) -> None:
 def log_openai_usage(response, operation: str):
     """
     Log OpenAI API usage for cost tracking and update rate limiter.
-    
+
+    Note: This is a legacy function that only logs to Python logger.
+    For DB-backed per-tenant tracking, use TrackedOpenAI wrapper via
+    get_openai_client(operation="...") instead.
+
     Args:
         response: OpenAI API response
         operation: Operation name (e.g., "document_extraction", "chat")
-    
+
     Example:
         >>> response = client.chat.completions.create(...)
         >>> log_openai_usage(response, "chat_message")
@@ -295,12 +490,9 @@ def log_openai_usage(response, operation: str):
     try:
         usage = getattr(response, 'usage', None)
         if usage:
-            import logging
-            logger = logging.getLogger(__name__)
-            
             # Track tokens for rate limiting
             _token_limiter.add_tokens(usage.total_tokens)
-            
+
             logger.info(
                 f"OpenAI Usage [{operation}]: "
                 f"prompt={usage.prompt_tokens} "
@@ -333,7 +525,8 @@ SETTINGS_BY_USE_CASE = {
     },
     "embeddings": {
         "model": DEFAULT_EMBEDDING_MODEL,
-        "dimensions": 1536,  # Default for text-embedding-3-small
+        "dimensions": DEFAULT_EMBEDDING_DIMENSIONS,
+        "description": "Text embeddings for semantic search (3072-dim)",
     },
     "batch_processing": {
         "model": DEFAULT_BATCH_MODEL,

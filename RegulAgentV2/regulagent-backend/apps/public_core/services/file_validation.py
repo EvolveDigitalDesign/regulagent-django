@@ -13,10 +13,11 @@ Phase 1 Implementation:
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
+
+from apps.public_core.services.openai_config import get_openai_client
 
 logger = logging.getLogger(__name__)
 
@@ -31,15 +32,6 @@ class ValidationResult:
     def __post_init__(self):
         if self.warnings is None:
             self.warnings = []
-
-
-def _openai_client():  # pragma: no cover
-    """Lazy import OpenAI client."""
-    from openai import OpenAI
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY not configured")
-    return OpenAI(api_key=api_key)
 
 
 def normalize_api(api_str: str) -> str:
@@ -124,44 +116,129 @@ def api_matches(extracted_api: str, expected_api: str, fuzzy: bool = True) -> bo
         return norm_extracted == norm_expected
 
 
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc"}
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+}
+
+
+def validate_file_extension(file_path: Path, content_type: str = "") -> ValidationResult:
+    """
+    Check that the file has an allowed extension and, when provided, an
+    allowed MIME type.
+
+    Allowed formats: .pdf, .docx, .doc
+
+    Args:
+        file_path:    Path to the file on disk.
+        content_type: Optional MIME type string from the HTTP upload.
+
+    Returns:
+        ValidationResult with is_valid=True when the file passes all checks.
+    """
+    suffix = file_path.suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        return ValidationResult(
+            is_valid=False,
+            errors=[
+                f"File type '{suffix}' is not allowed. "
+                f"Accepted formats: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+            ],
+        )
+
+    if content_type:
+        # Strip parameters (e.g. "application/pdf; charset=utf-8")
+        mime = content_type.split(";")[0].strip().lower()
+        if mime and mime not in ALLOWED_MIME_TYPES:
+            return ValidationResult(
+                is_valid=False,
+                errors=[
+                    f"MIME type '{mime}' is not allowed for extension '{suffix}'."
+                ],
+            )
+
+    return ValidationResult(is_valid=True, errors=[])
+
+
+def _extract_text_for_scan(file_path: Path) -> str:
+    """
+    Extract plain text from a PDF or Word document for security scanning.
+    Returns empty string on failure.
+    """
+    suffix = file_path.suffix.lower()
+    if suffix in (".docx", ".doc"):
+        try:
+            from apps.public_core.services.docx_extraction import extract_text_from_docx
+            text, _ = extract_text_from_docx(str(file_path))
+            return text
+        except Exception as e:
+            logger.warning("_extract_text_for_scan: docx extraction failed: %s", e)
+            return ""
+    # Default: PDF
+    try:
+        from apps.public_core.services.openai_extraction import _extract_pdf_text
+        return _extract_pdf_text(file_path, max_chars=50000)
+    except Exception as e:
+        logger.warning("_extract_text_for_scan: pdf extraction failed: %s", e)
+        return ""
+
+
 def openai_security_scan(file_path: Path, document_type: str = "unknown") -> ValidationResult:
     """
     Scan document for security issues using OpenAI moderation.
-    
+
+    Supports .pdf and .docx/.doc files. Returns a validation error for any
+    other extension.
+
     Checks for:
     - Prompt injection attempts
     - Malicious content
     - Unsafe instructions
-    
+
     Args:
-        file_path: Path to PDF file
-        document_type: Type of document (w2, gau, etc.)
-    
+        file_path: Path to the uploaded file (.pdf or .docx/.doc)
+        document_type: Type of document (w2, gau, pa_procedure, etc.)
+
     Returns:
         ValidationResult with is_valid=True if safe
     """
     try:
-        # Import extraction utilities
-        from apps.public_core.services.openai_extraction import _extract_pdf_text
-        
-        # Extract text from PDF
+        suffix = Path(file_path).suffix.lower()
+
+        # --- Text extraction: branch by file type ---
+        text = ""
         try:
-            text = _extract_pdf_text(file_path, max_chars=50000)
+            if suffix in (".docx", ".doc"):
+                from apps.public_core.services.docx_extraction import extract_text_from_docx
+                text, _ = extract_text_from_docx(str(file_path))
+            elif suffix == ".pdf":
+                from apps.public_core.services.openai_extraction import _extract_pdf_text
+                text = _extract_pdf_text(Path(file_path), max_chars=50000)
+            else:
+                return ValidationResult(
+                    is_valid=False,
+                    errors=[
+                        f"Unsupported file type '{suffix}' for security scan. "
+                        f"Accepted: .pdf, .docx, .doc"
+                    ],
+                )
         except Exception as e:
-            logger.exception("openai_security_scan: failed to extract PDF text")
+            logger.exception("openai_security_scan: failed to extract file text")
             return ValidationResult(
                 is_valid=False,
-                errors=[f"Failed to read PDF: {str(e)}"]
+                errors=[f"Failed to read file: {str(e)}"]
             )
-        
+
         if not text or len(text.strip()) < 50:
             return ValidationResult(
                 is_valid=False,
-                errors=["PDF appears empty or unreadable"]
+                errors=["File appears empty or unreadable"]
             )
         
         # OpenAI Moderation API check
-        client = _openai_client()
+        client = get_openai_client(operation="file_validation")
         
         try:
             moderation_response = client.moderations.create(input=text[:32000])  # API limit
@@ -229,67 +306,43 @@ def openai_security_scan(file_path: Path, document_type: str = "unknown") -> Val
 
 
 def verify_api_number(
-    file_path: Path,
-    document_type: str,
+    json_data: dict,
     expected_api: str,
     fuzzy_match: bool = True
 ) -> ValidationResult:
     """
-    Extract API number from document and verify it matches expected.
-    
+    Verify that extracted JSON contains the expected API number.
+
     Args:
-        file_path: Path to PDF file
-        document_type: Type of document (w2, gau, w15, etc.)
+        json_data: Already-extracted document JSON (from extract_json_from_pdf)
         expected_api: API number provided by user
         fuzzy_match: If True, match on last 8 digits
-    
+
     Returns:
         ValidationResult with is_valid=True if API matches
     """
     try:
-        # Import extraction utilities
-        from apps.public_core.services.openai_extraction import extract_json_from_pdf
-        
-        # Extract document
-        try:
-            extraction_result = extract_json_from_pdf(file_path, document_type)
-        except Exception as e:
-            logger.exception("verify_api_number: extraction failed")
-            return ValidationResult(
-                is_valid=False,
-                errors=[f"Failed to extract document: {str(e)}"]
-            )
-        
-        if extraction_result.errors:
-            return ValidationResult(
-                is_valid=False,
-                errors=[f"Extraction errors: {', '.join(extraction_result.errors)}"]
-            )
-        
-        # Get API from extracted data
-        json_data = extraction_result.json_data
-        
         # Try common API field locations
         extracted_api = None
         if "well_info" in json_data:
             extracted_api = json_data["well_info"].get("api") or json_data["well_info"].get("api_number")
-        
+
         if not extracted_api and "header" in json_data:
             extracted_api = json_data["header"].get("api") or json_data["header"].get("api_number")
-        
+
         if not extracted_api:
             # Fallback: search all top-level fields
             for key in ["api", "api_number", "api14", "well_api"]:
                 if key in json_data:
                     extracted_api = json_data[key]
                     break
-        
+
         if not extracted_api:
             return ValidationResult(
                 is_valid=False,
                 errors=["Could not extract API number from document"]
             )
-        
+
         # Verify API match
         if api_matches(extracted_api, expected_api, fuzzy=fuzzy_match):
             return ValidationResult(
@@ -306,7 +359,7 @@ def verify_api_number(
                     f"API mismatch: document contains '{extracted_api}', expected '{expected_api}'"
                 ]
             )
-        
+
     except Exception as e:
         logger.exception("verify_api_number: unexpected error")
         return ValidationResult(
@@ -320,33 +373,49 @@ def validate_uploaded_file(
     document_type: str,
     expected_api: str,
     skip_security_scan: bool = False,
-    fuzzy_api_match: bool = True
+    fuzzy_api_match: bool = True,
+    json_data: dict = None,
+    content_type: str = "",
 ) -> ValidationResult:
     """
     Complete validation pipeline for tenant-uploaded files.
-    
+
     Validation steps:
+    0. File extension / MIME type check (.pdf, .docx, .doc)
     1. Security scan (OpenAI moderation + prompt injection detection)
-    2. API number extraction and verification
-    
+    2. API number verification against pre-extracted JSON
+
     Args:
-        file_path: Path to uploaded PDF
-        document_type: Document type (w2, gau, w15, etc.)
+        file_path: Path to uploaded file (PDF or Word document)
+        document_type: Document type (w2, gau, w15, pa_procedure, etc.)
         expected_api: API number provided by user
         skip_security_scan: Skip security checks (for testing only)
         fuzzy_api_match: Match on last 8 digits vs exact 14-digit
-    
+        json_data: Already-extracted document JSON. When provided, API
+                   verification runs against this data instead of
+                   triggering a separate extraction call.
+        content_type: Optional MIME type from the HTTP upload header.
+
     Returns:
         ValidationResult with is_valid=True if all checks pass
     """
     all_errors = []
     all_warnings = []
-    
-    # Step 1: Security scan
+
+    # Step 0: Extension and MIME type check
+    ext_result = validate_file_extension(file_path, content_type=content_type)
+    if not ext_result.is_valid:
+        return ValidationResult(
+            is_valid=False,
+            errors=ext_result.errors,
+            warnings=all_warnings,
+        )
+
+    # Step 1: Security scan (uses lightweight text extraction, not full OpenAI call)
     if not skip_security_scan:
         logger.info(f"validate_uploaded_file: running security scan for {file_path}")
         security_result = openai_security_scan(file_path, document_type)
-        
+
         if not security_result.is_valid:
             all_errors.extend(security_result.errors)
             return ValidationResult(
@@ -354,28 +423,28 @@ def validate_uploaded_file(
                 errors=all_errors,
                 warnings=all_warnings
             )
-        
+
         all_warnings.extend(security_result.warnings)
-    
-    # Step 2: API verification
-    logger.info(f"validate_uploaded_file: verifying API number for {file_path}")
-    api_result = verify_api_number(
-        file_path,
-        document_type,
-        expected_api,
-        fuzzy_match=fuzzy_api_match
-    )
-    
-    if not api_result.is_valid:
-        all_errors.extend(api_result.errors)
-        return ValidationResult(
-            is_valid=False,
-            errors=all_errors,
-            warnings=all_warnings
+
+    # Step 2: API verification (requires pre-extracted JSON)
+    if json_data is not None:
+        logger.info(f"validate_uploaded_file: verifying API number for {file_path}")
+        api_result = verify_api_number(
+            json_data,
+            expected_api,
+            fuzzy_match=fuzzy_api_match,
         )
-    
-    all_warnings.extend(api_result.warnings)
-    
+
+        if not api_result.is_valid:
+            all_errors.extend(api_result.errors)
+            return ValidationResult(
+                is_valid=False,
+                errors=all_errors,
+                warnings=all_warnings
+            )
+
+        all_warnings.extend(api_result.warnings)
+
     # All checks passed
     logger.info(f"validate_uploaded_file: validation PASSED for {file_path}")
     return ValidationResult(

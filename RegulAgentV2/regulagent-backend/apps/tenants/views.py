@@ -10,8 +10,10 @@ from rest_framework.decorators import action
 from django_tenants.utils import get_tenant_model
 from django.db import connection
 
+from tenant_users.permissions.models import UserTenantPermissions
+
 from apps.tenants.services.plan_service import get_tenant_plan, get_effective_features, get_active_user_count
-from apps.tenants.services.usage_tracker import get_tenant_usage_summary
+from apps.tenants.services.usage_tracker import get_tenant_usage_summary, get_monthly_token_usage
 from .models import ClientWorkspace, UsageRecord
 from .serializers import ClientWorkspaceSerializer, ClientWorkspaceCreateSerializer, UsageRecordSerializer
 
@@ -83,6 +85,13 @@ class UserProfileView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        is_admin = False
+        try:
+            perm = UserTenantPermissions.objects.get(profile=user)
+            is_admin = perm.is_staff or getattr(perm, 'is_superuser', False)
+        except UserTenantPermissions.DoesNotExist:
+            pass
+
         return Response({
             "id": user.id,
             "email": user.email,
@@ -95,7 +104,8 @@ class UserProfileView(APIView):
                 "id": str(user_tenant.id),
                 "name": user_tenant.name,
                 "slug": user_tenant.slug,
-            }
+            },
+            "is_tenant_admin": is_admin,
         })
 
     def put(self, request):
@@ -111,6 +121,14 @@ class UserProfileView(APIView):
         try:
             user.save()
             user_tenant = user.tenants.first() if user and user.is_authenticated else None
+
+            is_admin = False
+            try:
+                perm = UserTenantPermissions.objects.get(profile=user)
+                is_admin = perm.is_staff or getattr(perm, 'is_superuser', False)
+            except UserTenantPermissions.DoesNotExist:
+                pass
+
             return Response({
                 "id": user.id,
                 "email": user.email,
@@ -123,7 +141,8 @@ class UserProfileView(APIView):
                     "id": str(user_tenant.id),
                     "name": user_tenant.name,
                     "slug": user_tenant.slug,
-                } if user_tenant else None
+                } if user_tenant else None,
+                "is_tenant_admin": is_admin,
             })
         except Exception as e:
             return Response(
@@ -287,6 +306,7 @@ class UsageSummaryView(APIView):
         event_type = request.query_params.get('event_type')
         workspace_id = request.query_params.get('workspace_id')
         group_by = request.query_params.get('group_by', 'event_type')
+        scope = request.query_params.get('scope')
 
         # Parse dates
         start_date = None
@@ -335,7 +355,11 @@ class UsageSummaryView(APIView):
             event_type=event_type,
             workspace=workspace,
             group_by=group_by,
+            user=request.user if scope == 'personal' else None,
         )
+
+        # Include monthly token budget info
+        monthly = get_monthly_token_usage(tenant, user=request.user if scope == 'personal' else None)
 
         return Response({
             'tenant': {
@@ -351,6 +375,7 @@ class UsageSummaryView(APIView):
                 'group_by': group_by,
             },
             'summary': summary,
+            'monthly_budget': monthly,
         })
 
 

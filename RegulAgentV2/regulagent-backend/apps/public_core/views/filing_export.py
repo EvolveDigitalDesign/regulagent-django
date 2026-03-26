@@ -78,7 +78,43 @@ class FilingExportView(APIView):
             }
             return Response(out, status=status.HTTP_200_OK)
 
-        # PDF format placeholder (MVP defers real PDF rendering)
-        return Response({"detail": "PDF export not yet implemented"}, status=status.HTTP_501_NOT_IMPLEMENTED)
+        # PDF format — generate W-3 PDF from form data
+        import os
+        from django.http import FileResponse
+        from apps.public_core.services.w3_pdf_generator import (
+            generate_w3_pdf,
+            W3PDFGeneratorError,
+        )
+
+        # Build w3_form_data structure from rrc_export
+        w3_form_data = {
+            "header": {
+                "api_number": api_14,
+                "rrc_district": plan_payload.get("district"),
+                "field_name": plan_payload.get("field"),
+                "county": plan_payload.get("county"),
+            },
+            "plugs": rrc_export if isinstance(rrc_export, list) else [],
+            "casing_record": plan_payload.get("casing_record", []),
+            "perforations": plan_payload.get("perforations", []),
+            "duqw": plan_payload.get("duqw", {}),
+            "remarks": plan_payload.get("remarks", ""),
+        }
+
+        try:
+            result = generate_w3_pdf(w3_form_data)
+            temp_path = result["temp_path"]
+            filename = f"W3_{api_14}.pdf"
+            return FileResponse(
+                open(temp_path, "rb"),
+                as_attachment=True,
+                filename=filename,
+                content_type="application/pdf",
+            )
+        except W3PDFGeneratorError as e:
+            return Response(
+                {"detail": f"PDF generation failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 

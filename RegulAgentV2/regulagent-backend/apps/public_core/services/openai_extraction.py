@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,18 +17,15 @@ import pytesseract
 from PIL import Image
 import io
 
-from .openai_config import DEFAULT_CHAT_MODEL
+from .openai_config import get_openai_client, DEFAULT_CHAT_MODEL, DEFAULT_EMBEDDING_MODEL
+from apps.public_core.services.text_processing import json_to_prose, chunk_text
 
 logger = logging.getLogger(__name__)
 
 
-# Lazy import to avoid hard dependency at import time
+# Backward-compatible alias for modules that import _openai_client from here
 def _openai_client():  # pragma: no cover
-    from openai import OpenAI
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY not configured")
-    return OpenAI(api_key=api_key)
+    return get_openai_client(operation="document_extraction")
 
 
 SUPPORTED_TYPES = {
@@ -105,7 +103,141 @@ SUPPORTED_TYPES = {
             "duqw",
         ],
     },
+    "c_101": {
+        "prompt_key": "c_101",
+        "required_sections": [
+            "header",
+            "operator_info",
+            "well_info",
+            "proposed_work",
+            "casing_record",
+            "cement_record",
+            "remarks",
+        ],
+    },
+    "c_103": {
+        "prompt_key": "c_103",
+        "required_sections": [
+            "header",
+            "operator_info",
+            "well_info",
+            "notice_type",
+            "proposed_work",
+            "casing_program",
+            "cement_program",
+            "plugging_procedure",
+            "remarks",
+        ],
+    },
+    "c_105": {
+        "prompt_key": "c_105",
+        "required_sections": [
+            "header",
+            "operator_info",
+            "well_info",
+            "completion_data",
+            "casing_record",
+            "perforation_record",
+            "production_test",
+            "cement_record",
+            "remarks",
+        ],
+    },
+    "sundry": {
+        "prompt_key": "sundry",
+        "required_sections": [
+            "header",
+            "operator_info",
+            "well_info",
+            "notice_type",
+            "description",
+            "remarks",
+        ],
+    },
+    "pa_procedure": {
+        "prompt_key": "pa_procedure",
+        "required_sections": [
+            "well_header",
+            "pa_procedure_steps",
+            "formation_data",
+            "operational_comments",
+            "contacts",
+            "notice_info",
+            "existing_wellbore_condition",
+            "existing_perforations",
+            "casing_record",
+        ],
+    },
+    "w1": {
+        "prompt_key": "w1",
+        "required_sections": [
+            "header",
+            "operator_info",
+            "well_info",
+            "permit_info",
+            "location",
+            "proposed_work",
+            "surface_casing",
+            "drilling_contractor",
+            "rule_37",
+            "attachments",
+        ],
+    },
+    "w3": {
+        "prompt_key": "w3",
+        "required_sections": [
+            "header",
+            "operator_info",
+            "well_info",
+            "plugging_summary",
+            "plug_record",
+            "casing_record",
+            "casing_disposition",
+            "mud_data",
+            "surface_restoration",
+            "certifications",
+            "remarks",
+        ],
+    },
+    "g1": {
+        "prompt_key": "g1",
+        "required_sections": [
+            "header",
+            "operator_info",
+            "well_info",
+            "well_status",
+            "test_data",
+            "deliverability",
+            "production_data",
+            "remarks",
+        ],
+    },
+    "w12": {
+        "prompt_key": "w12",
+        "required_sections": ["header", "operator_info", "well_info", "gas_test_data", "remarks"],
+    },
+    "l1": {
+        "prompt_key": "l1",
+        "required_sections": ["header", "operator_info", "well_info", "lease_info", "remarks"],
+    },
+    "p14": {
+        "prompt_key": "p14",
+        "required_sections": ["header", "operator_info", "well_info", "pressure_test_data", "remarks"],
+    },
+    "swr10": {
+        "prompt_key": "swr10",
+        "required_sections": ["header", "operator_info", "well_info", "exception_info", "remarks"],
+    },
+    "swr13": {
+        "prompt_key": "swr13",
+        "required_sections": ["header", "operator_info", "well_info", "exception_info", "remarks"],
+    },
 }
+
+# Aliases — normalize document types stored with/without underscores
+SUPPORTED_TYPES["c105"] = SUPPORTED_TYPES["c_105"]
+SUPPORTED_TYPES["c101"] = SUPPORTED_TYPES["c_101"]
+SUPPORTED_TYPES["c103"] = SUPPORTED_TYPES["c_103"]
 
 
 # OpenAI Models - using latest available models with best performance
@@ -113,7 +245,7 @@ SUPPORTED_TYPES = {
 MODEL_CLASSIFIER = os.getenv("OPENAI_CLASSIFIER_MODEL", "gpt-4o-mini")
 MODEL_PRIMARY = os.getenv("OPENAI_EXTRACTION_MODEL", "gpt-4o")  # Updated: best for structured outputs
 MODEL_BATCH = os.getenv("OPENAI_EXTRACTION_BATCH_MODEL", "gpt-4o")  # 50% cost savings for async
-MODEL_EMBEDDING = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+MODEL_EMBEDDING = DEFAULT_EMBEDDING_MODEL
 
 
 @dataclass
@@ -122,6 +254,8 @@ class ExtractionResult:
     json_data: Dict[str, Any]
     model_tag: str
     errors: List[str]
+    raw_text: str = ""
+    tokens_used: int = 0
 
 
 def _extract_pdf_text(file_path: Path, max_chars: int = 20000) -> str:
@@ -169,7 +303,7 @@ def _json_schema_for(doc_type: str) -> Dict[str, Any]:
     req = SUPPORTED_TYPES[doc_type]["required_sections"]
     properties: Dict[str, Any] = {}
     for key in req:
-        if key in ("casing_record", "tubing_record", "formation_record", "schematic_data"):
+        if key in ("casing_record", "tubing_record", "formation_record", "schematic_data", "formation_data", "existing_perforations", "pa_procedure_steps"):
             properties[key] = {"type": "array"}
         elif key in ("h2s_flag", "downhole_commingled", "remarks"):
             properties[key] = {"type": ["string", "object", "null"]}
@@ -188,9 +322,9 @@ def _json_schema_for(doc_type: str) -> Dict[str, Any]:
     return schema
 
 
-def classify_document(file_path: Path) -> str:
+def classify_document(file_path: Path, candidate_types: list[str] | None = None) -> str:
     """Classify document type using a lightweight model. Returns one of SUPPORTED_TYPES keys or 'unknown'."""
-    client = _openai_client()
+    client = get_openai_client(operation="document_extraction")
     logger.info("classify_document: start file=%s", file_path)
     
     # Check if it's an image file - always classify as schematic
@@ -201,9 +335,10 @@ def classify_document(file_path: Path) -> str:
     
     # Minimal heuristic by filename as fallback
     name = file_path.name.lower()
-    if "w-2" in name or " w2" in name:
+    if re.search(r'\bw-?12\b', name): return "w12"
+    if "w-2" in name or "w_2" in name or "w2" in name:
         return "w2"
-    if "w-15" in name or " w15" in name or "cement" in name:
+    if "w-15" in name or "w_15" in name or "w15" in name or "cement" in name:
         return "w15"
     if "gau" in name:
         return "gau"
@@ -211,22 +346,45 @@ def classify_document(file_path: Path) -> str:
         return "schematic"
     if "formation" in name and "top" in name:
         return "formation_tops"
+    if "c-101" in name or "c101" in name or "c_101" in name:
+        return "c_101"
+    if "c-103" in name or "c103" in name or "c_103" in name:
+        return "c_103"
+    if "c-105" in name or "c105" in name or "c_105" in name:
+        return "c_105"
+    if "sundry" in name:
+        return "sundry"
+    # w-3a must be checked BEFORE w-3 to avoid false match
+    if "w-3a" in name or "w_3a" in name or "w3a" in name:
+        return "w3a"
+    if "w-1" in name or "w_1" in name or ("w1" in name and "w15" not in name):
+        return "w1"
+    if "w-3" in name or "w_3" in name or "w3" in name:
+        return "w3"
+    if "g-1" in name or "g_1" in name or "g1" in name:
+        return "g1"
+    if re.search(r'\bl-?1\b', name): return "l1"
+    if re.search(r'\bp-?14\b', name): return "p14"
+    if re.search(r'\bswr[\s-]*10\b', name): return "swr10"
+    if re.search(r'\bswr[\s-]*13\b', name): return "swr13"
 
     # Upload and ask classifier (filename-based classification is typically sufficient)
     try:  # pragma: no cover
         fobj = client.files.create(file=open(str(file_path), "rb"), purpose="assistants")
         logger.info("classify_document: uploaded file_id=%s", getattr(fobj, 'id', ''))
-        prompt = "Classify the regulatory document type: one of [gau, w2, w15, schematic, formation_tops]. Return only the key."
+        type_list = candidate_types if candidate_types else list(SUPPORTED_TYPES.keys())
+        type_str = ", ".join(type_list)
+        prompt = f"Classify the regulatory document type: one of [{type_str}, unknown]. If the document does not clearly match any of these types, return 'unknown'. Return only the key."
         resp = client.chat.completions.create(
             model=MODEL_CLASSIFIER,
             messages=[
-                {"role": "system", "content": "Return only one token from the set: gau,w2,w15,schematic,formation_tops"},
+                {"role": "system", "content": f"Return only one token from the set: {type_str}, unknown. Return 'unknown' if the document does not match any type."},
                 {"role": "user", "content": f"File: {file_path.name} (file_id: {getattr(fobj,'id','')}). {prompt}"},
             ],
             temperature=0,
         )
         label = (resp.choices[0].message.content or "").strip().lower()
-        ok = label if label in SUPPORTED_TYPES else "unknown"
+        ok = label if label in (candidate_types or SUPPORTED_TYPES) else "unknown"
         logger.info("classify_document: label=%s resolved=%s", label, ok)
         return ok
     except Exception:
@@ -234,7 +392,7 @@ def classify_document(file_path: Path) -> str:
         return "unknown"
 
 
-def _load_prompt(prompt_key: str) -> str:
+def _load_prompt(prompt_key: str, tags: Optional[List[str]] = None) -> str:
     # Prompts instruct models to return normalized JSON for downstream planning.
     # Conventions:
     # - Use snake_case keys
@@ -354,6 +512,200 @@ def _load_prompt(prompt_key: str) -> str:
             "Extract Formation Record. Return JSON with: header; formation_record:[{formation, top_ft, base_ft}]; "
             "h2s_flag; downhole_commingled; remarks. Rules: numbers only (ft), snake_case keys. If a field is missing, set it to null."
         ),
+        "c_101": (
+            "Extract NM OCD C-101 (Application for Permit to Drill) data. Return JSON with: "
+            "header{date, permit_number, api_number}; "
+            "operator_info{name, address, operator_number, contact_name, phone}; "
+            "well_info{api, county, township, range, section, quarter, location_description, field, lease, well_no, latitude, longitude}; "
+            "proposed_work{well_type, proposed_total_depth_ft, surface_location, bottom_hole_location, "
+            "formation_target, purpose, spud_date}; "
+            "casing_record:[{string_type:'surface|intermediate|production|conductor', size_in, weight_ppf, "
+            "setting_depth_ft, hole_size_in, cement_top_ft}]; "
+            "cement_record:[{string_type, sacks, slurry_weight_ppg, cement_class, additives, "
+            "interval_top_ft, interval_bottom_ft}]; "
+            "remarks. "
+            "Coordinates: If latitude/longitude are present anywhere, output decimal degrees in well_info.latitude and .longitude. "
+            "Accept both decimal and DMS formats and convert to signed decimal (N/E positive, S/W negative). "
+            "Output up to 6 decimal places. If coordinates cannot be found, set both to null. "
+            "Rules: numbers only (feet for depths, inches for sizes), snake_case keys, no units in numeric values. "
+            "If a requested field is missing, set it to null."
+        ),
+        "c_103": (
+            "Extract NM OCD C-103 (Notice of Intention to Plug and Abandon / Workover) data. Return JSON with: "
+            "header{date, api_number, permit_number}; "
+            "operator_info{name, address, operator_number, contact_name, phone}; "
+            "well_info{api, county, township, range, section, quarter, field, lease, well_no, total_depth_ft}; "
+            "notice_type{type:'plug_and_abandon|workover|recompletion', description}; "
+            "proposed_work{description, formation_target, proposed_depth_ft, start_date}; "
+            "casing_program:[{string_type:'surface|intermediate|production|conductor|liner', size_in, "
+            "weight_ppf, setting_depth_ft, hole_size_in}]; "
+            "cement_program:[{string_type, sacks, slurry_weight_ppg, cement_class, additives, "
+            "interval_top_ft, interval_bottom_ft}]; "
+            "plugging_procedure:[{step_order, plug_type:'cement_plug|bridge_plug|mechanical_plug|squeeze', "
+            "depth_top_ft, depth_bottom_ft, sacks, cement_class, notes}]; "
+            "remarks. "
+            "Rules: numbers only (feet for depths, inches for sizes), snake_case keys, no units in numeric values. "
+            "If a requested field is missing, set it to null."
+        ),
+        "c_105": (
+            "Extract NM OCD C-105 (Completion/Recompletion Report) data. Return JSON with: "
+            "header{date, api_number, permit_number, completion_date}; "
+            "operator_info{name, address, operator_number}; "
+            "well_info{api, county, township, range, section, quarter, field, lease, well_no, "
+            "total_depth_ft, location{lat, lon}}; "
+            "completion_data{completion_type:'oil|gas|dry_hole|injection|disposal|recompletion', "
+            "formation_completed, well_type, elevation_ft, datum:'KB|GL|DF'}; "
+            "casing_record:[{string_type:'surface|intermediate|production|conductor|liner', size_in, "
+            "weight_ppf, hole_size_in, top_ft, bottom_ft, shoe_depth_ft, cement_top_ft}]; "
+            "perforation_record:[{interval_top_ft, interval_bottom_ft, formation, shots_per_ft, "
+            "gun_size_in, perforation_date, status:'open|squeezed|plugged'}]; "
+            "production_test{test_date, duration_hours, oil_bbls_per_day, gas_mcf_per_day, "
+            "water_bbls_per_day, tubing_pressure_psi, casing_pressure_psi, choke_size_in, "
+            "gas_oil_ratio, formation_tested}; "
+            "cement_record:[{string_type, sacks, slurry_weight_ppg, cement_class, additives, "
+            "interval_top_ft, interval_bottom_ft, cement_top_ft}]; "
+            "remarks. "
+            "Coordinates: If latitude/longitude are present anywhere, output decimal degrees in well_info.location.lat and .lon. "
+            "Accept both decimal and DMS formats and convert to signed decimal (N/E positive, S/W negative). "
+            "Output up to 6 decimal places. If coordinates cannot be found, set both to null. "
+            "Rules: numbers only (feet/inches/ppg/psi), snake_case keys, no units in numeric values. "
+            "If a requested field is missing, set it to null."
+        ),
+        "sundry": (
+            "Extract NM OCD Sundry Notice (Miscellaneous Filing) data. Return JSON with: "
+            "header{date, api_number, sundry_number}; "
+            "operator_info{name, address, operator_number, contact_name, phone}; "
+            "well_info{api, county, township, range, section, quarter, field, lease, well_no}; "
+            "notice_type{type, description}; "
+            "description{work_description, purpose, requested_action, justification}; "
+            "remarks. "
+            "notice_type.type: classify as one of: 'workover', 'recompletion', 'plug_and_abandon', "
+            "'change_of_operator', 'change_of_well_status', 'injection_disposal', 'surface_equipment', "
+            "'administrative', 'other' based on the filing content. "
+            "CRITICAL EXTRACTION RULES FOR description.work_description: "
+            "1. Copy the ENTIRE narrative text VERBATIM from the 'Description of Proposed Work' or "
+            "'Description of Work Performed' or 'Description of Work' field on the form. "
+            "2. Include ALL depth values (measured depth, true vertical depth), formation names, "
+            "casing sizes, cement volumes, packer depths, perforation intervals, and plug depths "
+            "mentioned anywhere in the narrative. "
+            "3. Do NOT summarize or paraphrase — copy the exact text as written on the form. "
+            "4. null is ONLY acceptable when the field is genuinely blank/empty on the form. "
+            "5. Also check 'Remarks', 'Additional Information', and 'Justification' sections "
+            "for supplementary narrative text and append it to work_description. "
+            "description.requested_action: specific approval or action being sought from the OCD. "
+            "Rules: snake_case keys. If a requested field is missing, set it to null."
+        ),
+        "pa_procedure": (
+            "Extract an Operator P&A Execution Packet (approved plugging and abandonment procedure). "
+            "This document type includes a C-103F NOI form, wellbore diagrams (CURRENT and PROPOSED), "
+            "and attached Conditions of Approval. Read ALL pages, including wellbore diagram tables. "
+            "Return JSON with: "
+
+            "well_header{api_number, well_name, operator, county, state, field, well_number, "
+            "lease_name, section, township, range, elevation_ft, elevation_datum, "
+            "surface_coordinates{lat, lon}}; "
+
+            "notice_info{form_type, received_date, approved_date, approved_by, "
+            "must_plug_by_date, ogrid_number, pool_name, lease_type}; "
+
+            "existing_wellbore_condition{"
+            "tubing_size_in, tubing_depth_ft, "
+            "rod_depth_ft, "
+            "rbp_depth_ft, "
+            "cement_retainer_depth_ft, "
+            "existing_cibp_depths:[{depth_ft, notes}], "
+            "cbl_on_file{on_file, date, toc_ft}, "
+            "td_ft, tvd_ft"
+            "}; "
+
+            "existing_perforations:[{depth_top_ft, depth_bottom_ft, formation_name, status}]; "
+
+            "formation_data:[{formation_name, top_ft}]; "
+
+            "casing_record:[{string_type:'surface|intermediate|production|liner|conductor', "
+            "od_in, weight_ppf, grade, thd, top_ft, bottom_ft, num_joints, "
+            "bit_size_in, sx_cmt, top_cmt_ft, comment}]; "
+
+            "pa_procedure_steps:[{"
+            "step_number, "
+            "operation:'miru|pooh_tubing_rods|remove_rbp|cleanout|run_cbl|pressure_test|"
+            "set_cibp|spot_plug|perf_and_squeeze|cement_retainer|casing_pull|"
+            "surface_plug|topoff|cut_wellhead|set_marker|other', "
+            "depth_top_ft, depth_bottom_ft, "
+            "perf_depth_ft, "
+            "sacks, cement_class, "
+            "woc_required, "
+            "pressure_test_psi, pressure_test_duration_min, "
+            "formations_referenced:[{formation_name, depth_ft, reference_type:'top|shoe|perf|tol'}], "
+            "description, contingency_notes"
+            "}]; "
+
+            "operational_comments:[{comment_text, category}]; "
+            "contacts:[{name, role, phone, email}]. "
+
+            "WELLBORE DIAGRAM EXTRACTION: "
+            "Pages labeled 'WELLBORE DIAGRAM - CURRENT' and 'WELLBORE DIAGRAM - PROPOSED' contain tables. "
+            "Extract the Casing Record table (Surface, Intermediate, Production casing rows) into casing_record. "
+            "Extract the Formation table (Formation / Top columns) into formation_data. "
+            "Extract tubing size and depth, rod depth, RBP depth, and CIBP depths into existing_wellbore_condition. "
+            "Extract any labeled perforations (e.g., 'Perf: 8642-8691', 'Perf: 13837-14035') into existing_perforations. "
+
+            "EXISTING WELLBORE CONDITION RULES: "
+            "rbp_depth_ft: look for 'RBP @ XXXX' in early procedure steps (removal of retrievable bridge plug). "
+            "cement_retainer_depth_ft: look for 'Cement Retainer @ XXXX' in cleanout steps. "
+            "cbl_on_file: if a step says 'CBP on file' or 'RCBL on file', set on_file=true and extract date and TOC depth. "
+            "existing_cibp_depths: list any CIBPs shown in the CURRENT wellbore diagram or referenced as pre-existing. "
+
+            "EXISTING PERFORATIONS: "
+            "Extract perforation intervals shown on the CURRENT wellbore diagram AND those referenced "
+            "parenthetically in procedure steps (e.g., '(Perfs @ 13837, Morrow @ 13619)' → depth_top_ft=13837, "
+            "formation_name='Morrow'). Status should be 'open' unless noted as squeezed or plugged. "
+
+            "FORMATION DATA: "
+            "Extract ALL formation tops from: (1) the Formation/Top table in the wellbore diagrams, "
+            "(2) parenthetical references inside procedure step descriptions such as '(Wolfcamp @ 11616)', "
+            "'(Delaware @ 5268, Shoe @ 5235)', '(Morrow @ 13619)', '(Atoka @ 12603, Strawn @ 12324)'. "
+            "Each parenthetical reference is a formation top depth — do not skip them. "
+
+            "PROCEDURE STEPS OPERATION TYPES: "
+            "miru: mobilize/rig up P&A unit. "
+            "pooh_tubing_rods: pull out of hole tubing, rods, pumps. "
+            "remove_rbp: retrieve retrievable bridge plug. "
+            "cleanout: circulate/wash/clean wellbore to a specified depth. "
+            "run_cbl: run cement bond log or RCBL; capture toc_ft from 'TOC @ XXXX' in description. "
+            "pressure_test: pressure test casing; capture pressure_test_psi and pressure_test_duration_min. "
+            "set_cibp: set cast iron bridge plug; depth_top_ft is the CIBP set depth. "
+            "spot_plug: spot cement plug; depth_top_ft and depth_bottom_ft are the plug interval. "
+            "perf_and_squeeze: perforate and squeeze; perf_depth_ft is the perforation depth, "
+            "depth_top_ft/depth_bottom_ft are the squeeze interval. "
+            "cement_retainer: set a cement retainer tool. "
+            "casing_pull: retrieve casing string. "
+            "surface_plug: set final surface cement plug. "
+            "topoff: top-off cement operation above an existing plug. "
+            "cut_wellhead: cut and remove wellhead. "
+            "set_marker: install dry hole marker. "
+            "other: any operation not fitting the above. "
+
+            "FORMATIONS REFERENCED IN STEPS: "
+            "For each step, extract formations_referenced as an array. Scan the step description AND any "
+            "parenthetical text for formation names with depths. "
+            "reference_type: 'top'=formation top depth, 'shoe'=casing shoe at that depth, "
+            "'perf'=perforation at that depth, 'tol'=top of liner. "
+            "Example: 'Spot 25 sx Cl H from 13787-13550. WOC & Tag. (Perfs @ 13837, Morrow @ 13619)' → "
+            "formations_referenced: [{formation_name:'Morrow', depth_ft:13619, reference_type:'top'}, "
+            "{formation_name:null, depth_ft:13837, reference_type:'perf'}]. "
+
+            "CEMENT CLASS EXTRACTION: "
+            "Look for 'Cl H', 'Cl C', 'Cl A', 'Cl G', 'Class H', 'Class C' in each step. "
+            "Return only the uppercase letter. 'sx Cl H' = sacks Class H. null if not mentioned for that step. "
+
+            "COORDINATES: "
+            "If lat/lon present anywhere, convert to signed decimal degrees (N/E positive, S/W negative), "
+            "6 decimal places. Null if absent. "
+
+            "Rules: numbers only (feet for depths, inches for sizes, sacks for cement), "
+            "snake_case keys, no units in numeric values. If a field is missing, set to null."
+        ),
         "w3a": (
             "Extract W-3A (Plugging Responsibility and Plugging Proposal) data. Return JSON with: "
             "header{api_number, well_name, operator, county, rrc_district, field, total_depth_ft}; "
@@ -396,8 +748,201 @@ def _load_prompt(prompt_key: str) -> str:
             "DUQW: Extract 'Deepest Usable Quality Water' information - the depth, formation, and how it was determined. "
             "Rules: numbers only (feet/inches/sacks), snake_case keys, no units in numeric values. If a field is missing, set it to null."
         ),
+        "w1": (
+            "Extract W-1 (Drilling Permit Application) data. Return JSON with: "
+            "header{tracking_number, date_filed, rrc_district}; "
+            "operator_info{name, address, operator_number, contact_name, phone}; "
+            "well_info{api, well_no, lease, field, county, total_depth_ft, "
+            "well_type:'new_drill|re_entry|field_transfer|deepening'}; "
+            "permit_info{permit_number, permit_date, expiration_date, approved_depth_ft}; "
+            "location{section, block, survey, abstract, latitude, longitude, "
+            "distance_from_nearest_lease_line_ft, distance_from_nearest_well_ft, "
+            "field_rules{spacing_acres, density_acres}}; "
+            "proposed_work{proposed_total_depth_ft, proposed_formation, spud_date, estimated_completion_date}; "
+            "surface_casing{surface_casing_depth_ft, gau_determination_depth_ft, cement_to_surface:bool}; "
+            "drilling_contractor{name, address}; "
+            "rule_37{exception_requested:bool, exception_type, justification}; "
+            "attachments:[{type:'plat|gau|other', description}]. "
+            "FORM STRUCTURE — TX RRC Form W-1 has these labeled sections: "
+            "1. HEADER (top of form): 'RRC District No.', 'Tracking No.', 'Date Filed' — these are typically printed or stamped at the top. "
+            "   The tracking number format varies: may be numeric (e.g., '006025'), alphanumeric (e.g., '8-15874'), or prefixed with '#'. Extract exactly as printed. "
+            "2. OPERATOR INFORMATION: 'Operator Name', 'Operator No.' (P-5 number), address, contact info. "
+            "   CRITICAL: Copy the operator name EXACTLY as printed. Old forms (pre-2000) may show historical operators like 'Stranlead Oil & Gas', 'Amoco Production Co.', etc. — extract the actual text, do NOT substitute modern operator names. "
+            "3. WELL INFORMATION: 'API No.' (format XX-XXX-XXXXX), 'Lease Name', 'Well No.', 'Field Name', 'County'. "
+            "   API EXTRACTION: The API number is typically in a labeled box near the top. On older forms it may be handwritten. "
+            "   If you see a number matching the pattern XX-XXX-XXXXX (2 digits, dash, 3 digits, dash, 5 digits), that is the API. "
+            "   On pre-1990 forms the API may be absent — set to null if not found. "
+            "   well_no: Extract the well number from the 'Well No.' field. This is a number or alphanumeric (e.g., '688', 'A-1', '1-H'). "
+            "4. PERMIT INFO: 'Permit No.', dates. May be stamped by RRC after approval. "
+            "5. LOCATION: Section, Block, Survey/Abstract, Township/Range (if applicable). "
+            "   Coordinates may appear as lat/lon in decimal or DMS format — convert to signed decimal degrees (N positive, W negative), 6 decimal places. "
+            "   Spacing distances: 'Distance from nearest lease line' and 'Distance from nearest well' in feet. "
+            "6. PROPOSED WORK: Total depth, target formation, spud date, estimated completion. "
+            "7. SURFACE CASING: GAU determination depth, proposed surface casing depth, cement to surface requirement. "
+            "8. DRILLING CONTRACTOR: Name and address of contractor. "
+            "9. RULE 37: Exception request information (if applicable). "
+            "LEGACY FORM VARIATIONS (pre-2000): "
+            "- Forms from 1950s-1980s have different layouts — fields may be in different positions but are still labeled. "
+            "- Older forms may not have API numbers (API system started ~1970). Set api to null if absent. "
+            "- Handwritten entries are common — extract what you can clearly read, null for illegible values. "
+            "- Some forms have the tracking number as 'Permit No.' instead of 'Tracking No.' "
+            "Coordinates: decimal degrees (N/E positive, S/W negative), 6 decimal places. "
+            "Rules: numbers only (feet for depths), snake_case keys, no units in numeric values. "
+            "If a requested field is missing or illegible, set it to null."
+        ),
+        "w3": (
+            "Extract W-3 (Plugging Record / Post-Plugging Report) data. Return JSON with: "
+            "header{tracking_number, date_filed, rrc_district}; "
+            "operator_info{name, address, operator_number, contact_name, phone}; "
+            "well_info{api, well_no, lease, field, county, total_depth_ft, "
+            "surface_elevation_ft, ground_elevation_ft}; "
+            "plugging_summary{plug_date, plugging_commenced_date, plugging_completed_date, "
+            "service_company, rig_type, freshwater_protection_depth_ft}; "
+            "plug_record:[{plug_number, depth_top_ft, depth_bottom_ft, sacks, cement_class, "
+            "slurry_weight_ppg, method:'dump_bail|squeeze|pump_and_plug|balanced_plug', "
+            "plug_type:'cement_plug|bridge_plug|mechanical_plug|CIBP', "
+            "annulus:'surface_casing|production_casing|open_hole|tubing_casing_annulus|between_strings', "
+            "pipe_description, "
+            "date_set, wait_on_cement_hours, tagged_top_ft}]; "
+            "casing_record:[{string_type:'surface|intermediate|production|liner|conductor', "
+            "size_in, weight_ppf, hole_size_in, top_ft, bottom_ft, shoe_depth_ft, cement_top_ft}]; "
+            "casing_disposition{casing_left_in_hole:bool, casing_cut_depth_ft, "
+            "casing_pulled:[{string_type, pulled_from_ft, pulled_to_ft}], explanation}; "
+            "mud_data{mud_weight_ppg, mud_type, fluid_level_ft, circulated:bool}; "
+            "surface_restoration{surface_plug_depth_top_ft, surface_plug_depth_bottom_ft, "
+            "surface_plug_sacks, cut_and_cap_depth_ft, plate_welded:bool, "
+            "cellar_filled:bool, pits_closed:bool}; "
+            "certifications{operator_signature:bool, service_company_signature:bool, notarized:bool}; "
+            "remarks. "
+            "CRITICAL: Extract EVERY plug in the plug record — wells may have 6-12+ plugs. "
+            "Track plug_number sequencing. If the form shows 'Plug #1', 'Plug #2', etc., preserve numbering. "
+            "If method is not explicitly stated, infer from context (dump bail for open hole, squeeze for perfs). "
+            "Coordinates: decimal degrees, 6 decimal places. If coordinates cannot be found, set to null. "
+            "DEPTH CONVENTION: depth_top_ft is always the SHALLOWER depth (smaller number, closer to surface). "
+            "depth_bottom_ft is always the DEEPER depth (larger number, further into earth). "
+            "If a plug is squeezed from 4051 ft up to 2655 ft, then depth_top_ft=2655, depth_bottom_ft=4051. "
+            "'Surface' as a depth means 0 ft. "
+            "ANNULUS: For each plug, identify WHERE the cement was placed — which annular space or hole section. "
+            "Look for references like 'between surface and production casing', 'in open hole below shoe', "
+            "'tubing-casing annulus', 'surface casing annulus', etc. "
+            "Set annulus to the best match. pipe_description is a free-text field for specifics like '5.5 x 10.75 ann'. "
+            "Rules: numbers only (feet/ppg/sacks), snake_case keys. If a field is missing, set it to null."
+        ),
+        "g1": (
+            "Extract G-1 (Gas Well Back Pressure Test / Status Report) data. Return JSON with: "
+            "header{date_filed, rrc_district, g1_type:'initial|annual|special'}; "
+            "operator_info{name, operator_number}; "
+            "well_info{api, well_no, lease, field, county, total_depth_ft, formation_name}; "
+            "well_status{status:'producing|shut_in|ta|injection', gas_well_classification}; "
+            "test_data{test_date, test_type:'multipoint|singlepoint|calculated', "
+            "shut_in_pressure_psi, flow_periods:[{"
+            "duration_hours, choke_size_64ths, tubing_pressure_psi, casing_pressure_psi, "
+            "gas_rate_mcfd, condensate_rate_bpd, water_rate_bpd}], "
+            "bottom_hole_temperature_f, datum_depth_ft}; "
+            "deliverability{aof_mcfd, four_point_c, four_point_n, "
+            "authorized_rate_mcfd, effective_date}; "
+            "production_data{last_month_gas_mcf, last_month_condensate_bbl, last_month_water_bbl, "
+            "gor, cumulative_gas_mcf}; "
+            "remarks. "
+            "FORM STRUCTURE — TX RRC Form G-1 has these labeled sections: "
+            "1. HEADER (top): 'RRC District No.', 'Date', type of test (Initial/Annual/Special). "
+            "2. OPERATOR & WELL INFO: 'Operator', 'Operator No.', 'API No.' (format XX-XXX-XXXXX), "
+            "   'Lease Name', 'Well No.', 'Field Name', 'County', 'Total Depth', 'Producing Formation'. "
+            "   API EXTRACTION: Look for the labeled 'API No.' field. Format XX-XXX-XXXXX. Extract exactly as printed. "
+            "3. WELL STATUS: Current well status (producing, shut-in, TA, injection), gas well classification. "
+            "4. TEST DATA TABLE: This is the main data table with flow period measurements. "
+            "   CRITICAL — READ THE TABLE COLUMNS CAREFULLY: "
+            "   - Each row is one flow period at a specific choke size "
+            "   - Columns typically: Duration (hrs), Choke Size (64ths in.), Tubing Pressure (psi), "
+            "     Casing Pressure (psi), Gas Rate (Mcf/D), Condensate (BPD), Water (BPD) "
+            "   - Do NOT confuse pressure columns (tubing vs casing) — they are separate columns "
+            "   - Gas rate is in Mcf/D (thousand cubic feet per day), NOT cf/D "
+            "   - Choke size is in 64ths of an inch (e.g., '16' means 16/64 = 1/4 inch) "
+            "   - The first row may be 'shut-in' (zero flow rate, maximum pressure) — this gives shut_in_pressure_psi "
+            "   - Extract ALL flow period rows as separate entries in the flow_periods array "
+            "5. DELIVERABILITY: Calculated values — AOF (Absolute Open Flow), C and n coefficients, authorized rate. "
+            "   These are typically computed from the test data and may appear below the test table. "
+            "6. PRODUCTION DATA: Recent production volumes — monthly gas, condensate, water, GOR, cumulative. "
+            "LEGACY FORM VARIATIONS: "
+            "- Older forms may have handwritten entries in the test data table — read carefully. "
+            "- Some forms combine multiple test types on one page. "
+            "- If test data table is blank or illegible, set test_data fields to null. "
+            "Rules: numbers only (psi/mcfd/bpd/ft), snake_case keys. If a field is missing or illegible, set it to null."
+        ),
+        "w12": (
+            "Extract structured data from this Texas Railroad Commission W-12 "
+            "(Completion or Recompletion Report — Gas Well) form.\n\n"
+            "Return JSON with these sections:\n"
+            "- header: form_type, filing_date, rrc_district, api_number\n"
+            "- operator_info: operator_name, operator_number, address\n"
+            "- well_info: well_number, lease_name, field_name, county, total_depth\n"
+            "- gas_test_data: test_date, gas_rate_mcf, tubing_pressure, casing_pressure, "
+            "choke_size, gor, btu_content, h2s_ppm, co2_percent\n"
+            "- remarks: text (any additional notes or remarks)\n\n"
+        ),
+        "l1": (
+            "Extract structured data from this Texas Railroad Commission L-1 "
+            "(Notification of Lease/Lease Term) form.\n\n"
+            "Return JSON with these sections:\n"
+            "- header: form_type, filing_date, rrc_district, api_number\n"
+            "- operator_info: operator_name, operator_number, address\n"
+            "- well_info: well_number, lease_name, field_name, county\n"
+            "- lease_info: lease_number, lease_date, lease_term, lessor, lessee, "
+            "acreage, legal_description\n"
+            "- remarks: text (any additional notes or remarks)\n\n"
+        ),
+        "p14": (
+            "Extract structured data from this Texas Railroad Commission P-14 "
+            "(Plugging Record) form.\n\n"
+            "Return JSON with these sections:\n"
+            "- header: form_type, filing_date, rrc_district, api_number\n"
+            "- operator_info: operator_name, operator_number, address\n"
+            "- well_info: well_number, lease_name, field_name, county, total_depth\n"
+            "- pressure_test_data: test_date, test_type, initial_pressure_psi, "
+            "final_pressure_psi, duration_minutes, result\n"
+            "- remarks: text (any additional notes or remarks)\n\n"
+        ),
+        "swr10": (
+            "Extract structured data from this Texas Railroad Commission SWR-10 "
+            "(Statewide Rule 10 — Well Spacing Exception) form.\n\n"
+            "Return JSON with these sections:\n"
+            "- header: form_type, filing_date, rrc_district, api_number\n"
+            "- operator_info: operator_name, operator_number, address\n"
+            "- well_info: well_number, lease_name, field_name, county\n"
+            "- exception_info: exception_type, requested_spacing, standard_spacing, "
+            "justification, affected_leases, hearing_date\n"
+            "- remarks: text (any additional notes or remarks)\n\n"
+        ),
+        "swr13": (
+            "Extract structured data from this Texas Railroad Commission SWR-13 "
+            "(Statewide Rule 13 — Casing, Cementing, Drilling, and Completion "
+            "Requirements Exception) form.\n\n"
+            "Return JSON with these sections:\n"
+            "- header: form_type, filing_date, rrc_district, api_number\n"
+            "- operator_info: operator_name, operator_number, address\n"
+            "- well_info: well_number, lease_name, field_name, county\n"
+            "- exception_info: exception_type, rule_section, current_requirement, "
+            "requested_exception, justification, well_conditions\n"
+            "- remarks: text (any additional notes or remarks)\n\n"
+        ),
     }
-    return base[prompt_key]
+    preamble = (
+        "ACCURACY RULES (apply to ALL fields): "
+        "1. If you cannot clearly read a value from the scanned form, return null. NEVER guess or fabricate values. "
+        "2. API number format on TX RRC forms is XX-XXX-XXXXX (e.g., 42-003-05770). Extract exactly as printed, preserving dashes and leading zeros. If the API is illegible or missing, set to null. "
+        "3. Operator names must be copied EXACTLY as printed on the form — do not invent or guess operator names. "
+        "4. Numeric field validation: weight_ppf is typically 1-100, size_in is typically 2-20, sacks is typically 1-500 for a single plug. If a value seems implausible, re-read the column headers to confirm you are reading the correct column. "
+        "5. Do NOT confuse table columns — depths, weights, and sizes are in separate columns. If a table has multiple columns, read the column header for each value. "
+        "6. Dates should be in YYYY-MM-DD format when possible. If only partial date is readable, include what you can read. "
+    )
+    prompt = preamble + base[prompt_key]
+    if tags:
+        focus = ", ".join(tags)
+        prompt += (
+            f" FOCUS AREAS: Pay special attention to extracting data related to: {focus}. "
+            "These are the key data categories expected in this document."
+        )
+    return prompt
 
 
 def _ensure_sections(doc_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -408,7 +953,7 @@ def _ensure_sections(doc_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def extract_json_from_pdf(file_path: Path, doc_type: str, retries: int = 2, w2_data: Optional[Dict] = None) -> ExtractionResult:
+def extract_json_from_pdf(file_path: Path, doc_type: str, retries: int = 2, w2_data: Optional[Dict] = None, tags: Optional[List[str]] = None) -> ExtractionResult:
     """
     Send PDF to OpenAI and retrieve structured JSON per schema; retry on malformed JSON up to retries.
     
@@ -442,9 +987,9 @@ def extract_json_from_pdf(file_path: Path, doc_type: str, retries: int = 2, w2_d
             )
     
     # Standard text-based extraction
-    client = _openai_client()
+    client = get_openai_client(operation="document_extraction")
     model = MODEL_PRIMARY
-    prompt = _load_prompt(SUPPORTED_TYPES[doc_type]["prompt_key"]) + " Return only valid JSON."
+    prompt = _load_prompt(SUPPORTED_TYPES[doc_type]["prompt_key"], tags=tags) + " Return only valid JSON."
     last_err = None
 
     # Pre-extract textual context to aid model grounding
@@ -491,6 +1036,7 @@ def extract_json_from_pdf(file_path: Path, doc_type: str, retries: int = 2, w2_d
                 max_output_tokens=4000,
                 temperature=0,
             )
+            tokens_used = getattr(getattr(resp, 'usage', None), 'total_tokens', 0) or 0
 
             # Robustly extract text from Responses API
             # Extract text from Responses API output
@@ -539,6 +1085,9 @@ def extract_json_from_pdf(file_path: Path, doc_type: str, retries: int = 2, w2_d
                 pass
             data = json.loads(content)
             data = _ensure_sections(doc_type, data)
+            # Post-extraction validation
+            from apps.public_core.services.extraction_validator import validate_extracted_data
+            data = validate_extracted_data(doc_type, data)
             # Post-process GAU: if lat/lon missing, parse from context text (decimal or DMS) and inject
             if doc_type == "gau":
                 try:
@@ -588,7 +1137,7 @@ def extract_json_from_pdf(file_path: Path, doc_type: str, retries: int = 2, w2_d
                 logger.info("extract_json_from_pdf: saved output -> %s", out_path)
             except Exception:
                 logger.exception("extract_json_from_pdf: failed to save output JSON")
-            return ExtractionResult(document_type=doc_type, json_data=data, model_tag=model, errors=[])
+            return ExtractionResult(document_type=doc_type, json_data=data, model_tag=model, errors=[], raw_text=context_text, tokens_used=tokens_used)
         except Exception as e:  # pragma: no cover
             last_err = str(e)
             logger.warning("extract_json_from_pdf: error attempt=%d err=%s", attempt + 1, last_err)
@@ -596,20 +1145,64 @@ def extract_json_from_pdf(file_path: Path, doc_type: str, retries: int = 2, w2_d
             continue
 
     logger.error("extract_json_from_pdf: failed after retries err=%s", last_err)
-    return ExtractionResult(document_type=doc_type, json_data={}, model_tag=model, errors=[last_err or "unknown_error"])
+    return ExtractionResult(document_type=doc_type, json_data={}, model_tag=model, errors=[last_err or "unknown_error"], raw_text=context_text)
+
+
+
+# Sections that are near-identical across filings for the same well and
+# pollute vector search results with noise.  Skip these for sundry documents.
+_SUNDRY_SKIP_SECTIONS = frozenset({"header", "operator_info", "well_info"})
 
 
 def iter_json_sections_for_embedding(doc_type: str, data: Dict[str, Any]) -> List[Tuple[str, str]]:
-    """Yield (section_name, section_text) pairs for vectorization."""
+    """Yield (section_name, section_text) pairs for vectorization.
+
+    Skips sections that are None, empty, or contain only null values
+    to avoid creating junk vectors that pollute search results.
+
+    For sundry documents, also skips header/operator_info/well_info sections
+    which are nearly identical across filings and displace useful content
+    in top-k retrieval.
+    """
     sections = SUPPORTED_TYPES.get(doc_type, {}).get("required_sections", [])
+    is_sundry = doc_type == "sundry"
     out: List[Tuple[str, str]] = []
     for sec in sections:
+        # Skip noise sections for sundry documents
+        if is_sundry and sec in _SUNDRY_SKIP_SECTIONS:
+            continue
         val = data.get(sec)
+        if val is None:
+            continue
         if isinstance(val, (dict, list)):
+            # Skip dicts/lists where all values are None
+            if isinstance(val, dict) and all(v is None for v in val.values()):
+                continue
+            if isinstance(val, list) and len(val) == 0:
+                continue
             text = json.dumps(val, ensure_ascii=False)
         else:
             text = str(val)
-        out.append((sec, text))
+        # Skip trivial text
+        if not text or text in ("None", "null", "", "{}", "[]"):
+            continue
+        # Convert JSON blobs to readable prose before embedding
+        if text.startswith("{") or text.startswith("["):
+            text = json_to_prose(sec, text)
+        # Chunk long sections so each vector covers a focused slice
+        if len(text) > 500:
+            for i, chunk in enumerate(chunk_text(text, 500, 100)):
+                out.append((f"{sec}__chunk_{i}", chunk))
+        else:
+            out.append((sec, text))
+    # Emit raw PDF text as fallback vector for retrieval
+    raw_text = data.get("_raw_text")
+    if raw_text and isinstance(raw_text, str) and len(raw_text.strip()) > 50:
+        if len(raw_text) > 800:
+            for i, chunk in enumerate(chunk_text(raw_text, 800, 200)):
+                out.append((f"_raw_text__chunk_{i}", chunk))
+        else:
+            out.append(("_raw_text", raw_text))
     return out
 
 
@@ -617,7 +1210,7 @@ def iter_json_sections_for_embedding(doc_type: str, data: Dict[str, Any]) -> Lis
 def _embed_texts(texts: List[str]) -> List[List[float]]:  # pragma: no cover
     if not texts:
         return []
-    client = _openai_client()
+    client = get_openai_client(operation="document_extraction")
     resp = client.embeddings.create(model=MODEL_EMBEDDING, input=texts)
     # SDK returns data list with .embedding per item
     vectors: List[List[float]] = []

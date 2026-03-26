@@ -21,8 +21,8 @@ class DocumentVector(models.Model):
     section_name = models.CharField(max_length=255, db_index=True)
     section_text = models.TextField()
 
-    # Embedding size 1536 for text-embedding-3-*; adjust via migration if model changes
-    embedding = VectorField(dimensions=1536)
+    # Embedding size 3072 for text-embedding-3-large; upgraded from 1536 via migration 0024
+    embedding = VectorField(dimensions=3072)  # text-embedding-3-large
 
     metadata = models.JSONField(default=dict)
 

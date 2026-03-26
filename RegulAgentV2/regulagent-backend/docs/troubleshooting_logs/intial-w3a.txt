@@ -1,0 +1,512 @@
+http://localhost:8001/api/w3a/initial
+
+{
+    "temp_plan_id": "temp_nm_3001528841_085ae676",
+    "jurisdiction": "NM",
+    "combined_pdf_url": "https://ocdimage.emnrd.nm.gov/imaging/WellFileView.aspx?RefType=WF&RefID=30015288410000&ViewAll=true",
+    "source_files": [
+        {
+            "filename": "30-015-28841_43744.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43744.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43745.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43745.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43746.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43746.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43747.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43747.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43748.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43748.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43749.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43749.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43750.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43750.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43751.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43751.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43752.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43752.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43753.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43753.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43754.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43754.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43755.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43755.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43756.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43756.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43757.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43757.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43758.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43758.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43759.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43759.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43760.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43760.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43761.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43761.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43762.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43762.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43763.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43763.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43764.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43764.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43765.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43765.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43766.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43766.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43767.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43767.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43768.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43768.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43769.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43769.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43770.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43770.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43771.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43771.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43772.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43772.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30-015-28841_43773.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/ada-03-00106%20artesia%20well%20files%20part%2006/ada-03-00106%2040001-50000/30-015-28841_43773.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "3001528841_31_wf.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/12905/3001528841_31_wf.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30015288410000_32_wf.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/303856/30015288410000_32_wf.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30015288410000_07_31_2018_02_37_53.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/artesia/wf/20180731/30015288410000_07_31_2018_02_37_53.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30015475940000_02_02_2022_08_34_21.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/santafe/wf/20220202/30015475940000_02_02_2022_08_34_21.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30015337560000_04_24_2024_08_51_58.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/santafe/wf/20240424/30015337560000_04_24_2024_08_51_58.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        },
+        {
+            "filename": "30015288410000_12_30_2025_01_31_49.pdf",
+            "url": "https://ocdimage.emnrd.nm.gov/Imaging/FileStore/santafe/wf/20251230/30015288410000_12_30_2025_01_31_49.pdf",
+            "file_size": null,
+            "date": null,
+            "doc_type": null
+        }
+    ],
+    "api": "3001528841",
+    "well_data": {
+        "api10": "30-015-28841",
+        "api14": "30015288410000",
+        "well_name": "",
+        "well_number": null,
+        "operator_name": "s",
+        "operator_number": "",
+        "status": "C-115 Reports",
+        "well_type": "",
+        "work_type": "",
+        "direction": "",
+        "multi_lateral": null,
+        "mineral_owner": "",
+        "surface_owner": "",
+        "surface_location": "",
+        "latitude": null,
+        "longitude": null,
+        "datum": "",
+        "gl_elevation_ft": null,
+        "kb_elevation_ft": null,
+        "df_elevation_ft": null,
+        "sing_mult_compl": "",
+        "potash_waiver": null,
+        "formation": "",
+        "proposed_formation": "",
+        "proposed_depth_ft": null,
+        "measured_vertical_depth_ft": null,
+        "true_vertical_depth_ft": null,
+        "plugback_measured_ft": null,
+        "elevation_ft": null,
+        "tvd_ft": null,
+        "event_dates": {
+            "initial_apd_approval": null,
+            "most_recent_apd_approval": null,
+            "current_apd_expiration": null,
+            "spud_date": null,
+            "completion_date": null,
+            "first_production_date": null,
+            "last_inspection": null,
+            "last_mit_bht": null,
+            "plugging_date": null,
+            "ta_date": null
+        },
+        "spud_date": null,
+        "completion_date": null,
+        "casing_records": [],
+        "completions": [],
+        "formation_tops": [],
+        "raw_html": null
+    },
+    "extraction": {
+        "c105": {
+            "header": {
+                "api": "30-015-28841",
+                "api14": "30015288410000",
+                "api10": "30-015-28841",
+                "source": "NM OCD Scraper"
+            },
+            "operator_info": {
+                "name": "s",
+                "operator_number": ""
+            },
+            "well_info": {
+                "api": "30-015-28841",
+                "api14": "30015288410000",
+                "county": "",
+                "field": "",
+                "lease": "",
+                "well_no": "",
+                "well_name": "",
+                "well_type": "",
+                "direction": "",
+                "status": "C-115 Reports",
+                "location": {
+                    "lat": null,
+                    "lon": null,
+                    "surface_location": ""
+                },
+                "elevation_ft": null
+            },
+            "depths": {
+                "proposed_depth": null,
+                "tvd": null
+            },
+            "formation": "",
+            "dates": {
+                "spud_date": null,
+                "completion_date": null
+            },
+            "casing_record": [],
+            "producing_injection_disposal_interval": [],
+            "mechanical_equipment": [],
+            "formation_record": [],
+            "completions": [],
+            "_metadata": {
+                "source_type": "nm_ocd_scraper",
+                "extraction_method": "web_scrape",
+                "requires_manual_casing_entry": true,
+                "has_scraped_casing": false,
+                "has_scraped_perforations": false,
+                "combined_pdf_available": true
+            }
+        }
+    },
+    "page_count": 0,
+    "file_size": 0,
+    "ttl_expires_at": "",
+    "requires_manual_entry": true,
+    "message": "NM well data scraped. Review documents at OCD portal and enter casing data manually.",
+    "nm_debug": {
+        "raw_scraper_output": {
+            "identifiers": {
+                "api10": "30-015-28841",
+                "api14": "30015288410000",
+                "well_name": "",
+                "well_number": null
+            },
+            "operator": {
+                "name": "s",
+                "number": ""
+            },
+            "classification": {
+                "status": "C-115 Reports",
+                "well_type": "",
+                "work_type": "",
+                "direction": "",
+                "multi_lateral": null
+            },
+            "ownership": {
+                "mineral_owner": "",
+                "surface_owner": ""
+            },
+            "location": {
+                "surface_location": "",
+                "latitude": null,
+                "longitude": null,
+                "datum": ""
+            },
+            "elevations": {
+                "gl_elevation_ft": null,
+                "kb_elevation_ft": null,
+                "df_elevation_ft": null
+            },
+            "formation": {
+                "formation": "",
+                "proposed_formation": ""
+            },
+            "depths": {
+                "proposed_depth_ft": null,
+                "measured_vertical_depth_ft": null,
+                "true_vertical_depth_ft": null,
+                "plugback_measured_ft": null
+            },
+            "completion_type": {
+                "sing_mult_compl": "",
+                "potash_waiver": null
+            },
+            "event_dates": {
+                "initial_apd_approval": null,
+                "most_recent_apd_approval": null,
+                "current_apd_expiration": null,
+                "spud_date": null,
+                "completion_date": null,
+                "first_production_date": null,
+                "last_inspection": null,
+                "last_mit_bht": null,
+                "plugging_date": null,
+                "ta_date": null
+            },
+            "casing_records": [],
+            "completions": []
+        },
+        "mapped_extraction": {
+            "c105": {
+                "header": {
+                    "api": "30-015-28841",
+                    "api14": "30015288410000",
+                    "api10": "30-015-28841",
+                    "source": "NM OCD Scraper"
+                },
+                "operator_info": {
+                    "name": "s",
+                    "operator_number": ""
+                },
+                "well_info": {
+                    "api": "30-015-28841",
+                    "api14": "30015288410000",
+                    "county": "",
+                    "field": "",
+                    "lease": "",
+                    "well_no": "",
+                    "well_name": "",
+                    "well_type": "",
+                    "direction": "",
+                    "status": "C-115 Reports",
+                    "location": {
+                        "lat": null,
+                        "lon": null,
+                        "surface_location": ""
+                    },
+                    "elevation_ft": null
+                },
+                "depths": {
+                    "proposed_depth": null,
+                    "tvd": null
+                },
+                "formation": "",
+                "dates": {
+                    "spud_date": null,
+                    "completion_date": null
+                },
+                "casing_record": [],
+                "producing_injection_disposal_interval": [],
+                "mechanical_equipment": [],
+                "formation_record": [],
+                "completions": [],
+                "_metadata": {
+                    "source_type": "nm_ocd_scraper",
+                    "extraction_method": "web_scrape",
+                    "requires_manual_casing_entry": true,
+                    "has_scraped_casing": false,
+                    "has_scraped_perforations": false,
+                    "combined_pdf_available": true
+                }
+            }
+        },
+        "mapped_geometry": {
+            "casing_strings": [],
+            "formation_tops": [],
+            "perforations": [],
+            "mechanical_barriers": [],
+            "uqw_data": null,
+            "kop_data": null,
+            "_nm_metadata": {
+                "well_type": "",
+                "direction": "",
+                "tvd_ft": null,
+                "proposed_depth_ft": null,
+                "requires_manual_entry": true,
+                "has_scraped_casing": false,
+                "has_scraped_perforations": false
+            }
+        },
+        "field_counts": {
+            "casing_records": 0,
+            "completions": 0,
+            "perforations": 0
+        }
+    }
+}
+

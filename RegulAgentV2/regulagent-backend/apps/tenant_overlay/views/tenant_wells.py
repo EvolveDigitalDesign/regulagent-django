@@ -21,6 +21,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from apps.public_core.models import WellRegistry
+from apps.public_core.models.bulk_job import BulkJob
 from apps.tenant_overlay.services.engagement_tracker import get_tenant_engagement_list
 from apps.tenant_overlay.serializers.tenant_wells import (
     TenantWellSerializer,
@@ -212,7 +213,7 @@ def get_tenant_well_history(request):
         f"History query by tenant {tenant_id}: total {total_count} wells, "
         f"returned {len(wells)} (offset={offset}, limit={limit})"
     )
-    
+
     return Response({
         "wells": wells_serializer.data,
         "pagination": {
@@ -222,4 +223,100 @@ def get_tenant_well_history(request):
             "has_more": offset + limit < total_count
         }
     }, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([JWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def import_wells_view(request):
+    """
+    POST /api/tenant/wells/import/
+
+    Bulk import wells by API numbers. For each well:
+    1. Get or create WellRegistry
+    2. Create WellEngagement (tenant-well link)
+    3. Queue async extraction -> WellComponent population
+
+    Request:  {"api_numbers": ["42383396820000", ...], "workspace_id": 1}
+    Response (202): {"job_id": "uuid", "status": "queued", "total_wells": 5, ...}
+    """
+    from apps.public_core.tasks import bulk_import_wells
+
+    tenant_id = get_tenant_id_from_request(request)
+    if not tenant_id:
+        return Response(
+            {"error": "No tenant associated with user"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    api_numbers = request.data.get("api_numbers")
+    workspace_id = request.data.get("workspace_id")
+
+    # Validate api_numbers
+    if not api_numbers or not isinstance(api_numbers, list):
+        return Response(
+            {"error": "api_numbers must be a non-empty list"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if len(api_numbers) > 100:
+        return Response(
+            {"error": "Maximum 100 wells per import request"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    for item in api_numbers:
+        if not isinstance(item, str):
+            return Response(
+                {"error": "Each API number must be a string"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    # Normalize: strip dashes/spaces, pad/truncate to 14 digits where possible
+    normalized = []
+    for raw in api_numbers:
+        cleaned = raw.replace("-", "").replace(" ", "")
+        if len(cleaned) < 14:
+            cleaned = cleaned.zfill(14)
+        elif len(cleaned) > 14:
+            cleaned = cleaned[:14]
+        normalized.append(cleaned)
+
+    # Create BulkJob
+    job = BulkJob.objects.create(
+        tenant_id=tenant_id,
+        job_type="well_import",
+        status=BulkJob.STATUS_QUEUED,
+        total_items=len(normalized),
+        input_data={
+            "api_numbers": normalized,
+            "workspace_id": workspace_id,
+        },
+        created_by=request.user.email,
+    )
+
+    logger.info(
+        f"Created bulk well import job {job.id} for {len(normalized)} wells "
+        f"by user {request.user.email}"
+    )
+
+    # Queue Celery batch task
+    task = bulk_import_wells.delay(
+        job_id=str(job.id),
+        api_numbers=normalized,
+        tenant_id=str(tenant_id),
+        workspace_id=workspace_id,
+    )
+
+    logger.info(f"Queued Celery task {task.id} for import job {job.id}")
+
+    return Response(
+        {
+            "job_id": str(job.id),
+            "status": job.status,
+            "total_wells": len(normalized),
+            "message": f"Well import job queued for {len(normalized)} wells",
+        },
+        status=status.HTTP_202_ACCEPTED,
+    )
 

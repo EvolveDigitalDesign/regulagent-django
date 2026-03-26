@@ -1,0 +1,624 @@
+{
+    "id": 317,
+    "plan_id": "4231736724:combined",
+    "kind": "baseline",
+    "status": "draft",
+    "visibility": "public",
+    "tenant_id": "00000000-0000-0000-0000-000000000002",
+    "well": {
+        "api14": "4231736724",
+        "state": "TX",
+        "county": "",
+        "operator_name": "",
+        "field_name": "",
+        "lease_name": "",
+        "well_number": "",
+        "lat": null,
+        "lon": null
+    },
+    "well_geometry": {
+        "casing_strings": [
+            {
+                "string": "surface",
+                "top_ft": null,
+                "size_in": 13.375,
+                "bottom_ft": 360,
+                "hole_size_in": 17.5,
+                "cement_top_ft": 0,
+                "shoe_depth_ft": null,
+                "weight_per_ft": null
+            },
+            {
+                "string": "intermediate",
+                "top_ft": null,
+                "size_in": 8.625,
+                "bottom_ft": 5521,
+                "hole_size_in": 11,
+                "cement_top_ft": 3710,
+                "shoe_depth_ft": null,
+                "weight_per_ft": null
+            },
+            {
+                "string": "production",
+                "top_ft": null,
+                "size_in": 5.5,
+                "bottom_ft": 12097,
+                "hole_size_in": 7.875,
+                "cement_top_ft": 5500,
+                "shoe_depth_ft": null,
+                "weight_per_ft": null
+            }
+        ],
+        "formation_tops": [
+            {
+                "formation": "Dean",
+                "top_ft": 6500.0
+            },
+            {
+                "formation": "San Andres",
+                "top_ft": 3500.0
+            },
+            {
+                "formation": "Santa Rosa",
+                "top_ft": 1000.0
+            },
+            {
+                "formation": "Up",
+                "top_ft": 6500.0
+            }
+        ],
+        "perforations": [],
+        "production_perforations": [
+            {
+                "top_ft": 9410,
+                "bottom_ft": 11170,
+                "open_hole": false
+            },
+            {
+                "top_ft": 11294,
+                "bottom_ft": 11422,
+                "open_hole": false
+            },
+            {
+                "top_ft": 11514,
+                "bottom_ft": 11964,
+                "open_hole": false
+            }
+        ],
+        "tubing": [],
+        "liner": [],
+        "historic_cement_jobs": [
+            {
+                "job_type": "surface",
+                "interval_top_ft": 0,
+                "interval_bottom_ft": 360,
+                "cement_top_ft": 16,
+                "sacks": 375,
+                "slurry_density_ppg": null,
+                "additives": [],
+                "yield_ft3_per_sk": null
+            },
+            {
+                "job_type": "intermediate",
+                "interval_top_ft": 0,
+                "interval_bottom_ft": 111,
+                "cement_top_ft": 19,
+                "sacks": 400,
+                "slurry_density_ppg": null,
+                "additives": [],
+                "yield_ft3_per_sk": null
+            }
+        ],
+        "mechanical_equipment": [],
+        "existing_tools": []
+    },
+    "kernel_version": "",
+    "policy_id": "",
+    "overlay_id": "",
+    "extraction_meta": {},
+    "created_at": "2026-03-25T14:17:07.242630Z",
+    "payload": {
+        "api": "4231736724",
+        "field": "SPRABERRY (TREND AREA)",
+        "steps": [
+            {
+                "type": "surface_casing_shoe_plug",
+                "recipe": {
+                    "id": "class_c_neat_15_6",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.6,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.06
+                },
+                "details": {
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    }
+                },
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": "perf_and_squeeze_plug",
+                "plug_purpose": "surface_casing_shoe_plug",
+                "tag_required": true,
+                "min_length_ft": 100.0,
+                "placement_basis": "Surface casing shoe coverage +50 ft shallower",
+                "geometry_context": "cased_production",
+                "regulatory_basis": [
+                    "tx.tac.16.3.14(e)(2)",
+                    "rrc.district.08.martin:tag.surface_shoe_in_oh"
+                ]
+            },
+            {
+                "type": "uqw_isolation_plug",
+                "recipe": {
+                    "id": "class_c_neat_15_6",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.6,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.06
+                },
+                "above_ft": 50.0,
+                "below_ft": 50.0,
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": "perf_and_squeeze_plug",
+                "plug_purpose": "uqw_isolation_plug",
+                "min_length_ft": 100.0,
+                "placement_basis": "UQW base isolation ±50 ft",
+                "regulatory_basis": [
+                    "tx.tac.16.3.14(g)(1)"
+                ]
+            },
+            {
+                "type": "top_plug",
+                "recipe": {
+                    "id": "class_c_neat_15_6",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.6,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.06
+                },
+                "top_ft": 0.0,
+                "details": {
+                    "cement_class": "C",
+                    "depth_mid_ft": 5.0
+                },
+                "bottom_ft": 10.0,
+                "length_ft": 10.0,
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": "spot_plug",
+                "plug_purpose": "top_plug",
+                "geometry_context": "cased_production",
+                "regulatory_basis": [
+                    "tx.tac.16.3.14(d)(8)"
+                ]
+            },
+            {
+                "type": "cut_casing_below_surface",
+                "recipe": {
+                    "id": "class_c_neat_15_6",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.6,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.06
+                },
+                "depth_ft": 3.0,
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": null,
+                "plug_purpose": "cut_casing_below_surface",
+                "regulatory_basis": [
+                    "tx.tac.16.3.14(d)(8)"
+                ]
+            },
+            {
+                "type": "bridge_plug",
+                "recipe": {
+                    "id": "class_c_neat_15_6",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.6,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.06
+                },
+                "top_ft": 9360.0,
+                "details": {
+                    "kop_considered": false,
+                    "placement_reason": "perforations (50 ft above shallowest perf top)",
+                    "new_cibp_required": true
+                },
+                "depth_ft": 9360.0,
+                "bottom_ft": 9360.0,
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": null,
+                "plug_purpose": "bridge_plug",
+                "regulatory_basis": [
+                    "tx.tac.16.3.14(g)(3)"
+                ]
+            },
+            {
+                "type": "bridge_plug_cap",
+                "recipe": {
+                    "id": "class_c_neat_15_6",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.6,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.06
+                },
+                "top_ft": 9340.0,
+                "details": {
+                    "cement_class": "H",
+                    "depth_mid_ft": 9350.0,
+                    "above_bridge_plug": 9360.0
+                },
+                "bottom_ft": 9360.0,
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": "dumpbail_plug",
+                "plug_purpose": "bridge_plug_cap",
+                "cap_length_ft": 20.0,
+                "geometry_context": "cased_production",
+                "regulatory_basis": [
+                    "tx.tac.16.3.14(g)(3)"
+                ]
+            },
+            {
+                "type": "formation_top_plug",
+                "recipe": {
+                    "id": "class_c_neat_15_6",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.6,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.06
+                },
+                "top_ft": 6500.0,
+                "details": {
+                    "center_ft": 6500.0,
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "geometry_used": {
+                        "annulus": "production_casing_id_vs_stinger_od",
+                        "casing_id_in": null,
+                        "stinger_od_in": null
+                    }
+                },
+                "explain": {
+                    "path": "cased_annulus"
+                },
+                "bottom_ft": 6400.0,
+                "formation": "Up",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": "spot_plug",
+                "plug_purpose": "formation_top_plug",
+                "tag_required": true,
+                "min_length_ft": 100.0,
+                "placement_basis": "Formation isolation: Up at 6500 ft, -100 ft",
+                "regulatory_basis": [
+                    "rrc.district.08.martin:formation_top:Up"
+                ]
+            },
+            {
+                "type": "formation_top_plug",
+                "recipe": {
+                    "id": "class_c_neat_15_6",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.6,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.06
+                },
+                "top_ft": 6500.0,
+                "details": {
+                    "center_ft": 6500.0,
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "geometry_used": {
+                        "annulus": "production_casing_id_vs_stinger_od",
+                        "casing_id_in": null,
+                        "stinger_od_in": null
+                    }
+                },
+                "explain": {
+                    "path": "cased_annulus"
+                },
+                "bottom_ft": 6400.0,
+                "formation": "Dean",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": "spot_plug",
+                "plug_purpose": "formation_top_plug",
+                "tag_required": true,
+                "min_length_ft": 100.0,
+                "placement_basis": "Formation isolation: Dean at 6500 ft, -100 ft",
+                "regulatory_basis": [
+                    "rrc.district.08.martin:formation_top:Dean"
+                ]
+            },
+            {
+                "type": "formation_top_plug",
+                "sacks": 74,
+                "recipe": {
+                    "id": "class_c_neat_15_6",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.6,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.06
+                },
+                "top_ft": 3500.0,
+                "details": {
+                    "annuli": [
+                        {
+                            "inner": "production",
+                            "outer": "intermediate",
+                            "inner_od_in": 5.5,
+                            "outer_id_in": 8.097,
+                            "base_volume_bbl": 3.4302903633184374,
+                            "interval_length_ft": 100.0,
+                            "capacity_bbl_per_ft": 0.034302903633184376
+                        },
+                        {
+                            "inner": "intermediate",
+                            "outer": "openhole",
+                            "inner_od_in": 8.625,
+                            "outer_id_in": 11.0,
+                            "base_volume_bbl": 4.527819603652613,
+                            "interval_length_ft": 100.0,
+                            "capacity_bbl_per_ft": 0.04527819603652613
+                        }
+                    ],
+                    "center_ft": 3500.0,
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "geometry_used": {
+                        "annulus": "production_casing_id_vs_stinger_od",
+                        "casing_id_in": null,
+                        "stinger_od_in": null
+                    },
+                    "perforation_casings": [
+                        "production",
+                        "intermediate"
+                    ],
+                    "uncmented_annuli_count": 2,
+                    "cement_aware_calculation": true
+                },
+                "explain": {
+                    "path": "cased_annulus"
+                },
+                "bottom_ft": 3400.0,
+                "formation": "San Andres",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {
+                        "ft3": 78.46972869747995,
+                        "sacks": 74,
+                        "explain": {
+                            "rounding_mode": "nearest",
+                            "water_gal_per_sk": 5.2,
+                            "yield_ft3_per_sk": 1.06
+                        },
+                        "additives": {},
+                        "total_bbl": 13.97601408782103,
+                        "water_bbl": 9.161904761904761
+                    }
+                },
+                "plug_type": "perf_and_squeeze_plug",
+                "plug_purpose": "formation_top_plug",
+                "tag_required": true,
+                "min_length_ft": 100.0,
+                "placement_basis": "Formation isolation: San Andres at 3500 ft, -100 ft",
+                "regulatory_basis": [
+                    "rrc.district.08.martin:formation_top:San Andres"
+                ]
+            },
+            {
+                "type": "formation_top_plug",
+                "sacks": 60,
+                "recipe": {
+                    "id": "class_c_neat_15_6",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.6,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.06
+                },
+                "top_ft": 1000.0,
+                "details": {
+                    "annuli": [
+                        {
+                            "inner": "production",
+                            "outer": "intermediate",
+                            "inner_od_in": 5.5,
+                            "outer_id_in": 8.097,
+                            "base_volume_bbl": 3.4302903633184374,
+                            "interval_length_ft": 100.0,
+                            "capacity_bbl_per_ft": 0.034302903633184376
+                        },
+                        {
+                            "inner": "intermediate",
+                            "outer": "openhole",
+                            "inner_od_in": 8.625,
+                            "outer_id_in": 11.0,
+                            "base_volume_bbl": 4.527819603652613,
+                            "interval_length_ft": 100.0,
+                            "capacity_bbl_per_ft": 0.04527819603652613
+                        }
+                    ],
+                    "center_ft": 1000.0,
+                    "geometry_used": {
+                        "annulus": "production_casing_id_vs_stinger_od",
+                        "casing_id_in": null,
+                        "stinger_od_in": null
+                    },
+                    "perforation_casings": [
+                        "production",
+                        "intermediate"
+                    ],
+                    "uncmented_annuli_count": 2,
+                    "cement_aware_calculation": true
+                },
+                "explain": {
+                    "path": "cased_annulus"
+                },
+                "bottom_ft": 900.0,
+                "formation": "Santa Rosa",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {
+                        "ft3": 63.82985394048743,
+                        "sacks": 60,
+                        "explain": {
+                            "rounding_mode": "nearest",
+                            "water_gal_per_sk": 5.2,
+                            "yield_ft3_per_sk": 1.06
+                        },
+                        "additives": {},
+                        "total_bbl": 11.368548772929048,
+                        "water_bbl": 7.428571428571429
+                    }
+                },
+                "plug_type": "perf_and_squeeze_plug",
+                "plug_purpose": "formation_top_plug",
+                "min_length_ft": 100.0,
+                "placement_basis": "Formation isolation: Santa Rosa at 1000 ft, -100 ft",
+                "regulatory_basis": [
+                    "rrc.district.08.martin:formation_top:Santa Rosa"
+                ]
+            }
+        ],
+        "county": "MARTIN",
+        "district": "08",
+        "policy_id": "tx.w3a",
+        "extraction": {
+            "files": [
+                "W-2_4231736724_009.pdf",
+                "GAU_4231736724_009.pdf",
+                "W-15_4231736724_009.pdf"
+            ],
+            "status": "success"
+        },
+        "casing_strings": [
+            {
+                "string": "surface",
+                "top_ft": null,
+                "size_in": 13.375,
+                "bottom_ft": 360,
+                "hole_size_in": 17.5,
+                "cement_top_ft": 0,
+                "shoe_depth_ft": null,
+                "weight_per_ft": null
+            },
+            {
+                "string": "intermediate",
+                "top_ft": null,
+                "size_in": 8.625,
+                "bottom_ft": 5521,
+                "hole_size_in": 11,
+                "cement_top_ft": 3710,
+                "shoe_depth_ft": null,
+                "weight_per_ft": null
+            },
+            {
+                "string": "production",
+                "top_ft": null,
+                "size_in": 5.5,
+                "bottom_ft": 12097,
+                "hole_size_in": 7.875,
+                "cement_top_ft": 5500,
+                "shoe_depth_ft": null,
+                "weight_per_ft": null
+            }
+        ],
+        "existing_tools": [],
+        "kernel_version": "0.1.0",
+        "materials_totals": {},
+        "formations_targeted": [
+            "Dean",
+            "San Andres",
+            "Santa Rosa",
+            "Up"
+        ],
+        "historic_cement_jobs": [
+            {
+                "job_type": "surface",
+                "interval_top_ft": 0,
+                "interval_bottom_ft": 360,
+                "cement_top_ft": 16,
+                "sacks": 375,
+                "slurry_density_ppg": null,
+                "additives": [],
+                "yield_ft3_per_sk": null
+            },
+            {
+                "job_type": "intermediate",
+                "interval_top_ft": 0,
+                "interval_bottom_ft": 111,
+                "cement_top_ft": 19,
+                "sacks": 400,
+                "slurry_density_ppg": null,
+                "additives": [],
+                "yield_ft3_per_sk": null
+            }
+        ],
+        "mechanical_equipment": [],
+        "production_perforations": [
+            {
+                "top_ft": 9410,
+                "bottom_ft": 11170,
+                "open_hole": false
+            },
+            {
+                "top_ft": 11294,
+                "bottom_ft": 11422,
+                "open_hole": false
+            },
+            {
+                "top_ft": 11514,
+                "bottom_ft": 11964,
+                "open_hole": false
+            }
+        ]
+    }
+}

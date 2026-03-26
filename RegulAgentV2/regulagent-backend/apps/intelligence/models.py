@@ -1,0 +1,355 @@
+import uuid
+from django.db import models
+from django.conf import settings
+from apps.intelligence.constants import (
+    AGENCY_CHOICES,
+    FILING_STATUS_CHOICES,
+    FORM_TYPE_CHOICES,
+    INTERACTION_ACTION_CHOICES,
+    PARSE_STATUS_CHOICES,
+    PRIORITY_CHOICES,
+    RECOMMENDATION_SCOPE_CHOICES,
+)
+
+
+class FilingStatusRecord(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    filing_id = models.CharField(max_length=128, db_index=True, help_text="Agency tracking/confirmation number")
+
+    # Nullable FKs to form models (polymorphic pattern)
+    w3_form = models.ForeignKey(
+        'public_core.W3FormORM',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='filing_statuses',
+    )
+    plan_snapshot = models.ForeignKey(
+        'public_core.PlanSnapshot',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='filing_statuses',
+    )
+    c103_form = models.ForeignKey(
+        'public_core.C103FormORM',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='filing_statuses',
+    )
+
+    tenant_id = models.UUIDField(db_index=True)
+    well = models.ForeignKey(
+        'public_core.WellRegistry',
+        on_delete=models.CASCADE,
+        related_name='filing_statuses',
+    )
+
+    agency = models.CharField(max_length=10, choices=AGENCY_CHOICES)
+    form_type = models.CharField(max_length=10, choices=FORM_TYPE_CHOICES)
+    status = models.CharField(
+        max_length=20,
+        choices=FILING_STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+    )
+
+    agency_remarks = models.TextField(blank=True)
+    reviewer_name = models.CharField(max_length=128, blank=True)
+    status_date = models.DateField(null=True, blank=True)
+    portal_url = models.URLField(blank=True)
+    raw_portal_data = models.JSONField(default=dict)
+    polled_at = models.DateTimeField(null=True, blank=True)
+
+    # Denormalized geo
+    state = models.CharField(max_length=2, blank=True, db_index=True)
+    district = models.CharField(max_length=10, blank=True)
+    county = models.CharField(max_length=64, blank=True)
+    land_type = models.CharField(max_length=20, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'intelligence_filing_status'
+        indexes = [
+            models.Index(fields=['tenant_id', '-status_date']),
+            models.Index(fields=['agency', 'form_type', 'status']),
+            models.Index(fields=['filing_id', 'agency']),
+        ]
+
+    def __str__(self):
+        return f"Filing {self.filing_id} ({self.agency} / {self.form_type}) — {self.status}"
+
+
+class RejectionRecord(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    filing_status = models.ForeignKey(
+        FilingStatusRecord,
+        on_delete=models.CASCADE,
+        related_name='rejections',
+    )
+
+    # Nullable FKs to form models (polymorphic pattern)
+    w3_form = models.ForeignKey(
+        'public_core.W3FormORM',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rejections',
+    )
+    plan_snapshot = models.ForeignKey(
+        'public_core.PlanSnapshot',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rejections',
+    )
+    c103_form = models.ForeignKey(
+        'public_core.C103FormORM',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rejections',
+    )
+
+    tenant_id = models.UUIDField(db_index=True)
+    well = models.ForeignKey(
+        'public_core.WellRegistry',
+        on_delete=models.CASCADE,
+        related_name='rejections',
+    )
+
+    # Denormalized geo
+    state = models.CharField(max_length=2, blank=True, db_index=True)
+    district = models.CharField(max_length=10, blank=True)
+    county = models.CharField(max_length=64, blank=True)
+    land_type = models.CharField(max_length=20, blank=True)
+
+    agency = models.CharField(max_length=10, choices=AGENCY_CHOICES)
+    form_type = models.CharField(max_length=10, choices=FORM_TYPE_CHOICES)
+
+    raw_rejection_notes = models.TextField(blank=True)
+    rejection_date = models.DateField(null=True, blank=True)
+    reviewer_name = models.CharField(max_length=128, blank=True)
+
+    parsed_issues = models.JSONField(default=list, help_text="AI-parsed list of field-level issues")
+    parse_status = models.CharField(
+        max_length=10,
+        choices=PARSE_STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+    )
+
+    submitted_form_snapshot = models.JSONField(
+        default=dict,
+        help_text="Snapshot of form data at time of submission",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'intelligence_rejection_records'
+        indexes = [
+            models.Index(fields=['tenant_id', '-rejection_date']),
+            models.Index(fields=['agency', 'form_type']),
+            models.Index(fields=['parse_status']),
+        ]
+
+    def __str__(self):
+        return f"Rejection ({self.agency} / {self.form_type}) on {self.rejection_date}"
+
+
+class RejectionPattern(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    form_type = models.CharField(max_length=10, choices=FORM_TYPE_CHOICES)
+    field_name = models.CharField(max_length=128)
+    issue_category = models.CharField(max_length=30)
+    issue_subcategory = models.CharField(max_length=30, blank=True)
+
+    state = models.CharField(max_length=2, blank=True)
+    district = models.CharField(max_length=10, blank=True)
+    agency = models.CharField(max_length=10, choices=AGENCY_CHOICES)
+
+    pattern_description = models.TextField()
+    example_bad_value = models.CharField(max_length=255, blank=True)
+    example_good_value = models.CharField(max_length=255, blank=True)
+
+    # Stats
+    occurrence_count = models.IntegerField(default=0)
+    tenant_count = models.IntegerField(default=0)
+    rejection_rate = models.FloatField(default=0.0)
+    first_observed = models.DateTimeField(null=True, blank=True)
+    last_observed = models.DateTimeField(null=True, blank=True)
+
+    # Trend
+    is_trending = models.BooleanField(default=False)
+    trend_direction = models.FloatField(
+        default=0.0,
+        help_text="Slope: positive=increasing, negative=decreasing",
+    )
+
+    confidence = models.FloatField(default=0.0)
+    embedding_vector = models.ForeignKey(
+        'public_core.DocumentVector',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rejection_patterns',
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'intelligence_rejection_patterns'
+        unique_together = [('form_type', 'field_name', 'issue_category', 'state', 'district', 'agency')]
+        indexes = [
+            models.Index(fields=['form_type', 'state']),
+            models.Index(fields=['is_trending']),
+            models.Index(fields=['-occurrence_count']),
+        ]
+
+    def __str__(self):
+        return f"Pattern: {self.form_type}/{self.field_name} — {self.issue_category} ({self.agency})"
+
+
+class Recommendation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pattern = models.ForeignKey(
+        RejectionPattern,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='recommendations',
+    )
+
+    # Targeting
+    form_type = models.CharField(max_length=10, choices=FORM_TYPE_CHOICES)
+    field_name = models.CharField(max_length=128)
+    state = models.CharField(max_length=2, blank=True)
+    district = models.CharField(max_length=10, blank=True)
+    county = models.CharField(max_length=64, blank=True)
+    land_type = models.CharField(max_length=20, blank=True)
+
+    # Content
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    suggested_value = models.CharField(max_length=255, blank=True)
+
+    trigger_condition = models.JSONField(
+        default=dict,
+        help_text="JSON: {field_name, trigger_values, trigger_pattern, context_match}",
+    )
+
+    scope = models.CharField(
+        max_length=15,
+        choices=RECOMMENDATION_SCOPE_CHOICES,
+        db_index=True,
+    )
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+
+    # Effectiveness
+    times_shown = models.IntegerField(default=0)
+    times_accepted = models.IntegerField(default=0)
+    times_dismissed = models.IntegerField(default=0)
+    acceptance_rate = models.FloatField(default=0.0)
+
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'intelligence_recommendations'
+        indexes = [
+            models.Index(fields=['form_type', 'field_name', 'state']),
+            models.Index(fields=['scope', 'is_active']),
+            models.Index(fields=['priority']),
+        ]
+
+    def __str__(self):
+        return f"Rec: {self.title} ({self.form_type}/{self.field_name})"
+
+
+class RecommendationInteraction(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    recommendation = models.ForeignKey(
+        Recommendation,
+        on_delete=models.CASCADE,
+        related_name='interactions',
+    )
+    tenant_id = models.UUIDField(db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='recommendation_interactions',
+    )
+
+    action = models.CharField(max_length=10, choices=INTERACTION_ACTION_CHOICES)
+    field_value_at_time = models.CharField(max_length=255, blank=True)
+    dismissal_reason = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'intelligence_recommendation_interactions'
+        indexes = [
+            models.Index(fields=['recommendation', '-created_at']),
+            models.Index(fields=['tenant_id', 'action']),
+        ]
+
+    def __str__(self):
+        return f"Interaction: {self.action} on {self.recommendation_id} by {self.user_id}"
+
+
+class PortalCredential(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant_id = models.UUIDField(db_index=True)
+    agency = models.CharField(max_length=10, choices=AGENCY_CHOICES)
+
+    # Encrypted at rest using Fernet
+    encrypted_username = models.BinaryField()
+    encrypted_password = models.BinaryField()
+
+    last_successful_login = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'intelligence_portal_credentials'
+        unique_together = [('tenant_id', 'agency')]
+
+    def __str__(self):
+        return f"PortalCredential: {self.agency} / tenant {self.tenant_id}"
+
+    def encrypt(self, value: str) -> bytes:
+        from cryptography.fernet import Fernet
+        from django.conf import settings as django_settings
+        key = django_settings.PORTAL_CREDENTIAL_KEY
+        f = Fernet(key)
+        return f.encrypt(value.encode())
+
+    def decrypt(self, encrypted_value: bytes) -> str:
+        from cryptography.fernet import Fernet
+        from django.conf import settings as django_settings
+        key = django_settings.PORTAL_CREDENTIAL_KEY
+        f = Fernet(key)
+        return f.decrypt(bytes(encrypted_value)).decode()
+
+    def set_username(self, username: str) -> None:
+        self.encrypted_username = self.encrypt(username)
+
+    def get_username(self) -> str:
+        return self.decrypt(self.encrypted_username)
+
+    def set_password(self, password: str) -> None:
+        self.encrypted_password = self.encrypt(password)
+
+    def get_password(self) -> str:
+        return self.decrypt(self.encrypted_password)

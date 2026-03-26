@@ -13,6 +13,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from apps.public_core.models import DocumentVector
 from apps.assistant.models import PlanModification
+from apps.public_core.services.openai_config import DEFAULT_EMBEDDING_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -458,7 +459,7 @@ def embed_modification(modification) -> 'DocumentVector':
     client = get_openai_client()
     response = client.embeddings.create(
         input=embedding_text,
-        model="text-embedding-3-small"
+        model=DEFAULT_EMBEDDING_MODEL
     )
     vector = response.data[0].embedding
 

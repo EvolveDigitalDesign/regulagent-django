@@ -1,0 +1,167 @@
+{
+  "schema_version": "1.0",
+  "jurisdiction": "NM",
+  "authority": "NM OCD - 19.15.25 NMAC",
+  "description": "Standard plugging conditions derived from NM OCD Figures A-D",
+  "conditions": [
+    {
+      "condition_id": "nm_fig_a_production_zone",
+      "label": "Production Zone Isolation",
+      "trigger": {
+        "type": "has_perforations",
+        "description": "Well has perforated intervals in production zone"
+      },
+      "requirement": {
+        "isolation_type": "cement_plug_across_perfs",
+        "min_plug_length_ft": 100,
+        "plug_placement": "straddle_perforations",
+        "note": "Cement plug must straddle all perforated intervals. Minimum 100 ft or 25 sacks, whichever is greater."
+      }
+    },
+    {
+      "condition_id": "nm_fig_a_casing_shoe",
+      "label": "Casing Shoe Isolation",
+      "trigger": {
+        "type": "casing_shoe_exists",
+        "description": "Well has casing set with cement shoe"
+      },
+      "requirement": {
+        "isolation_type": "cement_plug_at_shoe",
+        "min_plug_length_ft": 50,
+        "plug_placement": "within_50ft_of_shoe",
+        "note": "Cement plug required at or near casing shoe to isolate open hole from cased hole."
+      }
+    },
+    {
+      "condition_id": "nm_fig_b_open_hole",
+      "label": "Open Hole Below Casing",
+      "trigger": {
+        "type": "open_hole_below_casing",
+        "description": "Open hole interval exists below deepest casing shoe"
+      },
+      "requirement": {
+        "isolation_type": "cement_plug_in_open_hole",
+        "min_plug_length_ft": 100,
+        "plug_placement": "bottom_of_open_hole",
+        "note": "Open hole below casing shoe must be plugged with minimum 100 ft cement or 25 sacks."
+      }
+    },
+    {
+      "condition_id": "nm_fig_b_duqw",
+      "label": "Deepest Usable Quality Water (DUQW) Protection",
+      "trigger": {
+        "type": "keyword_match",
+        "keywords": ["duqw", "fresh water", "usable water", "drinking water", "deepest usable"],
+        "description": "Well penetrates usable quality water zones"
+      },
+      "requirement": {
+        "isolation_type": "cement_plug_across_duqw",
+        "min_plug_length_ft": 50,
+        "plug_placement": "straddle_duqw_depth",
+        "note": "Cement plug must isolate deepest usable quality water zone. 50 ft minimum."
+      }
+    },
+    {
+      "condition_id": "nm_fig_c_intermediate_zone",
+      "label": "Intermediate Formation Isolation",
+      "trigger": {
+        "type": "keyword_match",
+        "keywords": ["intermediate", "transition zone", "marker bed"],
+        "description": "Intermediate formation zone requiring isolation between production and surface"
+      },
+      "requirement": {
+        "isolation_type": "cement_plug_at_formation",
+        "min_plug_length_ft": 100,
+        "plug_placement": "across_formation_top",
+        "note": "Intermediate formations between production and surface zones must be isolated."
+      }
+    },
+    {
+      "condition_id": "nm_fig_c_multiple_producing",
+      "label": "Multiple Producing Zone Separation",
+      "trigger": {
+        "type": "keyword_match",
+        "keywords": ["multiple zones", "commingled", "dual completion", "multiple producing"],
+        "description": "Well has multiple producing zones that must be individually isolated"
+      },
+      "requirement": {
+        "isolation_type": "cement_plug_between_zones",
+        "min_plug_length_ft": 100,
+        "plug_placement": "between_each_zone",
+        "note": "Each producing zone must be isolated from adjacent zones with cement plugs."
+      }
+    },
+    {
+      "condition_id": "nm_fig_d_surface_plug",
+      "label": "Surface Plug Requirement",
+      "trigger": {
+        "type": "always",
+        "description": "All wells require a surface plug"
+      },
+      "requirement": {
+        "isolation_type": "surface_cement_plug",
+        "min_plug_length_ft": 50,
+        "plug_placement": "top_within_50ft_of_surface",
+        "note": "Surface plug top must be within 50 ft of ground surface. Required for all abandoned wells."
+      }
+    },
+    {
+      "condition_id": "nm_fig_d_max_spacing_cased",
+      "label": "Maximum Plug Spacing (Cased Hole)",
+      "trigger": {
+        "type": "casing_shoe_exists",
+        "description": "Cased hole sections must not exceed maximum plug spacing"
+      },
+      "requirement": {
+        "isolation_type": "spacing_check",
+        "max_spacing_ft": 3000,
+        "plug_placement": "no_gap_exceeding_3000ft",
+        "note": "No interval in cased hole may exceed 3000 ft without a cement plug (NMAC 19.15.25)."
+      }
+    },
+    {
+      "condition_id": "nm_fig_d_max_spacing_open",
+      "label": "Maximum Plug Spacing (Open Hole)",
+      "trigger": {
+        "type": "open_hole_below_casing",
+        "description": "Open hole sections must not exceed maximum plug spacing"
+      },
+      "requirement": {
+        "isolation_type": "spacing_check",
+        "max_spacing_ft": 2000,
+        "plug_placement": "no_gap_exceeding_2000ft",
+        "note": "No interval in open hole may exceed 2000 ft without a cement plug (NMAC 19.15.25)."
+      }
+    },
+    {
+      "condition_id": "nm_woc_requirement",
+      "label": "Wait on Cement (WOC) Time",
+      "trigger": {
+        "type": "always",
+        "description": "All cement plugs require minimum WOC time"
+      },
+      "requirement": {
+        "isolation_type": "woc_time_check",
+        "min_woc_hours": 4,
+        "plug_placement": "all_cement_plugs",
+        "note": "Minimum 4 hours WOC required before tagging or drilling out cement (NMAC 19.15.25)."
+      }
+    },
+    {
+      "condition_id": "nm_cement_class",
+      "label": "Cement Class Requirements",
+      "trigger": {
+        "type": "always",
+        "description": "Cement class must be appropriate for depth"
+      },
+      "requirement": {
+        "isolation_type": "cement_class_check",
+        "shallow_classes": ["A", "C"],
+        "deep_classes": ["G", "H"],
+        "depth_threshold_ft": 6000,
+        "plug_placement": "all_cement_plugs",
+        "note": "Class A/C for depths < 6000 ft; Class G/H for depths >= 6000 ft."
+      }
+    }
+  ]
+}

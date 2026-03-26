@@ -18,6 +18,7 @@ import logging
 import os
 import re
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
@@ -329,6 +330,16 @@ class W3AInitialView(APIView):
             # 3. Create extraction from scraped data
             extraction = map_nm_well_to_extractions(scraped_data)
 
+            # 3b. Auto-trigger research if critical data is missing
+            from apps.public_core.services.research_supplement import trigger_research_if_needed
+
+            research_info = trigger_research_if_needed(
+                api_number=api_normalized,
+                state="NM",
+                scraped_data=scraped_data,
+                well=well,
+            )
+
             # 4. Create temp plan snapshot
             temp_plan_id = f"temp_nm_{api_normalized}_{uuid4().hex[:8]}"
 
@@ -349,15 +360,19 @@ class W3AInitialView(APIView):
                 payload={
                     "stage": "document_sourcing",
                     "jurisdiction": "NM",
+                    "policy_id": "nm.c103",
                     "api": api_normalized,
                     "combined_pdf_url": combined_pdf_url,  # External URL, not local path
                     "source_files": documents,
                     "input_mode": input_mode,
                     "scraped_data": scraped_data,
                     "extraction": extraction,
+                    "research_session_id": research_info.get("research_session_id"),
+                    "research_status": research_info.get("research_status"),
+                    "research_missing_fields": research_info.get("missing_fields", []),
                 },
                 kernel_version="",
-                policy_id="nm.plugging",
+                policy_id="nm.c103",
                 overlay_id="",
                 tenant_id=request.user.tenants.first().id if request.user.tenants.exists() else None,
                 workspace=workspace,
@@ -383,6 +398,7 @@ class W3AInitialView(APIView):
                 "file_size": 0,
                 "ttl_expires_at": "",
                 "requires_manual_entry": True,
+                "research": research_info,
                 "message": "NM well data scraped. Review documents at OCD portal and enter casing data manually.",
                 # Debug output showing all extracted and mapped data
                 "nm_debug": {
@@ -695,7 +711,8 @@ class W3AConfirmDocsView(APIView):
                 api_number=api,
                 source_path=file_path,
                 document_type=doc_type,
-                status="success"
+                status="success",
+                is_stale=False,
             ).order_by("-created_at").first()
             
             if existing_extraction:
@@ -791,6 +808,7 @@ class W3AConfirmDocsView(APIView):
         from apps.public_core.services.nm_extraction_mapper import (
             create_nm_extracted_document_data,
         )
+        from apps.public_core.models import ResearchSession
 
         logger.info(f"🆕 NM CONFIRM DOCS - {snapshot.plan_id}")
 
@@ -798,6 +816,140 @@ class W3AConfirmDocsView(APIView):
             scraped_data = snapshot.payload.get("scraped_data", {})
             extraction_data = snapshot.payload.get("extraction", {})
             api = snapshot.payload.get("api")
+
+            # Auto-supplement extraction with research data if available
+            from apps.public_core.services.research_supplement import (
+                query_research_for_plan_data,
+                merge_research_into_extractions,
+            )
+
+            research_supplement = {
+                "status": "not_triggered",
+                "formations_found": 0,
+                "perforations_found": 0,
+            }
+            research_session_id = snapshot.payload.get("research_session_id")
+            logger.warning("🔍 EQUIP-TAG: research_session_id=%s", research_session_id)
+
+            if research_session_id:
+                try:
+                    rs = ResearchSession.objects.filter(id=research_session_id).first()
+
+                    # Wait for research to complete (Celery tasks may still be indexing)
+                    if rs and rs.status in ("pending", "fetching", "indexing"):
+                        logger.warning("🔍 EQUIP-TAG: Research session %s status=%s, waiting for completion...", rs.id, rs.status)
+                        _wait_start = time.time()
+                        _MAX_WAIT = 120  # seconds
+                        while rs.status in ("pending", "fetching", "indexing") and (time.time() - _wait_start) < _MAX_WAIT:
+                            time.sleep(5)
+                            rs.refresh_from_db()
+                            logger.warning("🔍 EQUIP-TAG: Polling research session %s — status=%s (%.0fs elapsed)", rs.id, rs.status, time.time() - _wait_start)
+                        logger.warning("🔍 EQUIP-TAG: Wait complete — final status=%s after %.0fs", rs.status, time.time() - _wait_start)
+
+                    if rs and rs.status == "ready":
+                        research_data = query_research_for_plan_data(str(rs.id))
+                        extraction_data, equipment_status_map = merge_research_into_extractions(
+                            extraction_data, research_data
+                        )
+                        research_supplement = {
+                            "status": "supplemented",
+                            "formations_found": len(research_data.get("formation_tops", [])),
+                            "perforations_found": len(research_data.get("perforations", [])),
+                            "raw_answers": research_data.get("raw_answers", {}),
+                        }
+                        # Update snapshot with supplemented extractions
+                        snapshot.payload["extraction"] = extraction_data
+                        snapshot.save(update_fields=["payload"])
+                        logger.warning("🔍 EQUIP-TAG: Research ready, starting equipment tagging for rs=%s", rs.id)
+                        # Tag C-105 casing_record entries with equipment status
+                        equipment_tagged_count = 0
+                        try:
+                            logger.warning("🔍 EQUIP-TAG: equipment_status_map has %d entries: %s", len(equipment_status_map), equipment_status_map)
+                            if equipment_status_map or True:  # Always run — fallback handles missing map entries
+                                from apps.public_core.services.research_supplement import _determine_status_from_text
+                                from apps.public_core.models import DocumentVector
+                                c105 = extraction_data.get("c105", {})
+                                casing_entries = c105.get("casing_record", [])
+                                logger.warning("🔍 EQUIP-TAG: c105 has %d casing_record entries, types=%s", len(casing_entries), [(e.get("casing_type"), e.get("bottom")) for e in casing_entries])
+
+                                # Pre-fetch sundry sections for deterministic fallback
+                                _sundry_sections = None
+                                def _get_sundry_sections():
+                                    nonlocal _sundry_sections
+                                    if _sundry_sections is None:
+                                        well = snapshot.well
+                                        if well:
+                                            vecs = DocumentVector.objects.filter(
+                                                well=well,
+                                                document_type="sundry",
+                                            ).values_list("section_text", flat=True)
+                                            _sundry_sections = [{"text": t} for t in vecs if t]
+                                        else:
+                                            _sundry_sections = []
+                                    return _sundry_sections
+
+                                for casing_entry in casing_entries:
+                                    ct = (casing_entry.get("casing_type") or "").upper().strip()
+                                    depth = casing_entry.get("bottom") or casing_entry.get("shoe_depth_ft") or 0
+                                    depth_key = round(float(depth) / 10) * 10
+                                    if "PACKER" in ct:
+                                        equip_key = "PACKER"
+                                    elif "TUBING" in ct:
+                                        equip_key = "TUBING"
+                                    elif "LINER" in ct:
+                                        equip_key = "LINER"
+                                    else:
+                                        continue  # structural casing — skip
+
+                                    # First try the research map
+                                    es = equipment_status_map.get((equip_key, depth_key), "unverified")
+
+                                    # Fallback: if unverified, run deterministic scan against sundry text
+                                    if es == "unverified" and equip_key in ("PACKER", "TUBING"):
+                                        sundry_secs = _get_sundry_sections()
+                                        if sundry_secs:
+                                            det_status = _determine_status_from_text(float(depth), sundry_secs)
+                                            # Also try rounded depth (e.g. 9051→9050) since
+                                            # well docs often use approximate depths like "±9050'"
+                                            if det_status == "current" and float(depth) != float(depth_key):
+                                                det_status = _determine_status_from_text(float(depth_key), sundry_secs)
+                                            if det_status != "current":
+                                                es = det_status
+                                                logger.warning(
+                                                    "🔍 EQUIP-TAG: Deterministic fallback for %s at %s ft → '%s'",
+                                                    equip_key, depth, es,
+                                                )
+                                            else:
+                                                # Deterministic says current — trust it over unverified
+                                                es = "current"
+
+                                    casing_entry["equipment_status"] = es
+                                    equipment_tagged_count += 1
+                                    logger.warning("🔍 EQUIP-TAG: Tagged %s at %s ft → '%s'", equip_key, depth, es)
+                                # Re-save with tags
+                                snapshot.payload["extraction"] = extraction_data
+                                # Sync merged c105 data (mechanical_equipment, tagged casing_record)
+                                # back into the extractions list so _derive_geometry() sees it.
+                                # extraction_data["c105"] has the merged data; extractions[]["json_data"]
+                                # was a snapshot taken before research ran.
+                                merged_c105 = extraction_data.get("c105", {})
+                                for ext_item in snapshot.payload.get("extractions", []):
+                                    if ext_item.get("document_type") == "c105":
+                                        ext_item["json_data"] = merged_c105
+                                        break
+                                snapshot.save(update_fields=["payload"])
+                        except Exception:
+                            logger.warning("🔍 EQUIP-TAG: Equipment status tagging failed", exc_info=True)
+                        research_supplement["equipment_found"] = equipment_tagged_count
+                    elif rs and rs.status in ("pending", "fetching", "indexing"):
+                        research_supplement = {"status": "in_progress"}
+                    elif rs and rs.status == "error":
+                        research_supplement = {
+                            "status": "error",
+                            "message": rs.error_message,
+                        }
+                except Exception:
+                    logger.exception("Research supplement failed for session %s", research_session_id)
 
             # Create ExtractedDocument from scraped data if not already created
             ed = ExtractedDocument.objects.filter(
@@ -865,6 +1017,7 @@ class W3AConfirmDocsView(APIView):
                 "extractions": extractions,
                 "extraction_count": len(extractions),
                 "requires_manual_entry": True,
+                "research_supplement": research_supplement,
                 "message": "NM well data ready for review. Please enter casing data manually.",
             }
 
@@ -1048,9 +1201,13 @@ class W3AGeometryView(APIView):
             "uqw_data": None,
             "kop_data": None,
         }
-        
+
+        # Equipment status is now tagged on casing_record entries during extraction review (confirm-docs).
+        # _derive_geometry reads it directly from each casing dict's "equipment_status" field.
+
         # Extract W-2 data
         w2_data = None
+        c105_data = None
         for ext in extractions:
             if ext["document_type"] == "w2":
                 w2_data = ext["json_data"]
@@ -1101,17 +1258,183 @@ class W3AGeometryView(APIView):
                     logger.info(f"🔧 Extracted mechanical barrier: {equip_type} @ {depth} ft")
                 
                 break  # Only process first W-2
-        
+
+        # Extract C-105 data (NM equivalent of W-2)
+        if not w2_data:
+            for ext in extractions:
+                if ext["document_type"] == "c105":
+                    c105_data = ext["json_data"]
+
+                    # Casing strings — map NM field names to TX-compatible field names
+                    for casing in c105_data.get("casing_record", []):
+                        casing_type = (casing.get("casing_type") or casing.get("string") or "").lower().strip()
+                        logger.warning(
+                            "🔍 C-105 casing_record entry: type=%s, bottom=%s, shoe_depth=%s",
+                            casing_type,
+                            casing.get("bottom"),
+                            casing.get("shoe_depth_ft"),
+                        )
+
+                        if casing_type.startswith("tubing"):
+                            tubing_depth = casing.get("bottom") or casing.get("shoe_depth_ft")
+                            equip_status = casing.get("equipment_status", "unverified")
+                            logger.warning(
+                                "🔍 TUBING status lookup: key=('TUBING', %s) → %s",
+                                casing.get("bottom") or casing.get("shoe_depth_ft"), equip_status,
+                            )
+                            if equip_status == "removed":
+                                logger.warning(
+                                    "Skipping C-105 TUBING at %s ft — research confirms removed",
+                                    tubing_depth,
+                                )
+                                continue
+                            # Route tubing to its own list
+                            geometry.setdefault("tubing", []).append({
+                                "type": casing_type,
+                                "size_in": casing.get("diameter") or casing.get("size_in"),
+                                "depth_ft": tubing_depth,
+                                "source": "C-105 casing_record (tubing)",
+                                "equipment_status": equip_status,
+                            })
+                            continue
+
+                        if casing_type.startswith("packer"):
+                            # Route packers to mechanical barriers (wrapped format for serializer)
+                            packer_depth = casing.get("bottom") or casing.get("shoe_depth_ft")
+                            equip_status = casing.get("equipment_status", "unverified")
+                            logger.warning(
+                                "🔍 PACKER status lookup: key=('PACKER', %s) → %s",
+                                packer_depth, equip_status,
+                            )
+                            if equip_status == "removed":
+                                logger.warning(
+                                    "Skipping C-105 PACKER at %s ft — research confirms removed",
+                                    packer_depth,
+                                )
+                                continue
+                            label = f"PACKER @ {packer_depth} ft" if packer_depth else "PACKER"
+                            if equip_status == "unverified":
+                                label += " (unverified)"
+                            mb_idx = len(geometry.get("mechanical_barriers", []))
+                            geometry.setdefault("mechanical_barriers", []).append({
+                                "field_id": f"mech_{mb_idx}",
+                                "field_label": label,
+                                "value": {
+                                    "type": "PACKER",
+                                    "depth_ft": packer_depth,
+                                    "description": "",
+                                    "equipment_status": equip_status,
+                                },
+                                "source": "C-105 casing_record (packer)",
+                                "editable": True,
+                            })
+                            continue
+
+                        # Check if this is a liner — liners can be removed unlike structural casing
+                        if "liner" in casing_type:
+                            depth_val = casing.get("bottom") or casing.get("shoe_depth_ft")
+                            equip_status = casing.get("equipment_status", "unverified")
+                            logger.warning(
+                                "🔍 LINER status lookup: key=('LINER', %s) → %s",
+                                depth_val, equip_status,
+                            )
+                            if equip_status == "removed":
+                                logger.warning(
+                                    "Skipping C-105 LINER at %s ft — research confirms removed",
+                                    depth_val,
+                                )
+                                continue
+
+                        # Route CIBPs and bridge plugs to mechanical barriers (safety net)
+                        if "cibp" in casing_type or "bridge" in casing_type or "retainer" in casing_type:
+                            tool_depth = casing.get("bottom") or casing.get("shoe_depth_ft")
+                            equip_status = casing.get("equipment_status", "unverified")
+                            if equip_status == "removed":
+                                logger.warning(
+                                    "Skipping C-105 %s at %s ft — research confirms removed",
+                                    casing_type.upper(), tool_depth,
+                                )
+                                continue
+                            mb_idx = len(geometry.get("mechanical_barriers", []))
+                            geometry.setdefault("mechanical_barriers", []).append({
+                                "field_id": f"mech_{mb_idx}",
+                                "field_label": f"{casing_type.upper()} @ {tool_depth} ft" if tool_depth else casing_type.upper(),
+                                "value": {
+                                    "type": casing_type.upper(),
+                                    "depth_ft": tool_depth,
+                                    "description": "",
+                                    "equipment_status": equip_status,
+                                },
+                                "source": "C-105 casing_record (tool/barrier)",
+                                "editable": True,
+                            })
+                            continue
+
+                        # Everything else is a casing string (surface, intermediate, production)
+                        mapped = {
+                            "string": casing.get("casing_type", ""),
+                            "size_in": casing.get("diameter"),
+                            "shoe_depth_ft": casing.get("bottom"),
+                            "cement_top_ft": casing.get("cement_top"),
+                            "top_ft": casing.get("top"),
+                            "cement_bottom": casing.get("cement_bottom"),
+                            "sacks": casing.get("sacks"),
+                            "grade": casing.get("grade"),
+                            "weight": casing.get("weight"),
+                        }
+                        geometry["casing_strings"].append({
+                            "field_id": f"casing_{len(geometry['casing_strings'])}",
+                            "field_label": f"{mapped['string'] or 'Unknown'} Casing",
+                            "value": mapped,
+                            "source": "C-105 casing_record",
+                            "editable": True,
+                        })
+
+                    # Perforations — c105 uses top_md/bottom_md instead of from_ft/to_ft
+                    for perf in c105_data.get("producing_injection_disposal_interval", []):
+                        normalized_perf = {
+                            "top_ft": perf.get("top_md"),
+                            "bottom_ft": perf.get("bottom_md"),
+                            "open_hole": perf.get("open_hole", False),
+                        }
+                        geometry["perforations"].append({
+                            "field_id": f"perf_{len(geometry['perforations'])}",
+                            "field_label": f"Perforation {perf.get('top_md')}-{perf.get('bottom_md')} ft",
+                            "value": normalized_perf,
+                            "source": "C-105 producing_injection_disposal_interval",
+                            "editable": True,
+                        })
+                        logger.warning(f"📍 Extracted NM perforation: {normalized_perf}")
+
+                    # Mechanical barriers (usually empty for NM but handle defensively)
+                    for idx, equipment in enumerate(c105_data.get("mechanical_equipment", [])):
+                        equip_type = equipment.get("type", "Unknown")
+                        depth = equipment.get("depth_ft") or equipment.get("set_depth_ft")
+                        geometry["mechanical_barriers"].append({
+                            "field_id": f"mech_{idx}",
+                            "field_label": f"{equip_type} @ {depth} ft" if depth else equip_type,
+                            "value": {
+                                "type": equip_type,
+                                "depth_ft": depth,
+                                "description": equipment.get("description", ""),
+                            },
+                            "source": "C-105 mechanical_equipment",
+                            "editable": True,
+                        })
+
+                    break  # Only process first C-105
+
         # Get policy-based formation tops
         policy_formations = []
-        if w2_data:
+        source_data = w2_data or c105_data
+        if source_data:
             try:
-                well_info = w2_data.get("well_info", {})
+                well_info = source_data.get("well_info", {})
                 district = well_info.get("district")
                 county = well_info.get("county")
                 field = well_info.get("field")
-                
-                if district and county:
+
+                if county:
                     logger.info(f"📋 Loading policy for district={district}, county={county}, field={field}")
                     policy = get_effective_policy(district=district, county=county, field=field)
                     
@@ -1144,9 +1467,9 @@ class W3AGeometryView(APIView):
                     "formation_name": formation_name,
                 }
         
-        # Add/override with W-2 formation_record if available
-        if w2_data:
-            for formation in w2_data.get("formation_record", []):
+        # Add/override with W-2/C-105 formation_record if available
+        if source_data:
+            for formation in source_data.get("formation_record", []):
                 formation_name = formation.get("formation")
                 if formation_name:
                     # If formation exists from policy, update it; otherwise add it
@@ -1376,6 +1699,19 @@ class W3AConfirmGeometryView(APIView):
                 snapshot.payload["stage"] = "plan_built"
                 snapshot.payload["final_plan_id"] = plan_id
                 snapshot.payload["final_plan_snapshot_id"] = str(final_snapshot.id)
+
+                # Write plan_proposed WellComponent records
+                try:
+                    from apps.public_core.services.component_writer import write_plan_components
+                    write_plan_components(
+                        well=final_snapshot.well,
+                        plan_snapshot=final_snapshot,
+                        steps=plan_result.get("steps", []),
+                        tenant_id=snapshot.tenant_id,
+                    )
+                except Exception:
+                    logger.warning("Failed to write plan components", exc_info=True)
+
             except Exception as e:
                 logger.exception("Failed to build plan")
                 # Don't fail the entire request, just log and continue
@@ -1461,7 +1797,8 @@ class W3AConfirmGeometryView(APIView):
         # Get extractions from snapshot
         extractions = snapshot.payload.get("extractions", [])
         geometry = snapshot.payload.get("geometry", {})
-        
+        policy_id = snapshot.payload.get("policy_id", "tx.w3a")
+
         # 🔍 DEBUG: Log what geometry we received at the start
         logger.error(f"🔍 _build_plan_from_snapshot START: geometry has {len(geometry.get('casing_strings', []))} casing_strings")
         if geometry.get('casing_strings'):
@@ -1481,6 +1818,22 @@ class W3AConfirmGeometryView(APIView):
             
             if doc_type == "w2":
                 w2_data = json_data
+            elif doc_type == "c105":
+                raw_casing = json_data.get("casing_record", [])
+                mapped_casing = []
+                for rec in raw_casing:
+                    mapped_casing.append({
+                        "string": rec.get("casing_type", ""),
+                        "size_in": rec.get("diameter"),
+                        "shoe_depth_ft": rec.get("bottom"),
+                        "cement_top_ft": rec.get("cement_top"),
+                        "cement_bottom": rec.get("cement_bottom"),
+                        "sacks": rec.get("sacks"),
+                        "grade": rec.get("grade"),
+                        "weight": rec.get("weight"),
+                    })
+                w2_data = dict(json_data)
+                w2_data["casing_record"] = mapped_casing
             elif doc_type == "w15":
                 w15_data = json_data
             elif doc_type == "gau":
@@ -1517,7 +1870,7 @@ class W3AConfirmGeometryView(APIView):
         # Build facts dictionary (mirroring w3a_from_api._build_plan)
         facts: Dict[str, Any] = {
             "api14": wrap(api14),
-            "state": wrap("TX"),
+            "state": wrap(snapshot.payload.get("jurisdiction", "TX")),
             "district": wrap(district),
             "county": wrap(county),
             "field": wrap(field),
@@ -1701,9 +2054,20 @@ class W3AConfirmGeometryView(APIView):
                     facts["historic_cement_jobs"] = historic_jobs
                     logger.info(f"📋 Added {len(historic_jobs)} historic cement jobs from W-15")
         
-        # Get policy
-        logger.info(f"🔍 Loading policy for district={district}, county={county}, field={field}")
-        policy = get_effective_policy(district=district, county=county, field=field)
+        # Get policy — jurisdiction-aware
+        jurisdiction = snapshot.payload.get("jurisdiction", "TX")
+        if jurisdiction == "NM":
+            from apps.kernel.services.jurisdiction_registry import get_handler
+            nm_handler = get_handler("NM")
+            if nm_handler:
+                logger.info("🔍 Loading NM policy via jurisdiction handler")
+                policy = nm_handler.load_effective_policy(facts)
+            else:
+                logger.warning("NM handler not registered, falling back to default policy")
+                policy = get_effective_policy(district=district, county=county, field=field)
+        else:
+            logger.info(f"🔍 Loading policy for district={district}, county={county}, field={field}")
+            policy = get_effective_policy(district=district, county=county, field=field)
         
         # ✅ INJECT USER-ADDED FORMATIONS INTO POLICY
         # The kernel only processes formations from policy["effective"]["district_overrides"]["formation_tops"]
@@ -1739,7 +2103,7 @@ class W3AConfirmGeometryView(APIView):
                         logger.info(f"   ✅ Added user formation: {formation_name} @ {depth} ft")
         
         # Override policy metadata
-        policy["policy_id"] = "tx.w3a"
+        policy["policy_id"] = policy_id
         policy["complete"] = True
         
         # Set merge preferences
@@ -1795,7 +2159,7 @@ class W3AConfirmGeometryView(APIView):
             "field": field,
             "district": district,
             "kernel_version": out_kernel.get("kernel_version", "0.1.0"),
-            "policy_id": "tx.w3a",
+            "policy_id": policy_id,
             "steps": steps,
             "formations_targeted": sorted(list(set([
                 s.get("formation") for s in steps if s.get("formation")
@@ -1835,6 +2199,7 @@ class W3AConfirmGeometryView(APIView):
                     "depth_ft": tool_data.get("depth_ft"),
                     "description": tool_data.get("description", ""),
                     "source": mb.get("source", ""),
+                    "equipment_status": tool_data.get("equipment_status"),
                 })
             logger.info(f"📦 Adding {len(mechanical_equipment_list)} mechanical_equipment to plan payload")
         

@@ -253,6 +253,7 @@ def generate_w3a_for_api(
                 w15_file=w15_file,
                 schematic_file=schematic_file,
                 formation_tops_file=formation_tops_file,
+                workspace=workspace,
             )
 
         # Continue with TX (RRC) flow below...
@@ -376,34 +377,52 @@ def generate_w3a_for_api(
                         print(f"    ⏭️  SKIPPED: Document type '{doc_type}' not in allowed list", file=sys.stderr)
                         continue
                     
-                    ext = extract_json_from_pdf(Path(path), doc_type)
-                    print(f"    Extraction model: {ext.model_tag}", file=sys.stderr)
-                    
-                    if ext.errors:
-                        print(f"    ⚠️  Extraction errors: {ext.errors}", file=sys.stderr)
-                    
-                    with transaction.atomic():
-                        ed = ExtractedDocument.objects.create(
-                            well=well,
-                            api_number=api,
-                            document_type=doc_type,
-                            source_path=str(path),
-                            model_tag=ext.model_tag,
-                            status="success" if not ext.errors else "error",
-                            errors=ext.errors,
-                            json_data=ext.json_data,
+                    # --- Check for existing successful extraction (cache hit) ---
+                    existing = ExtractedDocument.objects.filter(
+                        api_number=api,
+                        source_path=str(path),
+                        document_type=doc_type,
+                        status="success",
+                        is_stale=False,
+                    ).order_by("-created_at").first()
+
+                    if existing:
+                        logger.info(
+                            "♻️  Reusing existing extraction for %s (ID: %s)",
+                            os.path.basename(str(path)),
+                            existing.id,
                         )
-                        print(f"    ✅ Created ExtractedDocument: {ed.id}", file=sys.stderr)
-                        print(f"       Document Type: {ed.document_type}", file=sys.stderr)
-                        print(f"       Status: {ed.status}", file=sys.stderr)
-                        
-                        try:
-                            vectorize_extracted_document(ed)
-                            print(f"    ✅ Vectorization successful", file=sys.stderr)
-                        except Exception as vec_err:
-                            print(f"    ⚠️  Vectorization failed (non-fatal): {vec_err}", file=sys.stderr)
-                            logger.exception("vectorize: failed for RRC doc")
-                    
+                        print(f"    ♻️  Cache hit — reusing ExtractedDocument: {existing.id}", file=sys.stderr)
+                        ed = existing
+                    else:
+                        ext = extract_json_from_pdf(Path(path), doc_type)
+                        print(f"    Extraction model: {ext.model_tag}", file=sys.stderr)
+
+                        if ext.errors:
+                            print(f"    ⚠️  Extraction errors: {ext.errors}", file=sys.stderr)
+
+                        with transaction.atomic():
+                            ed = ExtractedDocument.objects.create(
+                                well=well,
+                                api_number=api,
+                                document_type=doc_type,
+                                source_path=str(path),
+                                model_tag=ext.model_tag,
+                                status="success" if not ext.errors else "error",
+                                errors=ext.errors,
+                                json_data=ext.json_data,
+                            )
+                            print(f"    ✅ Created ExtractedDocument: {ed.id}", file=sys.stderr)
+                            print(f"       Document Type: {ed.document_type}", file=sys.stderr)
+                            print(f"       Status: {ed.status}", file=sys.stderr)
+
+                            try:
+                                vectorize_extracted_document(ed)
+                                print(f"    ✅ Vectorization successful", file=sys.stderr)
+                            except Exception as vec_err:
+                                print(f"    ⚠️  Vectorization failed (non-fatal): {vec_err}", file=sys.stderr)
+                                logger.exception("vectorize: failed for RRC doc")
+
                     created.append({"document_type": doc_type, "extracted_document_id": str(ed.id)})
                     print(f"    ✅ SUCCESS: Document processed and stored", file=sys.stderr)
                 
@@ -486,41 +505,59 @@ def generate_w3a_for_api(
                         doc_type = classify_document(Path(saved_path))
                         if doc_type not in ("gau", "w2", "w15", "schematic", "formation_tops"):
                             continue
-                        ext = extract_json_from_pdf(Path(saved_path), doc_type)
-                        with transaction.atomic():
-                            ed = ExtractedDocument.objects.create(
-                                well=well,
-                                api_number=api,
-                                document_type=doc_type,
-                                source_path=saved_path,
-                                model_tag="user_uploaded_pdf",
-                                status="success" if not ext.errors else "error",
-                                errors=ext.errors,
-                                json_data=ext.json_data,
+                        # --- Check for existing successful extraction (cache hit) ---
+                        existing = ExtractedDocument.objects.filter(
+                            api_number=api,
+                            source_path=str(saved_path),
+                            document_type=doc_type,
+                            status="success",
+                            is_stale=False,
+                        ).order_by("-created_at").first()
+
+                        if existing:
+                            logger.info(
+                                "♻️  Reusing existing extraction for %s (ID: %s)",
+                                os.path.basename(str(saved_path)),
+                                existing.id,
                             )
-                        try:
-                            vectorize_extracted_document(ed)
-                        except Exception:
-                            logger.exception("vectorize: failed for user PDF")
-                            try:
-                                size_bytes = None
-                                try:
-                                    size_bytes = os.path.getsize(saved_path)
-                                except Exception:
-                                    size_bytes = None
-                                digest = _sha256_file(saved_path)
-                                TenantArtifact.objects.create(
-                                    artifact_type=doc_type,
-                                    file_path=saved_path,
-                                    content_type=content_type or "application/pdf",
-                                    size_bytes=size_bytes,
-                                    sha256=digest,
-                                    extracted_document=ed,
-                                    plan_snapshot=None,
-                                    metadata={"source": "user_upload", "label": label},
+                            print(f"   ♻️  Cache hit — reusing ExtractedDocument: {existing.id}", file=sys.stderr)
+                            ed = existing
+                        else:
+                            ext = extract_json_from_pdf(Path(saved_path), doc_type)
+                            with transaction.atomic():
+                                ed = ExtractedDocument.objects.create(
+                                    well=well,
+                                    api_number=api,
+                                    document_type=doc_type,
+                                    source_path=saved_path,
+                                    model_tag="user_uploaded_pdf",
+                                    status="success" if not ext.errors else "error",
+                                    errors=ext.errors,
+                                    json_data=ext.json_data,
                                 )
+                            try:
+                                vectorize_extracted_document(ed)
                             except Exception:
-                                logger.exception("Failed to persist TenantArtifact for PDF upload")
+                                logger.exception("vectorize: failed for user PDF")
+                                try:
+                                    size_bytes = None
+                                    try:
+                                        size_bytes = os.path.getsize(saved_path)
+                                    except Exception:
+                                        size_bytes = None
+                                    digest = _sha256_file(saved_path)
+                                    TenantArtifact.objects.create(
+                                        artifact_type=doc_type,
+                                        file_path=saved_path,
+                                        content_type=content_type or "application/pdf",
+                                        size_bytes=size_bytes,
+                                        sha256=digest,
+                                        extracted_document=ed,
+                                        plan_snapshot=None,
+                                        metadata={"source": "user_upload", "label": label},
+                                    )
+                                except Exception:
+                                    logger.exception("Failed to persist TenantArtifact for PDF upload")
                         created.append({"document_type": doc_type, "extracted_document_id": str(ed.id)})
                         uploaded_refs.append({"type": doc_type, "filename": os.path.basename(saved_path), "kind": "pdf"})
                         print(f"   ✅ SUCCESS: {label.upper()} upload processed", file=sys.stderr)
@@ -756,18 +793,34 @@ def generate_w3a_for_api(
                 else:
                     tmp_path = _persist_upload_to_tmp_pdf(gau_file)
                     try:
-                        ext = extract_json_from_pdf(Path(tmp_path), "gau")
-                        with transaction.atomic():
-                            ExtractedDocument.objects.create(
-                                well=well,
-                                api_number=api,
-                                document_type="gau",
-                                source_path=tmp_path,
-                                model_tag=ext.model_tag,
-                                status="success" if not ext.errors else "error",
-                                errors=ext.errors,
-                                json_data=ext.json_data,
+                        # --- Check for existing successful extraction (cache hit) ---
+                        existing = ExtractedDocument.objects.filter(
+                            api_number=api,
+                            source_path=str(tmp_path),
+                            document_type="gau",
+                            status="success",
+                            is_stale=False,
+                        ).order_by("-created_at").first()
+
+                        if existing:
+                            logger.info(
+                                "♻️  Reusing existing extraction for %s (ID: %s)",
+                                os.path.basename(str(tmp_path)),
+                                existing.id,
                             )
+                        else:
+                            ext = extract_json_from_pdf(Path(tmp_path), "gau")
+                            with transaction.atomic():
+                                ExtractedDocument.objects.create(
+                                    well=well,
+                                    api_number=api,
+                                    document_type="gau",
+                                    source_path=tmp_path,
+                                    model_tag=ext.model_tag,
+                                    status="success" if not ext.errors else "error",
+                                    errors=ext.errors,
+                                    json_data=ext.json_data,
+                                )
                     finally:
                         try:
                             os.unlink(tmp_path)
@@ -869,10 +922,32 @@ def generate_w3a_for_api(
                     logger.exception("Failed to track well engagement")
                 
                 logger.info(f"   ✅ PlanSnapshot created: {snapshot_id}")
+
+                # Write plan_proposed WellComponent records
+                try:
+                    from apps.public_core.services.component_writer import write_plan_components
+                    if plugs_mode == "both":
+                        steps = plan_output.get("variants", {}).get("combined", {}).get("steps", [])
+                    else:
+                        steps = plan_output.get("steps", [])
+                    tenant_id_for_components = (
+                        request.user.tenants.first().id
+                        if (request and hasattr(request, 'user') and request.user.is_authenticated and request.user.tenants.exists())
+                        else None
+                    )
+                    write_plan_components(
+                        well=well_for_snapshot,
+                        plan_snapshot=snapshot,
+                        steps=steps,
+                        tenant_id=tenant_id_for_components,
+                    )
+                except Exception:
+                    logger.warning("Failed to write plan components", exc_info=True)
+
         except Exception as e:
             logger.exception("Failed to persist PlanSnapshot")
             warnings.append(f"Snapshot persistence failed: {e}")
-        
+
         # ============================================================
         # STEP 7: EXTRACT WELL GEOMETRY
         # ============================================================
@@ -1238,6 +1313,7 @@ def _generate_w3a_for_nm_api(
     w15_file=None,
     schematic_file=None,
     formation_tops_file=None,
+    workspace=None,
 ) -> Dict[str, Any]:
     """
     Generate W-3A plan for NM wells using scraped data.
@@ -1419,7 +1495,7 @@ def _generate_w3a_for_nm_api(
                 overlay_id="",
                 extraction_meta={
                     "source": "nm_ocd_scraper",
-                    "documents": nm_data.get("documents", []),
+                    "documents_count": len(nm_data.get("documents", [])),
                     "combined_pdf_url": nm_data.get("combined_pdf_url"),
                 },
                 visibility=PlanSnapshot.VISIBILITY_PUBLIC,
