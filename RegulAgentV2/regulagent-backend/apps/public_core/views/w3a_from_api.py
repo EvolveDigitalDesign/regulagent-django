@@ -217,6 +217,9 @@ class W3AFromApiView(APIView):
                     return None
                 return None
 
+            # Accumulate tokens used across all extraction calls this request
+            total_tokens = 0
+
             # Default to extractions
             dl: Dict[str, Any] = {}
             files: List[str] = []
@@ -235,36 +238,57 @@ class W3AFromApiView(APIView):
                     doc_type = classify_document(Path(path))
                     if doc_type not in ("gau", "w2", "w15", "schematic", "formation_tops"):
                         continue
-                    ext = extract_json_from_pdf(Path(path), doc_type)
-                    
-                    # Extract tracking_no for W-2 documents (for revision tracking)
-                    tracking_no = None
-                    if doc_type == "w2" and ext.json_data:
-                        try:
-                            header = ext.json_data.get("header", {})
-                            tracking_no = header.get("tracking_no")
-                            if tracking_no:
-                                logger.debug(f"📝 W-2 extracted with tracking_no: {tracking_no}")
-                        except Exception as e:
-                            logger.warning(f"⚠️  Failed to extract tracking_no from W-2: {e}")
-                    
-                    with transaction.atomic():
-                        ed = ExtractedDocument.objects.create(
-                            well=well,
-                            api_number=api,
-                            document_type=doc_type,
-                            tracking_no=tracking_no,  # Store tracking_no for W-2s
-                            source_path=str(path),
-                            model_tag=ext.model_tag,
-                            status="success" if not ext.errors else "error",
-                            errors=ext.errors,
-                            json_data=ext.json_data,
+
+                    # --- Check for existing successful extraction (cache hit) ---
+                    existing = ExtractedDocument.objects.filter(
+                        api_number=api,
+                        source_path=str(path),
+                        document_type=doc_type,
+                        status="success",
+                        is_stale=False,
+                    ).order_by("-created_at").first()
+
+                    if existing:
+                        logger.info(
+                            "Reusing existing extraction for %s (ID: %s)",
+                            os.path.basename(str(path)),
+                            existing.id,
                         )
-                        try:
-                            vectorize_extracted_document(ed)
-                        except Exception:
-                            logger.exception("vectorize: failed for RRC doc")
-                    created.append({"document_type": doc_type, "extracted_document_id": str(ed.id), "tracking_no": tracking_no})
+                        ed = existing
+                    else:
+                        ext = extract_json_from_pdf(Path(path), doc_type)
+                        total_tokens += ext.tokens_used
+
+                        # Extract tracking_no for W-2 documents (for revision tracking)
+                        tracking_no = None
+                        if doc_type == "w2" and ext.json_data:
+                            try:
+                                header = ext.json_data.get("header", {})
+                                tracking_no = header.get("tracking_no")
+                                if tracking_no:
+                                    logger.debug(f"W-2 extracted with tracking_no: {tracking_no}")
+                            except Exception as e:
+                                logger.warning(f"Failed to extract tracking_no from W-2: {e}")
+
+                        with transaction.atomic():
+                            ed = ExtractedDocument.objects.create(
+                                well=well,
+                                api_number=api,
+                                document_type=doc_type,
+                                tracking_no=tracking_no,  # Store tracking_no for W-2s
+                                source_path=str(path),
+                                file_hash=_sha256_file(path),
+                                model_tag=ext.model_tag,
+                                status="success" if not ext.errors else "error",
+                                errors=ext.errors,
+                                json_data=ext.json_data,
+                            )
+                            try:
+                                vectorize_extracted_document(ed)
+                            except Exception:
+                                logger.exception("vectorize: failed for RRC doc")
+
+                    created.append({"document_type": doc_type, "extracted_document_id": str(ed.id), "tracking_no": (ed.tracking_no if existing else tracking_no)})
 
             # Ingest user files for user_files or hybrid modes
             if input_mode in ("user_files", "hybrid"):
@@ -330,29 +354,49 @@ class W3AFromApiView(APIView):
                         doc_type = classify_document(Path(saved_path))
                         if doc_type not in ("gau", "w2", "w15", "schematic", "formation_tops"):
                             continue
-                        ext = extract_json_from_pdf(Path(saved_path), doc_type)
-                        
-                        # Extract tracking_no for W-2 documents
-                        tracking_no = None
-                        if doc_type == "w2" and ext.json_data:
-                            try:
-                                header = ext.json_data.get("header", {})
-                                tracking_no = header.get("tracking_no")
-                            except Exception:
-                                pass
-                        
-                        with transaction.atomic():
-                            ed = ExtractedDocument.objects.create(
-                                well=well,
-                                api_number=api,
-                                document_type=doc_type,
-                                tracking_no=tracking_no,
-                                source_path=saved_path,
-                                model_tag="user_uploaded_pdf",
-                                status="success" if not ext.errors else "error",
-                                errors=ext.errors,
-                                json_data=ext.json_data,
+
+                        # --- Check for existing successful extraction (cache hit) ---
+                        existing = ExtractedDocument.objects.filter(
+                            api_number=api,
+                            source_path=saved_path,
+                            document_type=doc_type,
+                            status="success",
+                            is_stale=False,
+                        ).order_by("-created_at").first()
+
+                        if existing:
+                            logger.info(
+                                "Reusing existing extraction for %s (ID: %s)",
+                                os.path.basename(saved_path),
+                                existing.id,
                             )
+                            ed = existing
+                        else:
+                            ext = extract_json_from_pdf(Path(saved_path), doc_type)
+                            total_tokens += ext.tokens_used
+
+                            # Extract tracking_no for W-2 documents
+                            tracking_no = None
+                            if doc_type == "w2" and ext.json_data:
+                                try:
+                                    header = ext.json_data.get("header", {})
+                                    tracking_no = header.get("tracking_no")
+                                except Exception:
+                                    pass
+
+                            with transaction.atomic():
+                                ed = ExtractedDocument.objects.create(
+                                    well=well,
+                                    api_number=api,
+                                    document_type=doc_type,
+                                    tracking_no=tracking_no,
+                                    source_path=saved_path,
+                                    file_hash=_sha256_file(saved_path),
+                                    model_tag="user_uploaded_pdf",
+                                    status="success" if not ext.errors else "error",
+                                    errors=ext.errors,
+                                    json_data=ext.json_data,
+                                )
                         try:
                             vectorize_extracted_document(ed)
                         except Exception:
@@ -543,6 +587,7 @@ class W3AFromApiView(APIView):
                     tmp_path = self._persist_upload_to_tmp_pdf(gau_file)
                     try:
                         ext = extract_json_from_pdf(Path(tmp_path), "gau")
+                        total_tokens += ext.tokens_used
                         with transaction.atomic():
                             ExtractedDocument.objects.create(
                                 well=well,
@@ -702,6 +747,7 @@ class W3AFromApiView(APIView):
                                             resource_type='well',
                                             resource_id=well_for_snapshot.api14,
                                             user=request.user,
+                                            tokens_used=total_tokens,
                                             metadata={
                                                 'plan_id': snapshot.plan_id,
                                                 'snapshot_id': str(snapshot.id),

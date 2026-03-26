@@ -27,7 +27,7 @@ from apps.public_core.services.openai_config import (
 logger = logging.getLogger(__name__)
 
 # Initialize OpenAI client using central config
-client = get_openai_client()
+client = get_openai_client(operation="chat_assistant")
 
 
 # System prompt (will be cached via prompt caching)

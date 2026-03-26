@@ -1,0 +1,120 @@
+{
+  "metadata": {
+    "title": "New Mexico County-to-Region Mapping",
+    "jurisdiction": "NM",
+    "version": "2026.03.0",
+    "total_counties": 33,
+    "description": "Maps NM counties to COA figure regions for plugging book selection"
+  },
+  "regions": {
+    "north": {
+      "coa_figure": "A",
+      "plugging_book": "nm_figure_a_north.json",
+      "description": "Northern NM - San Juan Basin and general north"
+    },
+    "south_artesia": {
+      "coa_figure": "B",
+      "plugging_book": "nm_figure_b_artesia.json",
+      "description": "Artesia OCD district - Delaware Basin"
+    },
+    "potash": {
+      "coa_figure": "C",
+      "plugging_book": "nm_figure_c_potash.json",
+      "description": "Potash mining enclave - special cementing"
+    },
+    "south_hobbs": {
+      "coa_figure": "D",
+      "plugging_book": "nm_figure_d_hobbs.json",
+      "description": "Hobbs OCD district - Central Basin Platform"
+    }
+  },
+  "county_map": {
+    "bernalillo": { "region": "north", "notes": "" },
+    "catron": { "region": "north", "notes": "" },
+    "chaves": { "region": "south_artesia", "notes": "Major oil producing county in Artesia district" },
+    "cibola": { "region": "north", "notes": "" },
+    "colfax": { "region": "north", "notes": "" },
+    "curry": { "region": "north", "notes": "Minimal oil production" },
+    "de_baca": { "region": "north", "notes": "" },
+    "dona_ana": { "region": "north", "notes": "" },
+    "eddy": {
+      "region": "split",
+      "notes": "Split between Artesia, Potash, and Hobbs regions based on township/range",
+      "sub_regions": {
+        "default": "south_artesia",
+        "potash_enclave": {
+          "region": "potash",
+          "boundary": {
+            "description": "Potash area within Eddy County per NMOCD potash enclave map",
+            "townships": ["T16S-T24S"],
+            "ranges": ["R28E-R31E"],
+            "notes": "Wells within the designated potash enclave require saturated salt water cement"
+          }
+        },
+        "hobbs_area": {
+          "region": "south_hobbs",
+          "boundary": {
+            "description": "Eastern Eddy County - Hobbs district jurisdiction",
+            "townships": ["T16S-T26S"],
+            "ranges": ["R32E-R36E"],
+            "notes": "Eastern portion falls under Hobbs district COA Figure D"
+          }
+        }
+      }
+    },
+    "grant": { "region": "north", "notes": "" },
+    "guadalupe": { "region": "north", "notes": "" },
+    "harding": { "region": "north", "notes": "" },
+    "hidalgo": { "region": "north", "notes": "" },
+    "lea": {
+      "region": "split",
+      "notes": "Split between Hobbs and Potash regions based on township/range",
+      "sub_regions": {
+        "default": "south_hobbs",
+        "potash_enclave": {
+          "region": "potash",
+          "boundary": {
+            "description": "Potash area within Lea County",
+            "townships": ["T16S-T22S"],
+            "ranges": ["R28E-R31E"],
+            "notes": "Western Lea County potash enclave"
+          }
+        }
+      }
+    },
+    "lincoln": { "region": "north", "notes": "" },
+    "los_alamos": { "region": "north", "notes": "No oil production" },
+    "luna": { "region": "north", "notes": "" },
+    "mckinley": { "region": "north", "notes": "San Juan Basin area" },
+    "mora": { "region": "north", "notes": "" },
+    "otero": { "region": "north", "notes": "" },
+    "quay": { "region": "north", "notes": "" },
+    "rio_arriba": { "region": "north", "notes": "San Juan Basin - major gas production" },
+    "roosevelt": { "region": "south_hobbs", "notes": "Eastern NM, Hobbs district" },
+    "san_juan": { "region": "north", "notes": "Major gas production - San Juan Basin" },
+    "san_miguel": { "region": "north", "notes": "" },
+    "sandoval": { "region": "north", "notes": "" },
+    "santa_fe": { "region": "north", "notes": "" },
+    "sierra": { "region": "north", "notes": "" },
+    "socorro": { "region": "north", "notes": "" },
+    "taos": { "region": "north", "notes": "" },
+    "torrance": { "region": "north", "notes": "" },
+    "union": { "region": "north", "notes": "" },
+    "valencia": { "region": "north", "notes": "" }
+  },
+  "hobbs_sub_areas": {
+    "description": "Sub-area detection within Hobbs district (Lea/Eddy) based on township/range",
+    "northwest_shelf": {
+      "description": "Northwest Shelf portion of Hobbs district",
+      "townships": ["T16S-T20S"],
+      "ranges": ["R32E-R36E"],
+      "key_formations": ["San Andres", "Glorieta", "Yeso", "Abo"]
+    },
+    "central_basin_platform": {
+      "description": "Central Basin Platform portion of Hobbs district",
+      "townships": ["T20S-T26S"],
+      "ranges": ["R32E-R38E"],
+      "key_formations": ["San Andres", "Grayburg", "Queen", "Bone Spring", "Wolfcamp"]
+    }
+  }
+}

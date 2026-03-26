@@ -10,6 +10,7 @@ from uuid import UUID
 
 from django.db import transaction
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from apps.tenants.models import Tenant, ClientWorkspace, UsageRecord
 
@@ -98,6 +99,7 @@ def get_tenant_usage_summary(
     event_type: Optional[str] = None,
     workspace: Optional[ClientWorkspace] = None,
     group_by: str = 'event_type',
+    user=None,
 ) -> Dict[str, Any]:
     """
     Get usage summary for a tenant within a date range.
@@ -136,6 +138,8 @@ def get_tenant_usage_summary(
         queryset = queryset.filter(event_type=event_type)
     if workspace:
         queryset = queryset.filter(workspace=workspace)
+    if user:
+        queryset = queryset.filter(user=user)
 
     # Calculate totals
     totals = queryset.aggregate(
@@ -230,4 +234,47 @@ def get_tenant_usage_summary(
         'total_tokens': totals['total_tokens'] or 0,
         'total_processing_time_ms': totals['total_processing_time_ms'] or 0,
         'breakdown': breakdown,
+    }
+
+
+def get_monthly_token_usage(tenant: Tenant, user=None) -> Dict[str, Any]:
+    """
+    Get token usage and budget info for the current billing month.
+
+    Budget is stored in TenantPlan.feature_overrides['monthly_token_budget'].
+    Default budget is 5,000,000 tokens if not configured.
+
+    Returns:
+        Dict with tokens_used, monthly_budget, percentage, remaining
+    """
+    from django.db.models import Sum
+
+    now = timezone.now()
+    start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    qs = UsageRecord.objects.filter(
+        tenant=tenant,
+        created_at__gte=start_of_month,
+        event_type=UsageRecord.EVENT_API_CALL,
+    )
+    if user:
+        qs = qs.filter(user=user)
+    total = qs.aggregate(total=Sum('tokens_used'))['total'] or 0
+
+    # Get budget from TenantPlan.feature_overrides
+    monthly_budget = 5_000_000  # default
+    try:
+        tenant_plan = tenant.tenantplan
+        monthly_budget = tenant_plan.feature_overrides.get(
+            'monthly_token_budget', 5_000_000
+        )
+    except Exception:
+        pass  # No TenantPlan configured, use default
+
+    return {
+        'tokens_used': total,
+        'monthly_budget': monthly_budget,
+        'percentage': round(total / monthly_budget * 100, 1) if monthly_budget else 0,
+        'remaining': max(0, monthly_budget - total),
+        'billing_period_start': start_of_month.isoformat(),
     }

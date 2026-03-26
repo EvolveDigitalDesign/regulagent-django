@@ -7,7 +7,7 @@ class WellRegistry(models.Model):
     Public identity only: API14, jurisdiction, and location.
     """
 
-    api14 = models.CharField(max_length=14, unique=True)
+    api14 = models.CharField(max_length=20, unique=True)
     state = models.CharField(max_length=2)
     county = models.CharField(max_length=64, blank=True)
     district = models.CharField(max_length=8, blank=True, help_text="RRC District (e.g., '8A', '7C')")
@@ -15,6 +15,19 @@ class WellRegistry(models.Model):
     field_name = models.CharField(max_length=128, blank=True)
     lease_name = models.CharField(max_length=128, blank=True)
     well_number = models.CharField(max_length=32, blank=True)
+    lease_id = models.CharField(max_length=32, blank=True, db_index=True,
+        help_text="Neubus lease ID for TX wells")
+
+    DATA_STATUS_CHOICES = [
+        ("cold_storage", "Cold Storage"),
+        ("indexing", "Indexing"),
+        ("ready", "Ready"),
+    ]
+    data_status = models.CharField(
+        max_length=16, choices=DATA_STATUS_CHOICES, default="cold_storage",
+        db_index=True,
+        help_text="Data pipeline status: cold_storage (PDFs only), indexing (in progress), ready (fully extracted)"
+    )
 
     # Client workspace assignment (optional for backward compatibility)
     workspace = models.ForeignKey(
@@ -43,6 +56,7 @@ class WellRegistry(models.Model):
             models.Index(fields=['operator_name']),
             models.Index(fields=['field_name']),
             models.Index(fields=['workspace']),  # For filtering by client workspace
+            models.Index(fields=['data_status']),
         ]
 
     def __str__(self) -> str:  # pragma: no cover

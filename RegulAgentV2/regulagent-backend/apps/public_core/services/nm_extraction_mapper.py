@@ -17,6 +17,29 @@ from apps.public_core.services.nm_well_scraper import NMWellData
 
 logger = logging.getLogger(__name__)
 
+_NM_FIPS_COUNTY = {
+    "001": "Bernalillo", "003": "Catron", "005": "Chaves", "006": "Cibola",
+    "007": "Colfax", "009": "Curry", "011": "De Baca", "013": "Dona Ana",
+    "015": "Eddy", "017": "Grant", "019": "Guadalupe", "021": "Harding",
+    "023": "Hidalgo", "025": "Lea", "027": "Lincoln", "028": "Los Alamos",
+    "029": "Luna", "031": "McKinley", "033": "Mora", "035": "Otero",
+    "037": "Quay", "039": "Rio Arriba", "041": "Roosevelt", "043": "Sandoval",
+    "045": "San Juan", "047": "San Miguel", "049": "Santa Fe", "051": "Sierra",
+    "053": "Socorro", "055": "Taos", "057": "Torrance", "059": "Union",
+    "061": "Valencia",
+}
+
+
+def _county_from_api(api: str | None) -> str:
+    """Derive county name from NM API number's FIPS county code (digits 3-5)."""
+    if not api:
+        return ""
+    digits = re.sub(r'[^0-9]', '', str(api))
+    if len(digits) >= 5 and digits[:2] == "30":
+        code = digits[2:5]
+        return _NM_FIPS_COUNTY.get(code, "")
+    return ""
+
 
 def _collect_perforations(well_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Collect all perforation intervals from completions."""
@@ -50,8 +73,12 @@ def map_nm_well_to_extractions(well_data: Dict[str, Any]) -> Dict[str, Any]:
     # Extract lease and well number from well name
     lease_name, well_number = _parse_well_name(well_data.get("well_name", ""))
 
-    # Extract county from surface location
-    county = _extract_county(well_data.get("surface_location", ""))
+    # Extract county: try FIPS code from API, then surface location
+    api_str = well_data.get("api10") or well_data.get("api14") or ""
+    county = _county_from_api(api_str) or _extract_county(well_data.get("surface_location", ""))
+
+    # Extract township and range from surface location
+    township, range_val = _extract_township_range(well_data.get("surface_location", ""))
 
     return {
         "c105": {  # NM equivalent of W-2 (C-105 is NM completion report)
@@ -82,6 +109,8 @@ def map_nm_well_to_extractions(well_data: Dict[str, Any]) -> Dict[str, Any]:
                     "surface_location": well_data.get("surface_location", ""),
                 },
                 "elevation_ft": well_data.get("elevation_ft"),
+                "township": township,
+                "range": range_val,
             },
             "depths": {
                 "proposed_depth": well_data.get("proposed_depth_ft"),
@@ -111,8 +140,12 @@ def map_nm_well_to_extractions(well_data: Dict[str, Any]) -> Dict[str, Any]:
             "producing_injection_disposal_interval": _collect_perforations(well_data),
             # No mechanical equipment data available from scraper
             "mechanical_equipment": [],
-            # No formation record available from scraper
-            "formation_record": [],
+            # Formation record from scraped formation tops
+            "formation_record": [
+                {"formation": ft["formation_name"], "top_ft": ft["top_ft"]}
+                for ft in well_data.get("formation_tops", [])
+                if ft.get("formation_name") and ft.get("top_ft") is not None
+            ],
             # Completions from scraper
             "completions": [
                 {
@@ -213,6 +246,32 @@ def create_nm_extracted_document_data(
         "_nm_documents": documents or [],
         "_nm_combined_pdf_url": combined_pdf_url,
     }
+
+
+def _extract_township_range(surface_location: str | None) -> tuple[str | None, str | None]:
+    """Extract township and range from NM surface location string.
+
+    Handles two formats:
+    - Standard: 'T20N R12E', 'SEC 36 T20N R12E'
+    - NM short legal: 'M-11-20S-28E' (Meridian-Section-Township-Range)
+
+    Returns (township, range) e.g. ('20S', '28E') or (None, None).
+    """
+    if not surface_location:
+        return None, None
+
+    # Standard format: T{num}{N/S} R{num}{E/W}
+    match = re.search(r'T(\d+[NS])\s+R(\d+[EW])', surface_location, re.IGNORECASE)
+    if match:
+        return match.group(1).upper(), match.group(2).upper()
+
+    # NM short legal: M-{section}-{township}{N/S}-{range}{E/W}
+    # e.g. M-11-20S-28E, NM-36-16S-33E
+    match = re.search(r'[A-Z]*-\d+-(\d+[NS])-(\d+[EW])', surface_location, re.IGNORECASE)
+    if match:
+        return match.group(1).upper(), match.group(2).upper()
+
+    return None, None
 
 
 def _parse_well_name(well_name: str) -> tuple[str, str]:
@@ -325,3 +384,14 @@ def format_nm_api_for_display(api: str) -> str:
         return api  # Return original if can't parse
 
     return f"{digits[:2]}-{digits[2:5]}-{digits[5:10]}"
+
+
+def detect_missing_critical_fields(scraped_data: dict) -> list:
+    """Return list of field names that are empty but required for plan generation."""
+    missing = []
+    if not scraped_data.get("formation_tops"):
+        missing.append("formation_tops")
+    perfs = _collect_perforations(scraped_data)
+    if not perfs:
+        missing.append("perforations")
+    return missing

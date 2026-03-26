@@ -40,9 +40,13 @@ CO_2 = "co2"           # Application for Permit to Drill
 CO_4 = "co4"           # Sundry Notice
 CO_5A = "co5a"         # Completion Report
 
+# ---------- BLM (Federal) Forms ----------
+BLM_SUNDRY_3160_5 = "blm_sundry_3160_5"  # Sundry Notices and Reports on Wells
+
 # Generic document types (not jurisdiction-specific)
 SCHEMATIC = "schematic"
 FORMATION_TOPS = "formation_tops"
+PA_PROCEDURE = "pa_procedure"
 
 # All supported form types
 ALL_FORM_TYPES = [
@@ -52,6 +56,8 @@ ALL_FORM_TYPES = [
     NM_C101, NM_C102, NM_C103, NM_C104, NM_C105,
     # Generic
     SCHEMATIC, FORMATION_TOPS,
+    # Operator packets (always private)
+    PA_PROCEDURE,
 ]
 
 # Public document types (available to all tenants when validated)
@@ -102,6 +108,7 @@ FORM_NAMES = {
     # Generic
     SCHEMATIC: "Well Schematic",
     FORMATION_TOPS: "Formation Tops",
+    PA_PROCEDURE: "P&A Execution Procedure (Operator Packet)",
 }
 
 

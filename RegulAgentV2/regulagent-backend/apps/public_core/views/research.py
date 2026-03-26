@@ -1,0 +1,467 @@
+"""
+Research Session API views.
+
+Endpoints:
+    POST   /api/research/sessions/               — create session + kick off indexing
+    GET    /api/research/sessions/{id}/          — poll session status
+    GET    /api/research/sessions/{id}/documents/ — list indexed documents
+    POST   /api/research/sessions/{id}/ask/      — ask a question (SSE stream)
+    GET    /api/research/sessions/{id}/chat/     — get chat history
+    GET    /api/research/sessions/{id}/summary/  — aggregated well summary
+"""
+import logging
+
+from django.http import StreamingHttpResponse
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.public_core.models import ExtractedDocument, ResearchSession
+from apps.public_core.serializers.research import (
+    ResearchAskSerializer,
+    ResearchMessageSerializer,
+    ResearchSessionCreateSerializer,
+    ResearchSessionSerializer,
+)
+from apps.public_core.services.document_pipeline import detect_jurisdiction
+from apps.public_core.services.research_rag import get_chat_history, stream_research_answer
+from apps.public_core.tasks_research import start_research_session_task
+
+logger = logging.getLogger(__name__)
+
+
+class ResearchSessionListCreateView(APIView):
+    """
+    POST /api/research/sessions/
+
+    Create a new ResearchSession and dispatch the indexing pipeline as a
+    background Celery task.
+
+    Request body:
+        api_number (str, required): Well API number.
+        state (str, optional): "TX", "NM", or "UT". Auto-detected from API prefix if omitted.
+
+    Returns 201 with the session object immediately; clients should poll
+    GET /api/research/sessions/{id}/ until status == "ready".
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ResearchSessionCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        api_number = serializer.validated_data["api_number"]
+        explicit_state = serializer.validated_data.get("state")
+        state = detect_jurisdiction(api_number, explicit=explicit_state)
+        force_fetch = serializer.validated_data.get("force_fetch", False)
+
+        # Normalize API for consistent lookup
+        import re as _re
+        normalized_api = _re.sub(r"\D+", "", str(api_number))
+
+        if not force_fetch:
+            # Check for existing ready session — match on normalized API suffix
+            api_suffix = normalized_api[-8:] if len(normalized_api) >= 8 else normalized_api
+            existing = ResearchSession.objects.filter(
+                state=state, status="ready"
+            ).order_by("-created_at")
+
+            # Find first session whose api_number contains the same suffix
+            for sess in existing[:20]:
+                sess_clean = _re.sub(r"\D+", "", str(sess.api_number))
+                if len(sess_clean) >= 8 and sess_clean[-8:] == api_suffix:
+                    logger.info(f"[ResearchAPI] Reusing ready session {sess.id} for api={api_number}")
+                    return Response(
+                        ResearchSessionSerializer(sess).data,
+                        status=status.HTTP_200_OK,
+                    )
+
+            # Check for in-progress session (same normalized matching)
+            in_progress = ResearchSession.objects.filter(
+                state=state, status__in=["pending", "fetching", "indexing"],
+            ).order_by("-created_at")
+
+            for sess in in_progress[:20]:
+                sess_clean = _re.sub(r"\D+", "", str(sess.api_number))
+                if len(sess_clean) >= 8 and sess_clean[-8:] == api_suffix:
+                    logger.info(f"[ResearchAPI] Reusing in-progress session {sess.id} for api={api_number}")
+                    return Response(
+                        ResearchSessionSerializer(sess).data,
+                        status=status.HTTP_200_OK,
+                    )
+        else:
+            logger.info(f"[ResearchAPI] force_fetch=True for api={api_number}, bypassing session cache")
+
+        user_tenant = request.user.tenants.first() if request.user.is_authenticated else None
+
+        session = ResearchSession.objects.create(
+            api_number=api_number,
+            state=state,
+            status="pending",
+            tenant=user_tenant,
+            force_fetch=force_fetch,
+        )
+
+        # Kick off the background indexing pipeline
+        task = start_research_session_task.delay(str(session.id))
+        session.celery_task_id = task.id
+        session.save(update_fields=["celery_task_id"])
+
+        logger.info(
+            f"[ResearchAPI] Created session {session.id} for api={api_number} "
+            f"state={state} task={task.id} force_fetch={force_fetch}"
+        )
+
+        return Response(
+            ResearchSessionSerializer(session).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ResearchSessionDetailView(APIView):
+    """
+    GET /api/research/sessions/{id}/
+
+    Return current status and metadata for a research session.
+    Clients poll this until status is "ready" or "error".
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, session_id: str):
+        try:
+            session = ResearchSession.objects.get(id=session_id)
+        except ResearchSession.DoesNotExist:
+            return Response(
+                {"detail": "Session not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(ResearchSessionSerializer(session).data)
+
+
+class ResearchSessionDocumentsView(APIView):
+    """
+    GET /api/research/sessions/{id}/documents/
+
+    Return the list of ExtractedDocuments that have been indexed for this session.
+    Returns the document_list metadata cached on the session plus DB-side status.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, session_id: str):
+        try:
+            session = ResearchSession.objects.get(id=session_id)
+        except ResearchSession.DoesNotExist:
+            return Response(
+                {"detail": "Session not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Fetch ExtractedDocuments linked to this API number
+        extracted_docs = ExtractedDocument.objects.filter(
+            api_number=session.api_number
+        ).values(
+            "id",
+            "document_type",
+            "source_path",
+            "neubus_filename",
+            "source_page",
+            "status",
+            "model_tag",
+            "created_at",
+            "attribution_confidence",
+            "attribution_method",
+        ).order_by("-created_at")
+
+        return Response(
+            {
+                "session_id": str(session.id),
+                "api_number": session.api_number,
+                "state": session.state,
+                "total_documents": session.total_documents,
+                "indexed_documents": session.indexed_documents,
+                "failed_documents": session.failed_documents,
+                "document_list": session.document_list,
+                "extracted_documents": list(extracted_docs),
+            }
+        )
+
+
+class ResearchSessionAskView(APIView):
+    """
+    POST /api/research/sessions/{id}/ask/
+
+    Ask a question about this well's indexed documents.
+    Returns a Server-Sent Events stream.
+
+    SSE event format:
+        data: {"type": "token", "content": "..."}\n\n
+        data: {"type": "citations", "citations": [...]}\n\n
+        data: {"type": "done"}\n\n
+        data: {"type": "error", "message": "..."}\n\n
+
+    Request body:
+        question (str, required): The question to ask.
+        top_k (int, optional): Number of document sections to retrieve (1-20, default 8).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, session_id: str):
+        try:
+            session = ResearchSession.objects.get(id=session_id)
+        except ResearchSession.DoesNotExist:
+            return Response(
+                {"detail": "Session not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if session.status != "ready":
+            return Response(
+                {
+                    "detail": f"Session is not ready for queries (status={session.status}). "
+                              "Wait until indexing completes."
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        serializer = ResearchAskSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        question = serializer.validated_data["question"]
+        top_k = serializer.validated_data["top_k"]
+
+        logger.info(
+            f"[ResearchAPI] Ask question for session {session_id}: "
+            f"{question[:80]!r} (top_k={top_k})"
+        )
+
+        response = StreamingHttpResponse(
+            stream_research_answer(question, session, top_k=top_k),
+            content_type="text/event-stream",
+        )
+        response["Cache-Control"] = "no-cache"
+        response["X-Accel-Buffering"] = "no"
+        return response
+
+
+class ResearchSessionChatView(APIView):
+    """
+    GET /api/research/sessions/{id}/chat/
+
+    Return the full chat history for this research session.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, session_id: str):
+        try:
+            session = ResearchSession.objects.get(id=session_id)
+        except ResearchSession.DoesNotExist:
+            return Response(
+                {"detail": "Session not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        messages = get_chat_history(session)
+        return Response(
+            {
+                "session_id": str(session.id),
+                "api_number": session.api_number,
+                "messages": messages,
+            }
+        )
+
+
+class ResearchSessionSummaryView(APIView):
+    """
+    GET /api/research/sessions/{id}/summary/
+
+    Return an aggregated well summary built from all successfully extracted
+    documents for the session's well.  Includes document counts by type,
+    well info, casing records, plug records, and a filing timeline.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, session_id: str):
+        try:
+            session = ResearchSession.objects.get(id=session_id)
+        except ResearchSession.DoesNotExist:
+            return Response(
+                {"detail": "Session not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        import re as _re
+        clean_api = _re.sub(r"\D+", "", str(session.api_number or ""))
+
+        # Primary filter: use the api_number field (set from extracted well_info.api)
+        # Try progressively shorter suffixes since extracted APIs vary in format.
+        eds = ExtractedDocument.objects.none()
+        all_eds = ExtractedDocument.objects.filter(
+            status="success",
+        ).exclude(neubus_filename="")
+
+        for suffix_len in (8, 5):
+            if len(clean_api) >= suffix_len:
+                suffix = clean_api[-suffix_len:]
+                eds = all_eds.filter(api_number__icontains=suffix)
+                if eds.exists():
+                    break
+
+        # Do NOT fall back to all EDs — that comingles data across wells in the lease.
+
+        # Prefer high/medium confidence documents when available
+        confident_eds = eds.filter(attribution_confidence__in=["high", "medium"])
+        attribution_warning = ""
+        if confident_eds.exists():
+            eds = confident_eds
+        else:
+            attribution_warning = (
+                "Documents shown may include filings from sibling wells on the same lease. "
+                "Attribution confidence is low for all documents."
+            )
+
+        def _safe_dict(val):
+            """Return val if it's a dict, else empty dict (handles str/None)."""
+            return val if isinstance(val, dict) else {}
+
+        # ------------------------------------------------------------------
+        # Document counts by type
+        # ------------------------------------------------------------------
+        from django.db.models import Count
+
+        type_counts = dict(
+            eds.values_list("document_type")
+            .annotate(c=Count("id"))
+            .values_list("document_type", "c")
+        )
+
+        # ------------------------------------------------------------------
+        # Aggregate well_info from first W-1 / W-2 / W-3 that has it
+        # ------------------------------------------------------------------
+        well_info: dict = {}
+        for ed in eds.filter(document_type__in=["w1", "w2", "w3"]).order_by("-created_at")[:10]:
+            data = ed.json_data or {}
+            wi = data.get("well_info", {})
+            if wi and wi.get("lease") and not well_info.get("lease"):
+                well_info = {
+                    "api": wi.get("api", ""),
+                    "field": wi.get("field", ""),
+                    "lease": wi.get("lease", ""),
+                    "county": wi.get("county", ""),
+                    "district": _safe_dict(data.get("header")).get("rrc_district"),
+                    "total_depth_ft": wi.get("total_depth_ft"),
+                    "well_no": wi.get("well_no", ""),
+                }
+            oi = data.get("operator_info", {})
+            if oi and oi.get("name") and not well_info.get("operator"):
+                well_info["operator"] = oi.get("name", "")
+                well_info["operator_number"] = oi.get("operator_number", "")
+
+        # ------------------------------------------------------------------
+        # Casing records from W-3 and W-2 docs (deduplicated)
+        # Prefer most recent filing. Dedup by (type, size) since the same
+        # physical string may report slightly different depths across filings.
+        # ------------------------------------------------------------------
+        casing_records: list[dict] = []
+        seen_sizes: dict = {}  # size -> index in casing_records
+        for ed in eds.filter(document_type__in=["w3", "w2"]).order_by("-created_at"):
+            data = ed.json_data or {}
+            date_filed = _safe_dict(data.get("header")).get("date_filed", "")
+            for c in (data.get("casing_record") or []):
+                # Normalize field name: W-2 uses "string", W-3 uses "string_type"
+                casing_type = c.get("string_type") or c.get("string") or None
+                size = c.get("size_in")
+                if not size:
+                    continue
+                # Normalize the output
+                record = {**c}
+                if "string" in record and "string_type" not in record:
+                    record["string_type"] = record.pop("string")
+                if "weight_per_ft" in record and "weight_ppf" not in record:
+                    record["weight_ppf"] = record.pop("weight_per_ft")
+                record["source_doc_type"] = ed.document_type
+                record["source_date"] = date_filed
+                if size not in seen_sizes:
+                    # First time seeing this size — add it
+                    seen_sizes[size] = len(casing_records)
+                    casing_records.append(record)
+                elif casing_type and not casing_records[seen_sizes[size]].get("string_type"):
+                    # We have an untyped record; replace with this typed one
+                    casing_records[seen_sizes[size]] = record
+
+        # ------------------------------------------------------------------
+        # Plug records from W-3 docs (deduplicated)
+        # ------------------------------------------------------------------
+        plug_records: list[dict] = []
+        seen_plugs: set = set()
+        for ed in eds.filter(document_type="w3").order_by("-created_at"):
+            data = ed.json_data or {}
+            date_filed = _safe_dict(data.get("header")).get("date_filed", "")
+            for p in (data.get("plug_record") or []):
+                # Normalize depths: top should be shallower (smaller number)
+                top = p.get("depth_top_ft")
+                bottom = p.get("depth_bottom_ft")
+                # Convert "Surface" string to 0
+                if isinstance(top, str) and top.lower() == "surface":
+                    top = 0
+                if isinstance(bottom, str) and bottom.lower() == "surface":
+                    bottom = 0
+                # Swap if inverted (top deeper than bottom)
+                if top is not None and bottom is not None:
+                    try:
+                        top_num = float(top)
+                        bottom_num = float(bottom)
+                        if top_num > bottom_num:
+                            top, bottom = bottom, top
+                    except (ValueError, TypeError):
+                        pass
+
+                key = (top, bottom, p.get("sacks"))
+                if key not in seen_plugs and top is not None:
+                    seen_plugs.add(key)
+                    record = {**p}
+                    record["depth_top_ft"] = top
+                    record["depth_bottom_ft"] = bottom
+                    record["source_doc_type"] = "w3"
+                    record["source_date"] = date_filed
+                    plug_records.append(record)
+
+        # ------------------------------------------------------------------
+        # Filing timeline — one entry per ED, sorted by date (nulls last)
+        # ------------------------------------------------------------------
+        filing_timeline: list[dict] = []
+        for ed in eds.order_by("created_at"):
+            data = ed.json_data or {}
+            date_filed = _safe_dict(data.get("header")).get("date_filed")
+            tracking = _safe_dict(data.get("header")).get("tracking_number") or ed.tracking_no
+            operator = (_safe_dict(data.get("operator_info")).get("name", ""))
+            filing_timeline.append({
+                "document_type": ed.document_type,
+                "date": date_filed,
+                "tracking_no": tracking or "",
+                "operator": operator,
+                "attribution_confidence": ed.attribution_confidence,
+                "attribution_method": ed.attribution_method,
+            })
+
+        filing_timeline.sort(key=lambda x: x["date"] or "9999")
+
+        result = {
+            "session_id": str(session.id),
+            "api_number": session.api_number,
+            "state": session.state,
+            "document_counts": {
+                **type_counts,
+                "total": eds.count(),
+            },
+            "well_info": well_info,
+            "casing_records": casing_records[:50],
+            "plug_records": plug_records[:50],
+            "filing_timeline": filing_timeline,
+        }
+        if attribution_warning:
+            result["attribution_warning"] = attribution_warning
+        return Response(result)

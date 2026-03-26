@@ -368,7 +368,7 @@ def format_casing_record(
     for casing in w3a_casing_record:
         formatted_casing = {
             "string_type": casing.get("string_type"),
-            "size_in": casing.get("size_in"),
+            "od_in": casing.get("od_in") or casing.get("size_in"),
             "weight_ppf": casing.get("weight_ppf"),
             "hole_size_in": casing.get("hole_size_in"),
             "top_ft": casing.get("top_ft"),
@@ -378,7 +378,7 @@ def format_casing_record(
             "removed_to_depth_ft": casing.get("removed_to_depth_ft"),  # From casing state if cut
         }
         formatted_casings.append(formatted_casing)
-        logger.debug(f"Formatted casing: {formatted_casing['string_type']} {formatted_casing['size_in']}\"")
+        logger.debug(f"Formatted casing: {formatted_casing['string_type']} {formatted_casing['od_in']}\"")
     
     return formatted_casings
 
@@ -418,19 +418,20 @@ def format_perforations(
     # Add new perforations from PNA events
     new_perfs = [e for e in w3_events if e.event_type == "perforate"]
     for perf_event in new_perfs:
-        if perf_event.perf_depth_ft:
+        perf_depth = perf_event.perf_depth_ft or perf_event.depth_top_ft or perf_event.depth_bottom_ft
+        if perf_depth:
             # Add perforation from PNA event
             # Note: PNA typically only provides a single depth, so we use it for top
             # Bottom depth would need to be provided separately or defaulted
             formatted_perf = {
-                "interval_top_ft": perf_event.perf_depth_ft,
-                "interval_bottom_ft": perf_event.perf_depth_ft,  # Same as top since PNA gives single depth
+                "interval_top_ft": perf_depth,
+                "interval_bottom_ft": perf_event.depth_bottom_ft or perf_depth,
                 "formation": None,  # Not available from PNA events
                 "status": "perforated",  # Status from perforation event
-                "perforation_date": perf_event.date,
+                "perforation_date": perf_event.date.strftime("%m/%d/%y") if perf_event.date else None,
             }
             formatted_perfs.append(formatted_perf)
-            logger.info(f"Added perforation from PNA event at {perf_event.perf_depth_ft} ft on {perf_event.date}")
+            logger.info(f"Added perforation from PNA event at {perf_depth} ft on {perf_event.date}")
     
     logger.info(f"Formatted {len(formatted_perfs)} perforation intervals ({len(w3a_perforations)} from W-3A, {len(new_perfs)} from PNA events)")
     return formatted_perfs
@@ -507,8 +508,9 @@ def format_plugs_for_rrc(
             "calculated_top_of_plug_ft": calculated_toc,
             "toc_variance_ft": toc_variance_ft,
             "remarks": plug.remarks or "",
+            "cementing_date": plug.events[0].date.strftime("%m/%d/%y") if plug.events and plug.events[0].date else None,
         }
-        
+
         # Build detailed remarks from events
         event_details = []
         for event in plug.events:

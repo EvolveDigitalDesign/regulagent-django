@@ -1,0 +1,32 @@
+from django.urls import path
+from .views.w3_wizard import (
+    W3WizardCreateView,
+    W3WizardDetailView,
+    W3WizardUploadView,
+    W3WizardParseView,
+    W3WizardParseStatusView,
+    W3WizardPlanImportStatusView,
+    W3WizardReconcileView,
+    W3WizardJustificationsView,
+    W3WizardGenerateView,
+    W3WizardW3FormView,
+    W3WizardUploadWbdImageView,
+    W3WizardExportWBDExcelView,
+    W3WizardImportWBDExcelView,
+)
+
+urlpatterns = [
+    path("", W3WizardCreateView.as_view(), name="w3-wizard-list-create"),
+    path("<uuid:pk>/", W3WizardDetailView.as_view(), name="w3-wizard-detail"),
+    path("<uuid:pk>/upload/", W3WizardUploadView.as_view(), name="w3-wizard-upload"),
+    path("<uuid:pk>/parse/", W3WizardParseView.as_view(), name="w3-wizard-parse"),
+    path("<uuid:pk>/parse-status/", W3WizardParseStatusView.as_view(), name="w3-wizard-parse-status"),
+    path("<uuid:pk>/plan-import-status/", W3WizardPlanImportStatusView.as_view(), name="w3-wizard-plan-import-status"),
+    path("<uuid:pk>/reconciliation/", W3WizardReconcileView.as_view(), name="w3-wizard-reconciliation"),
+    path("<uuid:pk>/justifications/", W3WizardJustificationsView.as_view(), name="w3-wizard-justifications"),
+    path("<uuid:pk>/generate-w3/", W3WizardGenerateView.as_view(), name="w3-wizard-generate"),
+    path("<uuid:pk>/w3-form/", W3WizardW3FormView.as_view(), name="w3-wizard-w3-form"),
+    path("<uuid:pk>/upload-wbd-image/", W3WizardUploadWbdImageView.as_view(), name="w3-wizard-upload-wbd-image"),
+    path("<uuid:pk>/export-wbd-excel/", W3WizardExportWBDExcelView.as_view(), name="w3-wizard-export-wbd-excel"),
+    path("<uuid:pk>/import-wbd-excel/", W3WizardImportWBDExcelView.as_view(), name="w3-wizard-import-wbd-excel"),
+]

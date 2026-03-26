@@ -5,11 +5,16 @@ These tasks handle long-running operations that would timeout in HTTP requests:
 - Bulk plan generation
 - Bulk status updates
 - Bulk data exports
+- Well component extraction and population
 """
 import logging
+from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Any
 from celery import shared_task
 from django.utils import timezone
+
+from apps.tenants.context import set_current_tenant
+from apps.tenants.models import Tenant
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +71,9 @@ def bulk_generate_plans(
         job.start_processing()
         job.celery_task_id = self.request.id
         job.save(update_fields=['celery_task_id'])
+
+        tenant = Tenant.objects.get(id=job.tenant_id)
+        set_current_tenant(tenant)
 
         logger.info(f"[BulkTask] Job {job_id} marked as processing. Wells to process: {len(well_ids)}")
 
@@ -352,3 +360,385 @@ def bulk_update_plan_status(
             'status': 'failed',
             'error': str(e)
         }
+
+
+def _safe_decimal(val) -> Decimal | None:
+    """Convert a value to Decimal, returning None on any failure."""
+    if val is None:
+        return None
+    try:
+        return Decimal(str(val))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+
+
+@shared_task(bind=True, max_retries=3)
+def extract_and_populate_components(self, api14: str, tenant_id: str = None):
+    """
+    Extract well data from RRC/OCD and write WellComponent(layer='public') records.
+    Called during bulk well import to populate component data for a well.
+    """
+    from django.db import transaction
+    from apps.public_core.models import WellRegistry, WellComponent, WellComponentSnapshot
+    from apps.public_core.models.extracted_document import ExtractedDocument
+    from apps.public_core.models.public_casing_string import PublicCasingString
+    from apps.public_core.models.public_perforation import PublicPerforation
+    from apps.public_core.services.rrc_completions_extractor import extract_completions_all_documents
+
+    logger.info(f"[ExtractTask] Starting extract_and_populate_components for api14={api14}")
+
+    try:
+        # 1. Get or create WellRegistry
+        well, created = WellRegistry.objects.get_or_create(api14=api14)
+        if created:
+            logger.info(f"[ExtractTask] Created new WellRegistry for api14={api14}")
+
+        # 2. Idempotency — per-document check moved into extraction loop below
+
+        # 3. Download and extract documents from RRC
+        logger.info(f"[ExtractTask] Running extract_completions_all_documents for api14={api14}")
+        extract_completions_all_documents(api14)
+
+        # 4. Query ExtractedDocument records for this well
+        extracted_docs = ExtractedDocument.objects.filter(api_number=api14, status='success')
+        logger.info(f"[ExtractTask] Found {extracted_docs.count()} extracted documents for api14={api14}")
+
+        components: list[WellComponent] = []
+
+        for doc in extracted_docs:
+            # Per-document idempotency: skip if components already extracted from this doc
+            if WellComponent.objects.filter(
+                well=well,
+                layer=WellComponent.Layer.PUBLIC,
+                provenance__extracted_document_id=str(doc.id),
+            ).exists():
+                logger.info(f"[ExtractTask] Components already exist for doc {doc.id}, skipping")
+                continue
+            json_data = doc.json_data or {}
+            doc_type = doc.document_type.lower()
+
+            # ----------------------------------------------------------------
+            # W-2: casing, formation tops, tubing, liners
+            # ----------------------------------------------------------------
+            if doc_type == 'w2':
+                # Casing strings
+                for record in json_data.get('casing_record', []) or []:
+                    string_type = record.get('string_type', '') or ''
+                    comp_type = (
+                        WellComponent.ComponentType.LINER
+                        if 'liner' in string_type.lower()
+                        else WellComponent.ComponentType.CASING
+                    )
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=comp_type,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        outside_dia_in=_safe_decimal(record.get('size_in')),
+                        bottom_ft=_safe_decimal(record.get('shoe_depth_ft')),
+                        top_ft=_safe_decimal(record.get('top_ft')),
+                        hole_size_in=_safe_decimal(record.get('hole_size_in')),
+                        cement_top_ft=_safe_decimal(record.get('cement_top_ft')),
+                        source_document_type='w2',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties={'string_type': string_type},
+                    ))
+
+                # Formation tops
+                for record in json_data.get('formation_record', []) or []:
+                    props = {}
+                    if record.get('formation'):
+                        props['formation'] = record['formation']
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=WellComponent.ComponentType.FORMATION_TOP,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        top_ft=_safe_decimal(record.get('top_ft')),
+                        source_document_type='w2',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties=props,
+                    ))
+
+                # Tubing
+                for record in json_data.get('tubing_record', []) or []:
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=WellComponent.ComponentType.TUBING,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        outside_dia_in=_safe_decimal(record.get('size_in')),
+                        top_ft=_safe_decimal(record.get('top_ft')),
+                        bottom_ft=_safe_decimal(record.get('bottom_ft') or record.get('shoe_depth_ft')),
+                        source_document_type='w2',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties={},
+                    ))
+
+                # Liner records (explicit liner section)
+                for record in json_data.get('liner_record', []) or []:
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=WellComponent.ComponentType.LINER,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        outside_dia_in=_safe_decimal(record.get('size_in')),
+                        top_ft=_safe_decimal(record.get('top_ft')),
+                        bottom_ft=_safe_decimal(record.get('bottom_ft') or record.get('shoe_depth_ft')),
+                        hole_size_in=_safe_decimal(record.get('hole_size_in')),
+                        cement_top_ft=_safe_decimal(record.get('cement_top_ft')),
+                        source_document_type='w2',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties={},
+                    ))
+
+            # ----------------------------------------------------------------
+            # W-15: perforations, mechanical equipment, historic cement jobs
+            # ----------------------------------------------------------------
+            elif doc_type == 'w15':
+                # Perforations
+                for record in json_data.get('perforations', []) or []:
+                    props = {}
+                    if record.get('formation'):
+                        props['formation'] = record['formation']
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=WellComponent.ComponentType.PERFORATION,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        top_ft=_safe_decimal(record.get('top_ft')),
+                        bottom_ft=_safe_decimal(record.get('bottom_ft')),
+                        source_document_type='w15',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties=props,
+                    ))
+
+                # Mechanical equipment
+                _EQUIPMENT_TYPE_MAP = {
+                    'cibp': WellComponent.ComponentType.BRIDGE_PLUG,
+                    'bridge_plug': WellComponent.ComponentType.BRIDGE_PLUG,
+                    'packer': WellComponent.ComponentType.PACKER,
+                    'cement_plug': WellComponent.ComponentType.CEMENT_PLUG,
+                }
+                for record in json_data.get('mechanical_equipment', []) or []:
+                    raw_equip = (record.get('equipment_type') or '').lower()
+                    comp_type = _EQUIPMENT_TYPE_MAP.get(raw_equip)
+                    if comp_type is None:
+                        continue
+                    props = {}
+                    if record.get('sacks') is not None:
+                        props['sacks'] = record['sacks']
+                    if record.get('notes'):
+                        props['notes'] = record['notes']
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=comp_type,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        depth_ft=_safe_decimal(record.get('depth_ft')),
+                        source_document_type='w15',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties=props,
+                    ))
+
+                # Historic cement jobs
+                for record in json_data.get('historic_cement_jobs', []) or []:
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=WellComponent.ComponentType.CEMENT_JOB,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        top_ft=_safe_decimal(record.get('interval_top_ft')),
+                        bottom_ft=_safe_decimal(record.get('interval_bottom_ft')),
+                        sacks=_safe_decimal(record.get('sacks')),
+                        cement_class=record.get('cement_class') or '',
+                        source_document_type='w15',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties={},
+                    ))
+
+        # 5. Include PublicCasingString / PublicPerforation (same as backfill command)
+        for cs in PublicCasingString.objects.filter(well=well):
+            components.append(WellComponent(
+                well=well,
+                component_type=WellComponent.ComponentType.CASING,
+                layer=WellComponent.Layer.PUBLIC,
+                lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                sort_order=cs.string_no,
+                outside_dia_in=cs.outside_dia_in,
+                weight_ppf=cs.weight_ppf,
+                grade=cs.grade or '',
+                thread_type=cs.thread_type or '',
+                top_ft=cs.top_ft,
+                bottom_ft=cs.shoe_ft,
+                cement_top_ft=cs.cement_to_ft,
+                provenance=cs.provenance,
+                source_document_type=cs.source or '',
+                as_of=cs.as_of,
+                properties={'string_no': cs.string_no},
+            ))
+
+        for perf in PublicPerforation.objects.filter(well=well):
+            perf_props: dict = {}
+            if perf.formation:
+                perf_props['formation'] = perf.formation
+            if perf.shot_density_spf is not None:
+                perf_props['shot_density_spf'] = float(perf.shot_density_spf)
+            if perf.phase_deg is not None:
+                perf_props['phase_deg'] = float(perf.phase_deg)
+            components.append(WellComponent(
+                well=well,
+                component_type=WellComponent.ComponentType.PERFORATION,
+                layer=WellComponent.Layer.PUBLIC,
+                lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                top_ft=perf.top_ft,
+                bottom_ft=perf.bottom_ft,
+                provenance=perf.provenance,
+                source_document_type=perf.source or '',
+                as_of=perf.as_of,
+                properties=perf_props,
+            ))
+
+        logger.info(f"[ExtractTask] Prepared {len(components)} WellComponent records for api14={api14}")
+
+        # 6. Bulk create all components
+        with transaction.atomic():
+            WellComponent.objects.bulk_create(components, ignore_conflicts=True)
+
+        # 7. Create baseline snapshot
+        snapshot_data = [
+            {
+                'component_type': c.component_type,
+                'top_ft': float(c.top_ft) if c.top_ft is not None else None,
+                'bottom_ft': float(c.bottom_ft) if c.bottom_ft is not None else None,
+                'depth_ft': float(c.depth_ft) if c.depth_ft is not None else None,
+                'outside_dia_in': float(c.outside_dia_in) if c.outside_dia_in is not None else None,
+                'source_document_type': c.source_document_type,
+                'properties': c.properties,
+            }
+            for c in components
+        ]
+        WellComponentSnapshot.objects.create(
+            well=well,
+            tenant_id=tenant_id,
+            context=WellComponentSnapshot.SnapshotContext.BASELINE,
+            snapshot_data=snapshot_data,
+            component_count=len(components),
+        )
+
+        logger.info(
+            f"[ExtractTask] Completed extract_and_populate_components for api14={api14}. "
+            f"Created {len(components)} components."
+        )
+        return {'status': 'success', 'api14': api14, 'component_count': len(components)}
+
+    except Exception as e:
+        logger.exception(f"[ExtractTask] Error in extract_and_populate_components for api14={api14}")
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=e, countdown=30 * (self.request.retries + 1))
+        return {'status': 'failed', 'api14': api14, 'error': str(e)}
+
+
+@shared_task(bind=True)
+def bulk_import_wells(
+    self,
+    job_id: str,
+    api_numbers: List[str],
+    tenant_id: str,
+    workspace_id=None,
+) -> Dict[str, Any]:
+    """
+    Import wells in bulk: get-or-create WellRegistry, track engagement,
+    then run extraction synchronously per well.
+
+    Args:
+        job_id: BulkJob UUID string
+        api_numbers: List of API-14 strings
+        tenant_id: Tenant UUID string
+        workspace_id: Optional workspace ID (unused for now, reserved for future filtering)
+    """
+    from apps.public_core.models import BulkJob, WellRegistry
+    from apps.tenant_overlay.services.engagement_tracker import track_well_interaction
+    from uuid import UUID
+
+    logger.info(f"[BulkImport] Starting bulk_import_wells for job {job_id}, {len(api_numbers)} wells")
+
+    try:
+        job = BulkJob.objects.get(id=job_id)
+        job.start_processing()
+        job.celery_task_id = self.request.id
+        job.save(update_fields=['celery_task_id'])
+
+        tenant_uuid = UUID(tenant_id)
+        results = []
+        processed_count = 0
+        failed_count = 0
+
+        for api14 in api_numbers:
+            try:
+                well, created = WellRegistry.objects.get_or_create(
+                    api14=api14,
+                    defaults={'state': api14[:2]},
+                )
+                if created:
+                    logger.info(f"[BulkImport] Created new WellRegistry for api14={api14}")
+
+                track_well_interaction(tenant_uuid, well, "well_imported")
+
+                # Synchronous extraction within task
+                extract_result = extract_and_populate_components(api14, tenant_id)
+
+                results.append({
+                    'api14': api14,
+                    'status': 'success',
+                    'well_created': created,
+                    'extract_result': extract_result,
+                })
+                processed_count += 1
+                job.increment_progress(success=True)
+
+            except Exception as e:
+                error_msg = str(e)
+                logger.exception(f"[BulkImport] Error processing api14={api14}: {error_msg}")
+                results.append({
+                    'api14': api14,
+                    'status': 'failed',
+                    'error': error_msg,
+                })
+                failed_count += 1
+                job.increment_progress(success=False)
+
+        job.result_data = {
+            'results': results,
+            'summary': {
+                'total': len(api_numbers),
+                'processed': processed_count,
+                'failed': failed_count,
+            },
+        }
+        job.complete_successfully()
+
+        logger.info(
+            f"[BulkImport] Job {job_id} complete. "
+            f"Processed: {processed_count}, Failed: {failed_count}"
+        )
+
+        return {
+            'status': 'success',
+            'processed': processed_count,
+            'failed': failed_count,
+            'results': results,
+        }
+
+    except BulkJob.DoesNotExist:
+        logger.error(f"[BulkImport] Job {job_id} not found")
+        return {'status': 'failed', 'error': f"Job {job_id} not found"}
+
+    except Exception as e:
+        logger.exception(f"[BulkImport] Fatal error in bulk_import_wells for job {job_id}")
+        try:
+            job = BulkJob.objects.get(id=job_id)
+            job.fail(str(e))
+        except Exception:
+            pass
+        return {'status': 'failed', 'error': str(e)}

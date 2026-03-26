@@ -64,7 +64,14 @@ class PlanSnapshot(models.Model):
         (STATUS_WITHDRAWN, 'Withdrawn - Filing withdrawn'),
     ]
 
-    well = models.ForeignKey(WellRegistry, on_delete=models.CASCADE, related_name="plan_snapshots")
+    well = models.ForeignKey(
+        WellRegistry,
+        on_delete=models.CASCADE,
+        related_name="plan_snapshots",
+        null=True,
+        blank=True,
+        help_text="Well this plan belongs to. Null when the well record cannot be matched at import time.",
+    )
     plan_id = models.CharField(max_length=64, db_index=True)
     kind = models.CharField(max_length=16, choices=KIND_CHOICES, db_index=True)
 

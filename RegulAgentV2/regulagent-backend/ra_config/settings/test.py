@@ -7,6 +7,12 @@ from .base import *  # noqa
 DEBUG = False
 SECRET_KEY = 'test-secret-key-not-for-production'
 
+# Allow testserver host used by Django's test client / APIClient
+ALLOWED_HOSTS = ['*']
+
+# django-tenants: fall back to public schema when no domain matches (needed for test client)
+SHOW_PUBLIC_IF_NO_TENANT_FOUND = True
+
 # Use in-memory SQLite for faster tests (not PostgreSQL)
 # Note: django-tenants requires PostgreSQL, so we'll keep the DB backend
 # but use a test database name

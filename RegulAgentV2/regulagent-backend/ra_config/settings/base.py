@@ -33,6 +33,10 @@ SHARED_APPS = [
     'apps.assistant',  # AI chat and plan modification
     'apps.policy',
     'apps.policy_ingest',
+    'apps.kernel',
+    'apps.kernel.handlers.tx',
+    'apps.kernel.handlers.nm',
+    'apps.intelligence',
     'ordered_model',
     'plans',
 ]
@@ -45,6 +49,7 @@ INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_
 
 MIDDLEWARE = [
     'django_tenants.middleware.main.TenantMainMiddleware',
+    'apps.tenants.middleware.TenantContextMiddleware',  # Propagate tenant to contextvars
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -254,10 +259,28 @@ CELERY_TASK_TIME_LIMIT = 300  # 5 minutes hard limit
 CELERY_TASK_SOFT_TIME_LIMIT = 240  # 4 minutes soft limit
 
 # Worker configuration
-CELERY_WORKER_PREFETCH_MULTIPLIER = 4
-CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000  # Restart worker after 1000 tasks (memory cleanup)
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1  # Restart worker after each task (prevents OOM on Vision pipeline)
 
 # Beat scheduler (for periodic tasks)
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Static periodic task schedules (merged with DB-managed schedules by DatabaseScheduler)
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BEAT_SCHEDULE = {
+    'aggregate-rejection-patterns': {
+        'task': 'apps.intelligence.tasks.aggregate_rejection_patterns',
+        'schedule': crontab(minute=0, hour='*/6'),
+    },
+    'generate-recommendations': {
+        'task': 'apps.intelligence.tasks.generate_recommendations',
+        'schedule': crontab(minute=0, hour=2),  # daily at 2am
+    },
+    'update-recommendation-metrics': {
+        'task': 'apps.intelligence.tasks.update_recommendation_metrics',
+        'schedule': crontab(minute=0, hour='*/4'),
+    },
+}
 
 

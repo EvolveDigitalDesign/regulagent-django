@@ -9,6 +9,7 @@ from .serializers import PolicySectionSerializer, PolicyRuleSerializer
 class PolicySectionsListView(generics.ListAPIView):
     queryset = PolicySection.objects.select_related('rule').all()
     serializer_class = PolicySectionSerializer
+    pagination_class = None
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['rule__rule_id', 'version_tag', 'path']
     ordering_fields = ['order_idx']
@@ -19,6 +20,7 @@ class PolicyRulesListView(generics.ListAPIView):
     queryset = PolicyRule.objects.all()
     serializer_class = PolicyRuleSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['rule_id', 'version_tag']
+    filterset_fields = ['rule_id', 'version_tag', 'jurisdiction']
+    pagination_class = None
 
 

@@ -277,18 +277,16 @@ class NMWellScraper:
 
     def _fetch_with_turnstile(self, url: str, html: str) -> str:
         """
-        Use Playwright to load the page, solve the Turnstile challenge via
-        2captcha, inject the token, and trigger the page's own callback
-        to submit the form and load the well data.
+        Solve the Turnstile challenge via 2captcha, then POST the ASP.NET form
+        directly using the same session (preserving cookies/ViewState).
 
         Args:
             url: The well details URL
-            html: The initial HTML response (used for sitekey extraction fallback)
+            html: The initial HTML response containing the form fields and sitekey
 
         Returns:
             HTML string of the page after Turnstile submission
         """
-        # Extract sitekey from the static HTML first (avoids waiting for Playwright)
         sitekey = self._extract_turnstile_sitekey(html)
         if not sitekey:
             raise RuntimeError(
@@ -296,50 +294,36 @@ class NMWellScraper:
                 "extract sitekey. The page structure may have changed."
             )
 
-        # Solve the Turnstile challenge while Playwright loads
         token = self._solve_turnstile(url, sitekey)
 
-        from playwright.sync_api import sync_playwright
+        # Extract all hidden ASP.NET form fields from the initial HTML
+        soup = BeautifulSoup(html, 'html.parser')
+        form_data = {}
+        for inp in soup.find_all('input', {'type': 'hidden'}):
+            name = inp.get('name')
+            if name:
+                form_data[name] = inp.get('value', '')
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+        # Inject solved token into all turnstile fields
+        form_data['hfTurnstileToken'] = token
+        form_data['cf-turnstile-response'] = token
+        for key in list(form_data.keys()):
+            if 'hfTurnstileToken' in key:
+                form_data[key] = token
 
-            try:
-                # Use domcontentloaded — networkidle hangs due to Turnstile polling
-                page.goto(url, wait_until='domcontentloaded', timeout=int(self.timeout * 1000))
-
-                # Wait briefly for the ASP.NET form to be in the DOM
-                page.wait_for_selector('#hfTurnstileToken', state='attached', timeout=10000)
-
-                # Inject the solved token and invoke the page's callback
-                # onTurnstileSuccess sets hfTurnstileToken and submits the form
-                page.evaluate("""(token) => {
-                    const hf = document.getElementById('hfTurnstileToken');
-                    if (hf) { hf.value = token; }
-                    // Also populate standard response fields
-                    document.querySelectorAll(
-                        '[name="cf-turnstile-response"], [name="g-recaptcha-response"]'
-                    ).forEach(el => { el.value = token; });
-                }""", token)
-
-                # Use expect_navigation to catch the form submit navigation
-                with page.expect_navigation(wait_until='domcontentloaded', timeout=int(self.timeout * 1000)):
-                    page.evaluate("""(token) => {
-                        if (typeof onTurnstileSuccess === 'function') {
-                            onTurnstileSuccess(token);
-                        } else {
-                            const form = document.getElementById('aspnetForm')
-                                      || document.getElementById('form1');
-                            if (form) { form.submit(); }
-                        }
-                    }""", token)
-
-                result_html = page.content()
-                return result_html
-
-            finally:
-                browser.close()
+        # POST using the same session so cookies/IP are preserved
+        response = self.session.post(
+            url,
+            data=form_data,
+            headers={
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Referer': url,
+                'Origin': 'https://wwwapps.emnrd.nm.gov',
+            },
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.text
 
     def fetch_well(self, api: str, include_raw_html: bool = False) -> NMWellData:
         """
@@ -375,11 +359,16 @@ class NMWellScraper:
             logger.warning("Cloudflare Turnstile detected on NM OCD page, solving via 2captcha...")
             html = self._fetch_with_turnstile(url, html)
 
-            # Verify Turnstile was bypassed (well data should now be present)
-            if self._has_turnstile(html) and 'WellDetails' not in html:
+            # Verify Turnstile was bypassed — check for ASP.NET control IDs that only
+            # exist on the real well page, not on the Turnstile challenge page.
+            well_data_indicators = ['lblOperator', 'lblWellName', 'lblApi', 'WellDetailContent']
+            has_well_data = any(indicator in html for indicator in well_data_indicators)
+            if not has_well_data:
+                logger.error(f"Turnstile bypass returned no well data. HTML snippet: {html[:1000]}")
                 raise RuntimeError(
-                    "Cloudflare Turnstile still present after solving. "
-                    "The token may have expired or the submission method needs updating."
+                    "Cloudflare Turnstile bypass completed but well data not present in response. "
+                    "The 2captcha token may have been rejected (tokens are IP-bound). "
+                    "Consider using a proxy or alternative bypass method."
                 )
 
         return self._parse_html(html, api10, include_raw_html)
@@ -425,6 +414,18 @@ class NMWellScraper:
 
         # Extract all text content for easier searching
         full_text = soup.get_text()
+
+        # Validate that this is actually a well details page, not a CAPTCHA or error page.
+        # Use ASP.NET control IDs that only appear on the real well page to avoid false
+        # positives from words like 'Operator' appearing on non-well pages.
+        has_well_indicators = any(marker in html for marker in [
+            'lblOperator', 'lblWellName', 'lblApi', 'WellDetailContent',
+        ])
+        if not has_well_indicators:
+            raise RuntimeError(
+                f"NM OCD page for API {api10} does not contain well data. "
+                "The page may be blocked by Cloudflare Turnstile or returned an error."
+            )
 
         # Extract well name and number from header
         well_name, well_number = self._extract_well_name_and_number(soup, full_text)
