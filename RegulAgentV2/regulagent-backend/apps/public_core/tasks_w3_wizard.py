@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from dataclasses import asdict
-from datetime import date, time
+from datetime import date, time as dt_time
 from typing import Any, Dict, List, Optional
 
 from celery import shared_task
@@ -34,7 +35,7 @@ def _jsonable(obj):
         return [_jsonable(v) for v in obj]
     if isinstance(obj, (datetime.date, datetime.datetime)):
         return obj.isoformat()
-    if isinstance(obj, datetime.time):
+    if isinstance(obj, dt_time):
         return obj.isoformat()
     return obj
 
@@ -285,6 +286,15 @@ def import_wizard_plan(self, session_id: str, storage_key: str) -> None:
 
     try:
         file_path = os.path.join(settings.MEDIA_ROOT, storage_key)
+        # Wait for file to appear on disk — handles race condition where
+        # Celery picks up the task before Django finishes writing the upload
+        for _attempt in range(10):
+            if os.path.exists(file_path):
+                break
+            logger.info("import_wizard_plan: waiting for file %s (attempt %d)", file_path, _attempt + 1)
+            time.sleep(1)
+        else:
+            raise FileNotFoundError(f"File not found after 10s wait: {file_path}")
         ext = os.path.splitext(file_path)[1].lower()
 
         if ext == ".pdf":
@@ -844,10 +854,10 @@ def generate_wizard_w3(self, session_id: str) -> None:
 
             for event_dict in day.get("events", []):
                 # Parse optional time strings
-                def _parse_time(val: Any) -> Optional[time]:
+                def _parse_time(val: Any) -> Optional[dt_time]:
                     if not val:
                         return None
-                    if isinstance(val, time):
+                    if isinstance(val, dt_time):
                         return val
                     try:
                         from datetime import datetime as _dt2
