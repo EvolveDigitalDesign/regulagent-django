@@ -14,6 +14,8 @@ import logging
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 
+from apps.kernel.services.jurisdiction_registry import detect_jurisdiction
+
 logger = logging.getLogger(__name__)
 
 
@@ -72,7 +74,7 @@ class Command(BaseCommand):
             api_digits = re.sub(r"\D", "", api14)
             well = WellRegistry.objects.filter(api14=api14).first()
             lease_id = well.lease_id if well else ""
-            state = "TX" if api14.startswith("42") else "NM" if api14.startswith("30") else ""
+            state = detect_jurisdiction(api14)
 
             # Build broad match: exact api14, 10-digit prefix, 5-digit core,
             # plus any docs linked to the same well or lease siblings
@@ -134,7 +136,7 @@ class Command(BaseCommand):
                 if not ed_lease_id and ed.well:
                     ed_lease_id = ed.well.lease_id or ""
                 if not ed_state and ed.api_number:
-                    ed_state = "TX" if ed.api_number.startswith("42") else "NM" if ed.api_number.startswith("30") else ""
+                    ed_state = detect_jurisdiction(ed.api_number)
 
                 # Get or build lease-well map
                 lwm = {}

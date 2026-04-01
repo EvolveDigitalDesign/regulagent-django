@@ -327,6 +327,13 @@ def extract_completions_all_documents(api14: str, allowed_kinds: Optional[List[s
                             with open(file_path, "wb") as f:
                                 f.write(resp.content)
                             size = file_path.stat().st_size if file_path.exists() else 0
+                            # Validate PDF: must start with %PDF magic bytes and be at least 100 bytes
+                            with open(file_path, "rb") as f:
+                                header = f.read(4)
+                            if size < 100 or header != b"%PDF":
+                                file_path.unlink(missing_ok=True)
+                                logger.warning(f"      ⚠️  Skipping invalid PDF (corrupt download): {doc_type}")
+                                continue
                             ctype = resp.headers.get("content-type", "")
                             files.append(DownloadRecord(name=doc_type, url=url, path=str(file_path), size_bytes=size, content_type=ctype))
                             logger.info(f"      ✅ Downloaded: {doc_type} ({size:,} bytes)")

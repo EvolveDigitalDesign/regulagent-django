@@ -84,6 +84,19 @@ class NMRegionRulesEngine:
         if self.region:
             self._plugging_book = self._load_plugging_book(self.region)
 
+        # Resolve min_sacks from plugging book JSON; fall back to module default
+        self._min_sacks = _MIN_SACKS
+        if self._plugging_book:
+            for section_key in ("pluggingChart", "plugging_chart"):
+                section = self._plugging_book.get(section_key, {})
+                for sub_key in ("casing", "openHole", "open_hole"):
+                    sub = section.get(sub_key, {})
+                    if "min_sacks" in sub:
+                        self._min_sacks = sub["min_sacks"]
+                        break
+                if self._min_sacks != _MIN_SACKS:
+                    break
+
         # Cache sub-area if determinable at init time
         self._sub_area: Optional[str] = None
         if county and self.region:
@@ -396,8 +409,8 @@ class NMRegionRulesEngine:
         """
         book = self._plugging_book or self._load_plugging_book(self.region or "north")
         if not book:
-            logger.warning("No plugging book available; returning minimum %d sacks.", _MIN_SACKS)
-            return float(_MIN_SACKS)
+            logger.warning("No plugging book available; returning minimum %d sacks.", self._min_sacks)
+            return float(self._min_sacks)
 
         chart_section = book.get("pluggingChart", {}).get(hole_type)
         if not chart_section:
@@ -405,7 +418,7 @@ class NMRegionRulesEngine:
                 "No chart section '%s' in plugging book for region '%s'.",
                 hole_type, self.region,
             )
-            return float(_MIN_SACKS)
+            return float(self._min_sacks)
 
         diameter_str = self._match_diameter(diameter, chart_section.get("diameters", []))
         if not diameter_str:
@@ -413,13 +426,13 @@ class NMRegionRulesEngine:
                 "Could not match diameter %.3f\" in %s chart; returning minimum sacks.",
                 diameter, hole_type,
             )
-            return float(_MIN_SACKS)
+            return float(self._min_sacks)
 
         diameters = chart_section.get("diameters", [])
         try:
             dia_index = diameters.index(diameter_str)
         except ValueError:
-            return float(_MIN_SACKS)
+            return float(self._min_sacks)
 
         data_rows = chart_section.get("data", [])
         sacks = None
@@ -445,9 +458,9 @@ class NMRegionRulesEngine:
                 "No sack value found for %.3f\" @ %.0f ft in %s chart; returning minimum.",
                 diameter, depth_ft, hole_type,
             )
-            return float(_MIN_SACKS)
+            return float(self._min_sacks)
 
-        return max(sacks, float(_MIN_SACKS))
+        return max(sacks, float(self._min_sacks))
 
     @staticmethod
     def _match_diameter(target: float, available: List[str]) -> Optional[str]:
@@ -594,7 +607,7 @@ class NMRegionRulesEngine:
                 "No formation requirements found for region='%s' sub_area='%s'.",
                 region or self.region, sub_area or self._sub_area,
             )
-            return []
+            # Don't return early — well-specific formation tops can still generate plugs below
 
         # Build a lookup from formation name -> actual depth from well data
         actual_tops: Dict[str, float] = {}
@@ -649,6 +662,32 @@ class NMRegionRulesEngine:
                 "excess_factor": excess_factor,
                 "isolation_order": formation.get("isolationOrder", 99),
             })
+
+        # Add plugs for any well formation tops NOT already covered by required formations
+        # NM requires isolation of ALL penetrated formations, not just plugging-book ones
+        covered_formations = {c["formation"].lower() for c in candidates}
+        for fm_name, depth_ft in actual_tops.items():
+            if fm_name.lower() not in covered_formations:
+                cement_class = self.get_cement_class(depth_ft)
+                plug_top = max(depth_ft - _COVERAGE_FT, 50.0)
+                plug_bottom = depth_ft + _COVERAGE_FT
+                sack_count = self.get_sack_count_from_chart(depth_ft, hole_type, diameter)
+                excess_factor = _EXCESS_CASED if hole_type == "casing" else _EXCESS_OPEN
+                candidates.append({
+                    "_depth_ft": depth_ft,
+                    "formation": fm_name.title(),
+                    "top_ft": plug_top,
+                    "bottom_ft": plug_bottom,
+                    "cement_class": cement_class,
+                    "tag_required": True,
+                    "sack_count": sack_count,
+                    "excess_factor": excess_factor,
+                    "isolation_order": 99,
+                })
+                logger.info(
+                    "Added formation plug for well-specific top: %s @ %.0f ft (not in plugging book)",
+                    fm_name.title(), depth_ft,
+                )
 
         # Sort deepest first
         candidates.sort(key=lambda c: c["_depth_ft"], reverse=True)
@@ -719,7 +758,7 @@ class NMRegionRulesEngine:
         book = self._plugging_book
         base: Dict[str, Any] = {
             "woc_min_hours": _WOC_MIN_HOURS,
-            "min_sacks": _MIN_SACKS,
+            "min_sacks": self._min_sacks,
             "cibp_cap_min_ft": _CIBP_CAP_MIN_FT,
             "max_plug_spacing_cased_ft": _MAX_SPACING_CASED_FT,
             "max_plug_spacing_open_ft": _MAX_SPACING_OPEN_FT,

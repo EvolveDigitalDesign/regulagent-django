@@ -46,16 +46,66 @@ logger = logging.getLogger(__name__)
 # NM-specific constants (NMAC 19.15.25)
 # ---------------------------------------------------------------------------
 
-_COVERAGE_FT = 50                   # ±50 ft around formation/shoe tops
+_COVERAGE_FT = 50                   # ±50 ft around formation/shoe tops (initial placement)
+
+# Standard bit sizes for common casing ODs (API standard pairings)
+STANDARD_HOLE_SIZES: Dict[float, float] = {
+    4.5: 6.125, 5.0: 6.5, 5.5: 7.875, 7.0: 8.75,
+    7.625: 9.875, 8.625: 11.0, 9.625: 12.25,
+    10.75: 14.75, 13.375: 17.5, 16.0: 20.0, 20.0: 26.0,
+}
+
+
+def _depth_has_perforations(depth_ft: float, well: Dict[str, Any]) -> bool:
+    """Return True if the given depth falls within any perforation interval."""
+    for perf in well.get("perforations", []):
+        if float(perf.get("top_ft", 0)) <= depth_ft <= float(perf.get("bottom_ft", 0)):
+            return True
+    for perf in well.get("production_perforations", []):
+        if float(perf.get("top_ft", 0)) <= depth_ft <= float(perf.get("bottom_ft", 0)):
+            return True
+    return False
+
+
+def _calculate_plug_dimensions(
+    target_depth_ft: float,
+    casing_id_in: float,
+    excess_factor: float,
+    yield_ft3_per_sk: float = 1.18,
+    min_sacks: int = 25,
+    min_interval_ft: float = 100.0,
+) -> tuple:
+    """Calculate actual sack count and plug interval from cement volume.
+
+    Returns (actual_sacks, plug_top_ft, plug_bottom_ft, actual_interval_ft).
+    """
+    area_ft2 = math.pi / 4.0 * (casing_id_in / 12.0) ** 2
+
+    # Volume needed for min interval with excess
+    volume_min = area_ft2 * min_interval_ft * (1.0 + excess_factor)
+    sacks_for_min_interval = math.ceil(volume_min / yield_ft3_per_sk)
+
+    if sacks_for_min_interval >= min_sacks:
+        # Min interval requires more than min sacks — use min interval length
+        actual_sacks = sacks_for_min_interval
+        actual_interval = min_interval_ft
+    else:
+        # Min sacks gives more cement than min interval — let the interval grow
+        actual_sacks = min_sacks
+        volume_from_min_sacks = min_sacks * yield_ft3_per_sk
+        actual_interval = volume_from_min_sacks / (area_ft2 * (1.0 + excess_factor))
+
+    plug_top = target_depth_ft - actual_interval / 2.0
+    plug_bottom = target_depth_ft + actual_interval / 2.0
+
+    return actual_sacks, plug_top, plug_bottom, actual_interval
+
+
 _CIBP_SET_OFFSET_FT = 50           # Set CIBP 50 ft above shallowest perf top
 _CIBP_CAP_BAILER_FT = 35           # Bailer method CIBP cap (vs 100' standard)
 _FILL_PLUG_LENGTH_FT = 100         # Fill plugs are 100' cement plugs
 _SURFACE_PLUG_TOP_FT = 0.0         # Surface plug — top at grade
 _SURFACE_PLUG_BOTTOM_FT = 50.0     # Surface plug — minimum 50' depth
-_SQUEEZE_INSIDE_RATIO = 0.70       # 70% inside casing for squeeze
-_SQUEEZE_OUTSIDE_RATIO = 0.30      # 30% annular for squeeze
-
-
 class C103PluggingRules:
     """Deterministic NM C-103 plugging rules engine.
 
@@ -150,6 +200,37 @@ class C103PluggingRules:
         # Step 5 — formation plugs (mandatory NM)
         self._generate_formation_plugs(well, sequence, region, sub_area)
 
+        # Fix 2A: filter out formation plugs below the SHALLOWEST existing mechanical barrier
+        # Everything below the shallowest CIBP/cemented-packer is already isolated
+        barriers = well.get("existing_mechanical_barriers", [])
+        shallowest_barrier = float('inf')
+        for b in barriers:
+            # Handle both wrapped geometry format {"value": {...}} and flat format {"type": ...}
+            if isinstance(b, str):
+                continue
+            barrier_data = b.get("value", b) if isinstance(b, dict) else {}
+            if not isinstance(barrier_data, dict):
+                continue
+            b_type = (barrier_data.get("type") or "").upper()
+            b_depth = barrier_data.get("depth_ft") or 0
+            b_desc = str(barrier_data.get("description", "")).lower()
+            if b_type in ("CIBP", "BRIDGE_PLUG") or (
+                b_type == "PACKER" and "cement" in b_desc
+            ):
+                shallowest_barrier = min(shallowest_barrier, float(b_depth))
+        if shallowest_barrier < float('inf'):
+            before_count = len([s for s in sequence if s.step_type == "formation_plug"])
+            sequence[:] = [
+                s for s in sequence
+                if s.step_type != "formation_plug" or s.top_ft < shallowest_barrier
+            ]
+            filtered = before_count - len([s for s in sequence if s.step_type == "formation_plug"])
+            if filtered:
+                logger.info(
+                    "Filtered %d formation plugs below shallowest barrier at %.0f ft",
+                    filtered, shallowest_barrier,
+                )
+
         # Step 6 — casing shoe plugs
         self._generate_shoe_plugs(well, sequence)
 
@@ -164,11 +245,12 @@ class C103PluggingRules:
         # Step 9 — spacing enforcement
         self._enforce_spacing(plan)
 
-        # Step 10 — volume calculation
-        self._calculate_volumes(plan, well)
-
-        # Step 11 — operation classification
+        # Step 10 — operation classification (must run before volume calculation
+        #            so that perforate_and_squeeze annular volumes are included)
         self._classify_operations(plan, well)
+
+        # Step 11 — volume calculation (uses operation_type set in step 10)
+        self._calculate_volumes(plan, well)
 
         # Aggregate totals
         plan.calculate_totals()
@@ -368,13 +450,16 @@ class C103PluggingRules:
 
         for spec in plug_specs:
             formation_name: str = spec.get("formation", "Unknown Formation")
+            # Formation plug interval is regulatory: ±50 ft around formation top
             top_ft: float = spec["top_ft"]
             bottom_ft: float = spec["bottom_ft"]
-            cement_class: str = spec.get("cement_class", self._get_cement_class(bottom_ft))
-            sacks: float = max(float(spec.get("sack_count", NM_MIN_SACKS)), float(NM_MIN_SACKS))
+            mid_depth = (top_ft + bottom_ft) / 2.0
+            cement_class: str = spec.get("cement_class", self._get_cement_class(mid_depth))
 
-            # Determine hole type at this depth (below production shoe = open)
-            hole_type = self._get_hole_type_at_depth(bottom_ft, casing_strings)
+            # Fix 2E: determine hole type accounting for perforations
+            hole_type = self._get_hole_type_at_depth(bottom_ft, casing_strings, well)
+
+            sacks: float = max(float(spec.get("sack_count", NM_MIN_SACKS)), float(NM_MIN_SACKS))
 
             plug = C103PlugRow(
                 top_ft=top_ft,
@@ -420,10 +505,21 @@ class C103PluggingRules:
                 continue
             seen.add(dedup_key)
 
-            top_ft = max(shoe_ft - _COVERAGE_FT, 0.0)
-            bottom_ft = shoe_ft + _COVERAGE_FT
+            hole_type = self._get_hole_type_at_depth(shoe_ft + _COVERAGE_FT, casing_strings, well)
+            excess_factor = NM_OPEN_EXCESS if hole_type == "open" else NM_CASED_EXCESS
+            cement_class_shoe = self._get_cement_class(shoe_ft)
+            yield_per_sk = 1.18 if cement_class_shoe == "C" else 1.15
+            casing_id = self._estimate_casing_id(size_in)
 
-            hole_type = self._get_hole_type_at_depth(bottom_ft, casing_strings)
+            shoe_sacks, top_ft_calc, bottom_ft_calc, _ = _calculate_plug_dimensions(
+                target_depth_ft=shoe_ft,
+                casing_id_in=casing_id,
+                excess_factor=excess_factor,
+                yield_ft3_per_sk=yield_per_sk,
+                min_sacks=NM_MIN_SACKS,
+            )
+            top_ft = max(top_ft_calc, 0.0)
+            bottom_ft = bottom_ft_calc
 
             plug = C103PlugRow(
                 top_ft=top_ft,
@@ -432,7 +528,7 @@ class C103PluggingRules:
                 step_type="shoe_plug",
                 operation_type="spot",  # Overridden in _classify_operations
                 hole_type=hole_type,
-                sacks_required=NM_MIN_SACKS,  # Recalculated in _calculate_volumes
+                sacks_required=float(shoe_sacks),  # Volume-based; recalculated in _calculate_volumes
                 casing_size_in=size_in,
                 conduit_id=f"casing:{size_in}",
                 tag_required=True,
@@ -466,7 +562,7 @@ class C103PluggingRules:
         bottom_ft = duqw_depth + _COVERAGE_FT
 
         casing_strings = well.get("casing_strings", [])
-        hole_type = self._get_hole_type_at_depth(bottom_ft, casing_strings)
+        hole_type = self._get_hole_type_at_depth(bottom_ft, casing_strings, well)
         size_in = self._get_casing_od_at_depth(duqw_depth, casing_strings)
 
         plug = C103PlugRow(
@@ -638,14 +734,14 @@ class C103PluggingRules:
           - 50% excess for cased hole
           - 100% excess for open hole
           - Minimum 25 sacks per plug
-          - For squeeze: split inside/outside sacks (70/30)
+          - For squeeze/perf_and_squeeze/circulate: volume-based inside/outside split
 
         Sack count formula (approximate industry standard):
-          base_sacks = interval_ft * pi/4 * (id_in^2 - pipe_od_in^2) / 144 / 1.18
-          with_excess = base_sacks * (1 + excess_factor)
-          sacks = max(with_excess, NM_MIN_SACKS)
+          inside_sacks = interval_ft * pi/4 * id_in^2 / 144 / yield * (1 + excess)
+          annular_sacks = interval_ft * pi/4 * (hole_in^2 - od_in^2) / 144 / yield * (1 + excess)
+          sacks = max(total, NM_MIN_SACKS)
 
-        where 1.18 ft³/sack is approximate yield for Class C/H cement.
+        where yield = 1.32 ft³/sack Class C, 1.15 ft³/sack Class H.
         """
         casing_strings = well.get("casing_strings", [])
 
@@ -656,38 +752,81 @@ class C103PluggingRules:
             interval_ft = plug.bottom_ft - plug.top_ft
             mid_depth = (plug.top_ft + plug.bottom_ft) / 2.0
 
-            # Casing OD and ID at plug mid-depth
-            casing_od = self._get_casing_od_at_depth(mid_depth, casing_strings) or 7.0
+            # Determine casing OD for volume calculation:
+            # - Shoe plugs: casing_size_in is pre-set to the specific shoe casing OD; preserve it.
+            # - Formation/fill/surface plugs: look up the correct innermost casing at this depth
+            #   (overrides the single-diameter chart value used during plug generation).
+            if plug.casing_size_in:
+                casing_od = float(plug.casing_size_in)
+            else:
+                casing_od = self._get_casing_od_at_depth(mid_depth, casing_strings) or 7.0
+                plug.casing_size_in = casing_od
+                plug.conduit_id = f"casing:{casing_od}"
             casing_id = self._estimate_casing_id(casing_od)
-
-            # Tubing/drill-pipe OD assumed for cement placement (2.375" = standard tubing)
-            pipe_od_in = 2.375
 
             excess_factor = NM_OPEN_EXCESS if plug.hole_type == "open" else NM_CASED_EXCESS
             plug.excess_factor = excess_factor
 
-            # Approximate annular volume in cubic feet
-            annular_area_sqin = (math.pi / 4.0) * (casing_id**2 - pipe_od_in**2)
-            annular_area_sqft = annular_area_sqin / 144.0
-            base_volume_cuft = interval_ft * annular_area_sqft
+            # Cement yield: 1.32 ft³/sack for Class C; 1.15 for Class H
+            yield_cuft_per_sack = 1.32 if plug.cement_class == "C" else 1.15
 
-            # Cement yield: ~1.18 ft³/sack for Class C; ~1.15 for Class H
-            yield_cuft_per_sack = 1.18 if plug.cement_class == "C" else 1.15
-            base_sacks = base_volume_cuft / yield_cuft_per_sack
+            if plug.operation_type == "spot":
+                # SPOT: cement fills full casing interior (tubing is pulled per NM procedure)
+                inside_area_ft2 = math.pi / 4.0 * (casing_id / 12.0) ** 2
+                volume_ft3 = inside_area_ft2 * interval_ft * (1.0 + excess_factor)
+                sacks = volume_ft3 / yield_cuft_per_sack
+                plug.sacks_required = max(math.ceil(sacks), NM_MIN_SACKS)
 
-            total_sacks = base_sacks * (1.0 + excess_factor)
-            plug.sacks_required = max(total_sacks, float(NM_MIN_SACKS))
+            elif plug.operation_type in ("squeeze", "perforate_and_squeeze"):
+                # SQUEEZE / PERF-AND-SQUEEZE: inside casing + annular volume behind casing
+                hole_size = self._get_hole_size_for_casing(casing_od)
 
-            # Squeeze split
-            if plug.operation_type == "squeeze":
-                plug.inside_sacks = round(plug.sacks_required * _SQUEEZE_INSIDE_RATIO, 1)
-                plug.outside_sacks = round(plug.sacks_required * _SQUEEZE_OUTSIDE_RATIO, 1)
+                # Inside casing volume
+                inside_area_ft2 = math.pi / 4.0 * (casing_id / 12.0) ** 2
+                inside_vol_ft3 = inside_area_ft2 * interval_ft * (1.0 + excess_factor)
 
-            # Attach casing info if not already set
-            if not plug.casing_size_in:
-                plug.casing_size_in = casing_od
-            if not plug.conduit_id:
-                plug.conduit_id = f"casing:{casing_od}"
+                # Annular volume (between casing OD and hole wall)
+                annular_area_ft2 = math.pi / 4.0 * ((hole_size / 12.0) ** 2 - (casing_od / 12.0) ** 2)
+                annular_vol_ft3 = annular_area_ft2 * interval_ft * (1.0 + excess_factor)
+
+                total_vol_ft3 = inside_vol_ft3 + annular_vol_ft3
+                total_sacks = max(math.ceil(total_vol_ft3 / yield_cuft_per_sack), NM_MIN_SACKS)
+                plug.sacks_required = total_sacks
+
+                # Volume-based split (NOT fixed ratio)
+                total_vol = inside_vol_ft3 + annular_vol_ft3
+                if total_vol > 0:
+                    plug.inside_sacks = round(total_sacks * (inside_vol_ft3 / total_vol), 1)
+                    plug.outside_sacks = round(total_sacks * (annular_vol_ft3 / total_vol), 1)
+
+            elif plug.operation_type == "circulate":
+                # CIRCULATE: fills full casing interior + annulus to surface
+                hole_size = self._get_hole_size_for_casing(casing_od)
+
+                # Inside casing volume
+                inside_area_ft2 = math.pi / 4.0 * (casing_id / 12.0) ** 2
+                inside_vol_ft3 = inside_area_ft2 * interval_ft * (1.0 + excess_factor)
+
+                # Annular volume (between casing OD and hole wall)
+                annular_area_ft2 = math.pi / 4.0 * ((hole_size / 12.0) ** 2 - (casing_od / 12.0) ** 2)
+                annular_vol_ft3 = annular_area_ft2 * interval_ft * (1.0 + excess_factor)
+
+                total_vol_ft3 = inside_vol_ft3 + annular_vol_ft3
+                total_sacks = max(math.ceil(total_vol_ft3 / yield_cuft_per_sack), NM_MIN_SACKS)
+                plug.sacks_required = total_sacks
+
+                # Volume-based split
+                total_vol = inside_vol_ft3 + annular_vol_ft3
+                if total_vol > 0:
+                    plug.inside_sacks = round(total_sacks * (inside_vol_ft3 / total_vol), 1)
+                    plug.outside_sacks = round(total_sacks * (annular_vol_ft3 / total_vol), 1)
+
+            else:
+                # Fallback: treat same as spot
+                inside_area_ft2 = math.pi / 4.0 * (casing_id / 12.0) ** 2
+                volume_ft3 = inside_area_ft2 * interval_ft * (1.0 + excess_factor)
+                sacks = volume_ft3 / yield_cuft_per_sack
+                plug.sacks_required = max(math.ceil(sacks), NM_MIN_SACKS)
 
     # ------------------------------------------------------------------
     # Private — operation classification
@@ -696,19 +835,45 @@ class C103PluggingRules:
     def _classify_operations(
         self, plan: C103PluggingPlan, well: Dict[str, Any]
     ) -> None:
-        """Classify each plug's operation type based on CBL data.
+        """Classify each plug's operation type based on casing geometry and CBL data.
 
-        Logic:
-          - surface_plug -> circulate (always)
-          - mechanical_plug -> spot (no cement)
-          - Plug interval covered by 'poor_cement_intervals' -> squeeze
-          - Otherwise -> spot
+        Logic (in order):
+          1. surface_plug -> circulate (always)
+          2. mechanical_plug -> spot (no cement)
+          3. existing_cement -> skip (not a new operation)
+          4. For formation_plug / shoe_plug inside production casing:
+             - If perforations exist at mid-depth -> spot (hole already open)
+             - If no perforations -> perforate_and_squeeze (must perf casing first)
+             (Skip if plug is above production casing TOC — cement already behind pipe)
+          5. CBL poor-cement override: spot -> squeeze when CBL shows poor bond
+             (CBL can also override perforate_and_squeeze -> squeeze)
+          6. Default -> spot
         """
         cbl_data: Dict[str, Any] = well.get("cbl_data") or {}
         poor_intervals: List[Tuple[float, float]] = [
             (float(lo), float(hi))
             for lo, hi in cbl_data.get("poor_cement_intervals", [])
         ]
+
+        # Locate production casing once for the whole plan
+        prod_casing = self._find_production_casing(well)
+        prod_shoe_ft: Optional[float] = None
+        prod_toc_ft: Optional[float] = None
+        prod_size_in: Optional[float] = None
+        if prod_casing:
+            prod_shoe_ft = prod_casing.get("depth_ft") or prod_casing.get("shoe_depth_ft") or prod_casing.get("bottom")
+            prod_toc_ft = (
+                prod_casing.get("cement_top_ft")
+                or prod_casing.get("top_of_cement_ft")
+                or prod_casing.get("cement_top")
+            )
+            prod_size_in = prod_casing.get("size_in") or prod_casing.get("od_in") or prod_casing.get("diameter")
+            try:
+                prod_shoe_ft = float(prod_shoe_ft) if prod_shoe_ft is not None else None
+                prod_toc_ft = float(prod_toc_ft) if prod_toc_ft is not None else None
+                prod_size_in = float(prod_size_in) if prod_size_in is not None else None
+            except (ValueError, TypeError):
+                prod_shoe_ft = prod_toc_ft = prod_size_in = None
 
         for plug in plan.steps:
             if plug.step_type == "surface_plug":
@@ -717,15 +882,85 @@ class C103PluggingRules:
             if plug.step_type == "mechanical_plug":
                 plug.operation_type = "spot"
                 continue
+            if plug.step_type == "existing_cement":
+                # existing_cement steps are documentation-only — no operation type
+                continue
 
-            # Check if plug interval overlaps a poor cement zone
-            if self._overlaps_poor_cement(plug.top_ft, plug.bottom_ft, poor_intervals):
-                plug.operation_type = "squeeze"
-                # Recalculate squeeze split
-                plug.inside_sacks = round(plug.sacks_required * _SQUEEZE_INSIDE_RATIO, 1)
-                plug.outside_sacks = round(plug.sacks_required * _SQUEEZE_OUTSIDE_RATIO, 1)
+            # ------------------------------------------------------------------
+            # Casing-aware classification (formation_plug, shoe_plug, fill_plug)
+            # ------------------------------------------------------------------
+            mid_depth = (plug.top_ft + plug.bottom_ft) / 2.0
+
+            casing_op: Optional[str] = None
+            if (
+                prod_shoe_ft is not None
+                and prod_toc_ft is not None
+                and plug.step_type in ("formation_plug", "fill_plug")
+            ):
+                # Apply perforate-and-squeeze to formation and fill plugs that fall in the
+                # uncemented annular zone of the production casing: between surface
+                # and the production casing TOC (where no annular cement was placed).
+                # Below TOC (mid_depth >= toc) cement already exists behind the
+                # casing — treat as spot (or squeeze if CBL says otherwise).
+                # Shoe plugs are excluded: they sit at casing set points where the
+                # original casing cement was placed and don't require perforation.
+                plug_inside_casing = mid_depth <= prod_shoe_ft
+                cement_behind_casing = mid_depth >= prod_toc_ft
+
+                if plug_inside_casing and not cement_behind_casing:
+                    if self._has_perfs_at_depth(mid_depth, well):
+                        # Casing is already perforated here — cement goes inside
+                        casing_op = "spot"
+                    else:
+                        # Need to perforate production casing then squeeze behind pipe
+                        casing_op = "perforate_and_squeeze"
+                        size_str = f"{prod_size_in:.3f}-in" if prod_size_in else "production"
+                        plug.special_instructions = (
+                            f"Perforate {size_str} production casing at "
+                            f"{mid_depth:,.0f} ft; squeeze cement behind pipe"
+                        )
+                        # Store perforation interval for WBD rendering
+                        # Perforate across the plug interval (where cement needs to go behind casing)
+                        plug.perf_top_ft = plug.top_ft
+                        plug.perf_bottom_ft = plug.bottom_ft
+
+            # Apply casing-based op (may be overridden by CBL below)
+            if casing_op is not None:
+                plug.operation_type = casing_op
             else:
                 plug.operation_type = "spot"
+
+            # ------------------------------------------------------------------
+            # CBL override: poor cement zone → squeeze (runs after casing logic)
+            # ------------------------------------------------------------------
+            if self._overlaps_poor_cement(plug.top_ft, plug.bottom_ft, poor_intervals):
+                plug.operation_type = "squeeze"
+
+            # Note: inside_sacks / outside_sacks are calculated in _calculate_volumes
+            # using volume-based split, so no fixed-ratio recalculation here.
+
+    @staticmethod
+    def _find_production_casing(well: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Return the production casing string dict, or None if not found."""
+        for cs in well.get("casing_strings", []):
+            cs_type = (cs.get("type") or cs.get("casing_type") or cs.get("string") or "").lower()
+            if "production" in cs_type:
+                return cs
+        return None
+
+    @staticmethod
+    def _has_perfs_at_depth(depth_ft: float, well: Dict[str, Any]) -> bool:
+        """Return True if depth_ft falls within any production or general perforation interval."""
+        for perf in well.get("production_perforations", []) + well.get("perforations", []):
+            perf_top = perf.get("top_ft") or perf.get("top_md")
+            perf_bottom = perf.get("bottom_ft") or perf.get("bottom_md")
+            if perf_top is not None and perf_bottom is not None:
+                try:
+                    if float(perf_top) <= depth_ft <= float(perf_bottom):
+                        return True
+                except (ValueError, TypeError):
+                    pass
+        return False
 
     @staticmethod
     def _overlaps_poor_cement(
@@ -792,31 +1027,79 @@ class C103PluggingRules:
         }
         return _BASIS_MAP.get(plug_type, "NMAC 19.15.25")
 
-    @staticmethod
+    @classmethod
     def _get_hole_type_at_depth(
-        depth_ft: float, casing_strings: List[Dict[str, Any]]
+        cls,
+        depth_ft: float,
+        casing_strings: List[Dict[str, Any]],
+        well: Dict[str, Any] = None,
     ) -> str:
-        """Return 'open' if depth is below all casing shoes, 'cased' otherwise."""
+        """Return 'open' if depth is below all casing shoes or has perfs without casing.
+
+        Fix 2E: if perforations exist at this depth without casing coverage,
+        classify as open hole (100% excess applies instead of 50%).
+        Handles multiple field name variants via _get_casing_depth helper.
+        """
         if not casing_strings:
-            return "cased"
-        deepest_shoe = max(float(c.get("depth_ft", 0)) for c in casing_strings)
-        return "open" if depth_ft > deepest_shoe else "cased"
+            return "open" if well and _depth_has_perforations(depth_ft, well) else "cased"
+        deepest_shoe = max(cls._get_casing_depth(c) for c in casing_strings)
+        if depth_ft > deepest_shoe:
+            return "open"
+        # Check if perforations exist at this depth without adjacent casing coverage
+        if well and _depth_has_perforations(depth_ft, well):
+            # Perforations without casing coverage → treat as open hole for excess calc
+            covering = [c for c in casing_strings if cls._get_casing_depth(c) >= depth_ft]
+            if not covering:
+                return "open"
+        return "cased"
 
     @staticmethod
+    def _get_casing_depth(casing: Dict[str, Any]) -> float:
+        """Return the shoe depth of a casing string, handling multiple field name variants."""
+        val = (
+            casing.get("depth_ft")
+            or casing.get("shoe_depth_ft")
+            or casing.get("bottom")
+            or 0
+        )
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return 0.0
+
+    @staticmethod
+    def _get_casing_od(casing: Dict[str, Any]) -> float:
+        """Return the OD of a casing string, handling multiple field name variants."""
+        val = (
+            casing.get("size_in")
+            or casing.get("od_in")
+            or casing.get("diameter")
+            or 0
+        )
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return 0.0
+
+    @classmethod
     def _get_casing_od_at_depth(
-        depth_ft: float, casing_strings: List[Dict[str, Any]]
+        cls, depth_ft: float, casing_strings: List[Dict[str, Any]]
     ) -> Optional[float]:
-        """Return the OD of the innermost casing string covering depth_ft."""
+        """Return the OD of the innermost casing string covering depth_ft.
+
+        Handles multiple field name variants for depth (depth_ft, shoe_depth_ft,
+        bottom) and OD (size_in, od_in, diameter).
+        """
         if not casing_strings:
             return None
-        # Casings that reach or pass depth_ft, sorted by OD ascending (innermost last)
+        # Casings that reach or pass depth_ft
         covering = [
-            c for c in casing_strings if float(c.get("depth_ft", 0)) >= depth_ft
+            c for c in casing_strings if cls._get_casing_depth(c) >= depth_ft
         ]
         if not covering:
             return None
         # Return smallest OD — innermost string
-        return min(float(c["size_in"]) for c in covering)
+        return min(cls._get_casing_od(c) for c in covering) or None
 
     @staticmethod
     def _estimate_casing_id(od_in: float) -> float:
@@ -846,6 +1129,18 @@ class C103PluggingRules:
         else:
             wall = 0.30  # Conservative fallback
         return od_in - 2.0 * wall
+
+    @staticmethod
+    def _get_hole_size_for_casing(casing_od: float, casing_record: Optional[Dict] = None) -> float:
+        """Get hole size for a casing OD. Uses actual if available, otherwise standard bit size."""
+        if casing_record:
+            hole = casing_record.get("hole_size_in") or casing_record.get("hole_size")
+            if hole:
+                return float(hole)
+        best = min(STANDARD_HOLE_SIZES.keys(), key=lambda k: abs(k - casing_od))
+        if abs(best - casing_od) < 1.0:
+            return STANDARD_HOLE_SIZES[best]
+        return casing_od * 1.45  # Conservative fallback
 
     # ------------------------------------------------------------------
     # Public — validation

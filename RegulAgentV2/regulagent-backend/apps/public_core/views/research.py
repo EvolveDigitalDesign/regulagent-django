@@ -72,6 +72,12 @@ class ResearchSessionListCreateView(APIView):
             for sess in existing[:20]:
                 sess_clean = _re.sub(r"\D+", "", str(sess.api_number))
                 if len(sess_clean) >= 8 and sess_clean[-8:] == api_suffix:
+                    # Only reuse if session actually has useful data
+                    if sess.failed_documents > 0 or sess.indexed_documents == 0:
+                        logger.info(
+                            f"[ResearchAPI] Skipping session {sess.id} — has failed docs or no indexed docs, will re-index"
+                        )
+                        continue
                     logger.info(f"[ResearchAPI] Reusing ready session {sess.id} for api={api_number}")
                     return Response(
                         ResearchSessionSerializer(sess).data,

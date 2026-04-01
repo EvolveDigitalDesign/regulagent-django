@@ -68,8 +68,9 @@ def combine_pdfs_to_temp(
     try:
         merger = PdfMerger()
         source_info = []
+        skipped_files = []
         total_pages = 0
-        
+
         # Add each PDF
         for idx, pdf_path in enumerate(pdf_paths):
             try:
@@ -78,7 +79,7 @@ def combine_pdfs_to_temp(
                     reader = PdfReader(f)
                     page_count = len(reader.pages)
                     total_pages += page_count
-                    
+
                     # Track source file info
                     source_info.append({
                         "index": idx,
@@ -87,15 +88,24 @@ def combine_pdfs_to_temp(
                         "page_count": page_count,
                         "page_range": [total_pages - page_count + 1, total_pages]
                     })
-                
+
                 # Append to merger
                 merger.append(pdf_path)
-                
+
                 logger.debug(f"Added PDF {idx+1}/{len(pdf_paths)}: {os.path.basename(pdf_path)} ({page_count} pages)")
-                
+
             except Exception as e:
-                logger.error(f"Failed to process PDF {pdf_path}: {e}")
-                raise PDFCombinerError(f"Failed to process {os.path.basename(pdf_path)}: {e}")
+                logger.warning(f"Skipping corrupt or unreadable PDF {os.path.basename(pdf_path)}: {e}")
+                skipped_files.append({
+                    "index": idx,
+                    "filename": os.path.basename(pdf_path),
+                    "path": pdf_path,
+                    "reason": str(e),
+                })
+                continue
+
+        if not source_info:
+            raise PDFCombinerError("All PDF files are corrupt or unreadable")
         
         # Create temporary output file in Django's media directory for persistence
         import django.conf
@@ -122,15 +132,18 @@ def combine_pdfs_to_temp(
             expires_at = datetime.datetime.utcnow() + datetime.timedelta(hours=ttl_hours)
             
             logger.info(
-                f"✅ Combined {len(pdf_paths)} PDFs into {temp_path} "
+                f"Combined {len(source_info)}/{len(pdf_paths)} PDFs into {temp_path} "
                 f"({total_pages} pages, {file_size / 1024:.1f} KB)"
+                + (f" — skipped {len(skipped_files)} corrupt file(s): "
+                   f"{[s['filename'] for s in skipped_files]}" if skipped_files else "")
             )
-            
+
             return {
                 "temp_path": temp_path,
                 "file_size": file_size,
                 "page_count": total_pages,
                 "source_files": source_info,
+                "skipped_files": skipped_files,
                 "ttl_expires_at": expires_at.isoformat() + "Z",
                 "ttl_hours": ttl_hours,
             }

@@ -29,7 +29,7 @@ ADAPTER_REGISTRY: Dict[str, type] = {
 
 # Jurisdiction-appropriate document type candidates for LLM classification fallback
 TX_TYPES = ["w1", "w2", "w3", "w3a", "w15", "g1", "pa_procedure", "gau", "schematic", "formation_tops", "w12", "l1", "p14", "swr10", "swr13"]
-NM_TYPES = ["gau", "w2", "w15", "schematic", "formation_tops", "c_101", "c_103", "c_105", "sundry"]
+NM_TYPES = ["c_100", "c_101", "c_102", "c_103", "c_104", "c_105", "sundry", "apd", "schematic", "formation_tops"]
 
 
 def get_adapter(state: str) -> StateAdapter:
@@ -76,12 +76,22 @@ def index_single_document(
             source_path__icontains=doc.filename,
         ).first()
     if existing:
-        logger.info(f"Document already extracted: {doc.filename} -> ED {existing.id}")
-        if session:
-            ResearchSession.objects.filter(id=session.id).update(
-                indexed_documents=F("indexed_documents") + 1
+        # Only skip re-processing if the existing document was successfully extracted
+        has_data = existing.json_data and existing.json_data != {}
+        is_known_type = existing.document_type and existing.document_type != "unknown"
+        if has_data and is_known_type:
+            logger.info(f"Document already extracted: {doc.filename} -> ED {existing.id}")
+            if session:
+                ResearchSession.objects.filter(id=session.id).update(
+                    indexed_documents=F("indexed_documents") + 1
+                )
+            return existing
+        else:
+            logger.info(
+                f"Re-processing previously failed document: {doc.filename} "
+                f"(type={existing.document_type}, status={existing.status})"
             )
-        return existing
+            existing.delete()
 
     # Download
     local_path = adapter.download_document(doc)
@@ -97,11 +107,22 @@ def index_single_document(
         doc_type = classify_document(local_path, candidate_types=candidate_types)
     if doc_type == "unknown":
         logger.warning(f"Could not classify document: {doc.filename}")
+        # Persist the failure so it can be retried and provides an audit trail
+        ed = ExtractedDocument.objects.create(
+            well=well,
+            api_number=api_number,
+            document_type="unknown",
+            source_path=doc.url or (str(local_path) if local_path else doc.filename),
+            neubus_filename=doc.filename if (doc.metadata and doc.metadata.get("neubus_lease_id")) else "",
+            status="error",
+            json_data={},
+            errors=[f"Could not classify document: {doc.filename}"],
+        )
         if session:
             ResearchSession.objects.filter(id=session.id).update(
                 failed_documents=F("failed_documents") + 1
             )
-        return None
+        return ed
 
     # Extract (with optional tag-aware prompts)
     try:
@@ -109,7 +130,44 @@ def index_single_document(
         _tags = tag_segment(doc_type)
     except Exception:
         _tags = None
-    result = extract_json_from_pdf(local_path, doc_type, tags=_tags)
+
+    try:
+        result = extract_json_from_pdf(local_path, doc_type, tags=_tags)
+    except (KeyError, ValueError) as exc:
+        # No extraction prompt for this doc type — store as classified but not extracted
+        logger.info(f"No extraction prompt for {doc_type}, storing as classified: {exc}")
+        from dataclasses import dataclass
+
+        @dataclass
+        class _Stub:
+            json_data: dict
+            raw_text: str
+            errors: list
+            model_tag: str
+
+        # Try to get raw text for search
+        raw_text = ""
+        try:
+            import pdfplumber
+            with pdfplumber.open(str(local_path)) as pdf:
+                raw_text = "\n".join((p.extract_text() or "") for p in pdf.pages[:5])[:10000]
+        except Exception:
+            pass
+        if not raw_text.strip():
+            try:
+                from pdf2image import convert_from_path
+                import pytesseract
+                images = convert_from_path(str(local_path), first_page=1, last_page=3, dpi=150)
+                raw_text = "\n".join(pytesseract.image_to_string(img) for img in images)[:10000]
+            except Exception:
+                pass
+
+        result = _Stub(
+            json_data={"_raw_text": raw_text} if raw_text else {},
+            raw_text=raw_text,
+            errors=[],
+            model_tag="none",
+        )
 
     # Store raw PDF text for fallback vector retrieval
     if result.raw_text:
@@ -121,7 +179,7 @@ def index_single_document(
             well=well,
             api_number=api_number,
             document_type=doc_type,
-            source_path=str(local_path),
+            source_path=doc.url or str(local_path),
             neubus_filename=doc.filename if (doc.metadata and doc.metadata.get("neubus_lease_id")) else "",
             model_tag=result.model_tag,
             status="success" if not result.errors else "partial",

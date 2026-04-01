@@ -1,9 +1,10 @@
+name: regulagent
+
 services:
   db:
     build:
       context: ..
       dockerfile: docker/Dockerfile.db
-    platform: linux/amd64
     container_name: regulagent_db
     environment:
       - POSTGRES_DB=${DB_NAME:-regulagent}

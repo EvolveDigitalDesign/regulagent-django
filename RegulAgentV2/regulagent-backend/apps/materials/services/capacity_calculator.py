@@ -19,9 +19,13 @@ if not os.path.exists(DB_PATH):
 if not os.path.exists(DB_PATH) and "PIPE_DATA_DB" in os.environ:
     DB_PATH = os.environ["PIPE_DATA_DB"]
 
-# Final fallback: hardcoded absolute path
+# Fail fast if DB not found — no silent fallback to dev paths
 if not os.path.exists(DB_PATH):
-    DB_PATH = "/Users/ru/Git/JMR/RegulatoryAgent/regulagent-django/RegulAgentV2/regulagent-backend/apps/materials/pipe_data.db"
+    raise FileNotFoundError(
+        f"pipe_data.db not found. Searched: {os.path.join(SCRIPT_DIR, 'pipe_data.db')}, "
+        f"{os.path.join(os.path.dirname(SCRIPT_DIR), 'pipe_data.db')}. "
+        f"Set the PIPE_DATA_DB environment variable to the correct path."
+    )
 
 CLASS_C_YIELD = 1.32  # ft³/sack (Class C cement)
 CLASS_H_YIELD = 1.06  # ft³/sack (Class H cement)
@@ -230,6 +234,49 @@ def calculate_cement_simple(
         yield_ft3_per_sack=yield_ft3_per_sack,
         pipe_spec=pipe,  # Include for reference
     )
+
+
+def calculate_cement_for_interval(
+    top_ft: float,
+    bottom_ft: float,
+    hole_size_inch: float,
+    casing_od_inch: float,
+    casing_weight_lbft=None,
+    cement_class: str = "C",
+) -> dict:
+    """Calculate cement for a plug placed between two measured depths.
+
+    Args:
+        top_ft: Top of plug interval (measured depth, ft)
+        bottom_ft: Bottom of plug interval (measured depth, ft)
+        hole_size_inch: Hole or casing ID in inches
+        casing_od_inch: Casing OD in inches
+        casing_weight_lbft: Casing weight in lb/ft (optional, defaults to lightest)
+        cement_class: Cement class ("C" or "H")
+
+    Returns:
+        dict matching calculate_cement_simple() output with added
+        'top_ft' and 'bottom_ft' keys.
+
+    Raises:
+        ValueError: If bottom_ft <= top_ft
+    """
+    if bottom_ft <= top_ft:
+        raise ValueError(
+            f"bottom_ft ({bottom_ft}) must be greater than top_ft ({top_ft})"
+        )
+    plug_length_ft = bottom_ft - top_ft
+    result = calculate_cement_simple(
+        hole_size_inch=hole_size_inch,
+        casing_od_inch=casing_od_inch,
+        casing_weight_lbft=casing_weight_lbft,
+        plug_length_ft=plug_length_ft,
+        plug_depth_ft=bottom_ft,
+        cement_class=cement_class,
+    )
+    result["top_ft"] = top_ft
+    result["bottom_ft"] = bottom_ft
+    return result
 
 
 def calculate_cement_full(

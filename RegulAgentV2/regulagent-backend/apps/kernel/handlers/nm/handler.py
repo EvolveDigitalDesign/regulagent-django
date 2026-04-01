@@ -69,6 +69,7 @@ class NMJurisdictionHandler:
             "tubing": [],
             "perforations": [],
             "formation_tops": [],
+            "kop_ft": None,
         }
 
         c105 = _find_c105(extractions)
@@ -113,6 +114,14 @@ class NMJurisdictionHandler:
                 "name": ft.get("formation"),
                 "depth_ft": ft.get("top_ft"),
             })
+
+        # --- KOP (kickoff point) ---
+        kop = c105.get("kop") or c105.get("kickoff_point")
+        if kop is not None:
+            try:
+                geometry["kop_ft"] = float(kop)
+            except (ValueError, TypeError):
+                pass
 
         return geometry
 
@@ -189,7 +198,19 @@ class NMJurisdictionHandler:
         policy: dict,
         geometry: dict,
     ) -> dict:
-        raise NotImplementedError("NM payload building not yet extracted from view")
+        """Build the final plan payload for NM C-103 plugging reports."""
+        return {
+            "jurisdiction": "NM",
+            "form": "C-103",
+            "api": facts.get("api_number", ""),
+            "well_name": facts.get("well_name", ""),
+            "operator": facts.get("operator", ""),
+            "county": facts.get("county", ""),
+            "steps": steps,
+            "geometry": geometry,
+            "policy_id": policy.get("policy_id", "nm.c103"),
+            "policy_version": policy.get("policy_version"),
+        }
 
 
 # ---------------------------------------------------------------------------

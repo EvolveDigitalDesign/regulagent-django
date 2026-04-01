@@ -36,6 +36,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from apps.kernel.services.policy_kernel import plan_from_facts
+from apps.kernel.services.jurisdiction_registry import detect_jurisdiction
 from apps.policy.services.loader import get_effective_policy
 from apps.public_core.models import (
     ExtractedDocument,
@@ -72,6 +73,48 @@ from apps.policy.services.loader import get_effective_policy
 logger = logging.getLogger(__name__)
 
 
+def _parse_fraction(val):
+    """Parse a fraction string like '9 5/8' to 9.625, or return float if already numeric."""
+    if val is None or val == "":
+        return None
+    if isinstance(val, (int, float)):
+        return float(val)
+    val_str = str(val).strip()
+    if not val_str:
+        return None
+    try:
+        return float(val_str)
+    except ValueError:
+        pass
+    # Try "whole num/den" format like "9 5/8"
+    parts = val_str.split()
+    if len(parts) == 2 and "/" in parts[1]:
+        try:
+            whole = float(parts[0])
+            num, den = parts[1].split("/")
+            return whole + float(num) / float(den)
+        except (ValueError, ZeroDivisionError):
+            return None
+    # Try pure fraction "5/8"
+    if "/" in val_str:
+        try:
+            num, den = val_str.split("/")
+            return float(num) / float(den)
+        except (ValueError, ZeroDivisionError):
+            return None
+    return None
+
+
+def _safe_float(val):
+    """Convert val to float, returning None if val is None, empty string, or unparseable."""
+    if val is None or val == "":
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
 class W3AInitialView(APIView):
     """
     Stage 1: Document sourcing and combined PDF generation.
@@ -104,6 +147,10 @@ class W3AInitialView(APIView):
         logger.info(f"📍 API: {api_normalized}, Jurisdiction: {jurisdiction}")
 
         try:
+            # Route to manual entry flow (no document sourcing)
+            if input_mode == "manual":
+                return self._handle_manual_initial(request, serializer.validated_data)
+
             # Route to NM-specific flow if jurisdiction is NM
             if jurisdiction == "NM":
                 return self._handle_nm_initial(request, api_normalized, input_mode, serializer)
@@ -208,13 +255,14 @@ class W3AInitialView(APIView):
                 status=PlanSnapshot.STATUS_DRAFT,
                 payload={
                     "stage": "document_sourcing",
+                    "jurisdiction": jurisdiction,
                     "api": api_normalized,
                     "combined_pdf_path": combined_info["temp_path"],
                     "source_files": source_file_metadata,
                     "input_mode": input_mode,
                 },
                 kernel_version="",
-                policy_id="tx.w3a",
+                policy_id="nm.c103" if jurisdiction == "NM" else "tx.w3a",
                 overlay_id="",
                 tenant_id=request.user.tenants.first().id if request.user.tenants.exists() else None,
                 workspace=workspace,
@@ -263,6 +311,91 @@ class W3AInitialView(APIView):
             outfp.write(chunk if isinstance(chunk, (bytes, bytearray)) else str(chunk).encode("utf-8"))
 
         return dest
+
+    def _handle_manual_initial(self, request, validated_data: Dict[str, Any]) -> Response:
+        """
+        Handle manual entry mode: skip document sourcing and extraction entirely.
+
+        Creates a PlanSnapshot at stage "geometry_derived" with empty geometry,
+        allowing the user to enter casing/perf data directly via the geometry UI.
+        """
+        api10 = validated_data["api10"]
+        api14 = api10 + "0000" if len(api10) == 10 else api10
+
+        logger.info(f"✏️  MANUAL INITIAL - api14={api14}")
+
+        try:
+            # Find or create WellRegistry entry
+            well, _ = WellRegistry.objects.get_or_create(api14=api14)
+
+            temp_plan_id = f"temp_manual_{api14}_{uuid4().hex[:8]}"
+
+            # Resolve workspace
+            workspace = None
+            workspace_id = request.data.get("workspace_id")
+            if workspace_id:
+                from apps.tenants.models import ClientWorkspace
+                user_tenant = request.user.tenants.first()
+                if user_tenant:
+                    workspace = ClientWorkspace.objects.filter(id=workspace_id, tenant=user_tenant).first()
+
+            well_metadata = {
+                "district": validated_data.get("district", ""),
+                "county": validated_data.get("county", ""),
+                "field_name": validated_data.get("field_name", ""),
+                "lease": validated_data.get("lease", ""),
+                "well_no": validated_data.get("well_no", ""),
+                "total_depth_ft": validated_data.get("total_depth"),
+                "has_uqw": validated_data.get("has_uqw", False),
+                "uqw_base_depth_ft": validated_data.get("uqw_base_depth"),
+            }
+
+            snapshot = PlanSnapshot.objects.create(
+                well=well,
+                plan_id=temp_plan_id,
+                kind=PlanSnapshot.KIND_BASELINE,
+                status=PlanSnapshot.STATUS_DRAFT,
+                payload={
+                    "stage": "geometry_derived",
+                    "input_mode": "manual",
+                    "api": api14,
+                    "extractions": [],
+                    "geometry": {
+                        "casing_strings": [],
+                        "formation_tops": [],
+                        "perforations": [],
+                        "mechanical_barriers": [],
+                        "cement_jobs": [],
+                        "uqw_data": None,
+                        "kop_data": None,
+                    },
+                    "well_metadata": well_metadata,
+                },
+                kernel_version="",
+                policy_id="tx.w3a",
+                overlay_id="",
+                tenant_id=request.user.tenants.first().id if request.user.tenants.exists() else None,
+                workspace=workspace,
+                visibility=PlanSnapshot.VISIBILITY_PRIVATE,
+            )
+
+            logger.info(f"✅ Created manual temp plan {temp_plan_id}")
+
+            return Response(
+                {
+                    "temp_plan_id": temp_plan_id,
+                    "input_mode": "manual",
+                    "api": api14,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            logger.exception("Manual Initial - error")
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def _handle_nm_initial(self, request, api_normalized: str, input_mode: str, serializer) -> Response:
         """
@@ -851,6 +984,7 @@ class W3AConfirmDocsView(APIView):
                         extraction_data, equipment_status_map = merge_research_into_extractions(
                             extraction_data, research_data
                         )
+                        logger.warning(f"DIAG-1: After merge, c105 formation_record={len(extraction_data.get('c105', {}).get('formation_record', []))}")
                         research_supplement = {
                             "status": "supplemented",
                             "formations_found": len(research_data.get("formation_tops", [])),
@@ -934,9 +1068,15 @@ class W3AConfirmDocsView(APIView):
                                 # was a snapshot taken before research ran.
                                 merged_c105 = extraction_data.get("c105", {})
                                 for ext_item in snapshot.payload.get("extractions", []):
-                                    if ext_item.get("document_type") == "c105":
+                                    if ext_item.get("document_type") in ("c105", "c_105"):
                                         ext_item["json_data"] = merged_c105
                                         break
+                                for _ext in snapshot.payload.get("extractions", []):
+                                    _dt = _ext.get("document_type", "")
+                                    if "c105" in _dt or "c_105" in _dt:
+                                        _jd = _ext.get("json_data", {})
+                                        _fr = _jd.get("formation_record", [])
+                                        logger.warning(f"DIAG-2: Synced extraction doc_type={_dt}, json_data has formation_record={len(_fr)}, json_data keys={list(_jd.keys())[:10]}")
                                 snapshot.save(update_fields=["payload"])
                         except Exception:
                             logger.warning("🔍 EQUIP-TAG: Equipment status tagging failed", exc_info=True)
@@ -1186,9 +1326,113 @@ class W3AGeometryView(APIView):
         extractions: List[Dict[str, Any]],
         edits
     ) -> List[Dict[str, Any]]:
-        """Apply user edits to extracted JSONs (in-memory)."""
-        # TODO: Implement JSON path editing
-        return extractions
+        """Apply user edits to extracted JSONs (in-memory).
+
+        Each edit's field_path is applied to the extraction's json_data.
+        Edits are matched to extractions by document_type if the edit
+        has a plan_snapshot with extraction metadata, otherwise applied
+        to the first extraction that contains the top-level key.
+        """
+        import copy
+        if not edits:
+            return extractions
+
+        # Deep copy to avoid mutating the original payload
+        edited = copy.deepcopy(extractions)
+
+        # Deduplicate edits (same field_path + edited_value = skip duplicates)
+        seen_edits = set()
+        unique_edits = []
+        for edit in edits:
+            key = (edit.field_path, str(edit.edited_value))
+            if key not in seen_edits:
+                seen_edits.add(key)
+                unique_edits.append(edit)
+
+        # Separate DELETE edits from value edits
+        delete_edits = []
+        non_delete_edits = []
+        for edit in unique_edits:
+            if edit.edited_value == "__DELETE__":
+                delete_edits.append(edit)
+            else:
+                non_delete_edits.append(edit)
+
+        # Sort deletes by index descending so higher indices are removed first
+        delete_edits.sort(
+            key=lambda e: int(e.field_path.split(".")[-1]) if e.field_path.split(".")[-1].isdigit() else 0,
+            reverse=True,
+        )
+
+        # Track deleted indices per array key for re-indexing non-delete edits
+        deleted_indices: dict = {}  # {"mechanical_equipment": [1], ...}
+
+        for edit in delete_edits:
+            field_path = edit.field_path
+            parts = field_path.split(".")
+            if len(parts) == 2 and parts[1].isdigit():
+                array_key = parts[0]
+                delete_idx = int(parts[1])
+                for ext in edited:
+                    json_data = ext.get("json_data", {})
+                    if not json_data:
+                        continue
+                    if array_key in json_data and isinstance(json_data[array_key], list):
+                        target_list = json_data[array_key]
+                        if 0 <= delete_idx < len(target_list):
+                            target_list.pop(delete_idx)
+                            deleted_indices.setdefault(array_key, []).append(delete_idx)
+                            logger.info(
+                                "Deleted item at index %d from %s (edit %s)",
+                                delete_idx, array_key, edit.id
+                            )
+                            break
+
+        # Re-index non-delete edits: adjust indices that were shifted by deletions
+        for edit in non_delete_edits:
+            parts = edit.field_path.split(".")
+            if len(parts) >= 2 and parts[1].isdigit():
+                array_key = parts[0]
+                orig_idx = int(parts[1])
+                if array_key in deleted_indices:
+                    # Count how many deleted indices were BELOW this one
+                    shift = sum(1 for d in sorted(deleted_indices[array_key]) if d < orig_idx)
+                    if shift > 0:
+                        new_idx = orig_idx - shift
+                        parts[1] = str(new_idx)
+                        edit.field_path = ".".join(parts)
+                        logger.info(f"Re-indexed edit {array_key}.{orig_idx} → {array_key}.{new_idx}")
+
+        # Then process non-delete edits
+        for edit in non_delete_edits:
+            field_path = edit.field_path
+            parts = field_path.split(".")
+            top_key = parts[0]
+            applied = False
+
+            for ext in edited:
+                json_data = ext.get("json_data", {})
+                if not json_data:
+                    continue
+                # Apply to the extraction whose json_data contains the top-level key
+                if top_key in json_data:
+                    try:
+                        _apply_field_edit(json_data, field_path, edit.edited_value)
+                        applied = True
+                        break
+                    except (KeyError, IndexError, TypeError) as exc:
+                        logger.warning(
+                            "Failed to apply extraction edit %s (path=%s): %s",
+                            edit.id, field_path, exc
+                        )
+
+            if not applied:
+                logger.warning(
+                    "Extraction edit %s (path=%s) did not match any extraction",
+                    edit.id, field_path
+                )
+
+        return edited
     
     def _derive_geometry(self, extractions: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Derive well geometry from extractions + policy-based formation tops."""
@@ -1264,6 +1508,14 @@ class W3AGeometryView(APIView):
             for ext in extractions:
                 if ext["document_type"] == "c105":
                     c105_data = ext["json_data"]
+                    logger.warning(f"DIAG-3: c105_data keys={list(c105_data.keys())[:15]}, formation_record={len(c105_data.get('formation_record', []))}")
+
+                    # Fix B: handle double-nested json_data where c105 key wraps the real data
+                    if not c105_data.get("formation_record") and not c105_data.get("casing_record"):
+                        nested_c105 = c105_data.get("c105", {})
+                        if isinstance(nested_c105, dict) and (nested_c105.get("formation_record") or nested_c105.get("casing_record")):
+                            logger.warning(f"DIAG-3: Detected double-nested c105, unwrapping. Nested keys={list(nested_c105.keys())[:15]}")
+                            c105_data = nested_c105
 
                     # Casing strings — map NM field names to TX-compatible field names
                     for casing in c105_data.get("casing_record", []):
@@ -1299,7 +1551,6 @@ class W3AGeometryView(APIView):
                             continue
 
                         if casing_type.startswith("packer"):
-                            # Route packers to mechanical barriers (wrapped format for serializer)
                             packer_depth = casing.get("bottom") or casing.get("shoe_depth_ft")
                             equip_status = casing.get("equipment_status", "unverified")
                             logger.warning(
@@ -1422,7 +1673,56 @@ class W3AGeometryView(APIView):
                             "editable": True,
                         })
 
+                    # Formation tops from C-105 formation_record (populated by research supplement)
+                    for formation in c105_data.get("formation_record", []):
+                        formation_name = formation.get("formation", "")
+                        top_ft = formation.get("top_ft")
+                        if formation_name and top_ft is not None:
+                            geometry["formation_tops"].append({
+                                "field_id": f"formation_{formation_name.lower().replace(' ', '_')}",
+                                "field_label": formation_name,
+                                "value": float(top_ft),
+                                "unit": "ft",
+                                "source": "C-105 formation_record",
+                                "editable": True,
+                                "formation_name": formation_name,
+                            })
+                    if geometry["formation_tops"]:
+                        logger.info(f"📊 Extracted {len(geometry['formation_tops'])} formation tops from C-105")
+
                     break  # Only process first C-105
+
+        # Deduplicate mechanical_barriers — casing_record packers may duplicate
+        # research-discovered mechanical_equipment packers at different depths.
+        # Keep mechanical_equipment version (more accurate depth from research AI).
+        barriers = geometry.get("mechanical_barriers", [])
+        if len(barriers) > 1:
+            seen_types = {}  # {type: best_barrier}
+            deduped = []
+            for b in barriers:
+                v = b.get("value", {})
+                b_type = (v.get("type") or "").upper()
+                b_source = b.get("source", "")
+                # Prefer mechanical_equipment source over casing_record source
+                if b_type in seen_types:
+                    existing_source = seen_types[b_type].get("source", "")
+                    if "mechanical_equipment" in b_source and "casing_record" in existing_source:
+                        # Replace casing_record version with mechanical_equipment version
+                        deduped = [x for x in deduped if x is not seen_types[b_type]]
+                        deduped.append(b)
+                        seen_types[b_type] = b
+                    elif "casing_record" in b_source and "mechanical_equipment" in existing_source:
+                        # Keep existing mechanical_equipment version, skip casing_record
+                        continue
+                    else:
+                        # Different sources or same source — keep both (could be different barriers)
+                        deduped.append(b)
+                else:
+                    seen_types[b_type] = b
+                    deduped.append(b)
+            if len(deduped) < len(barriers):
+                logger.info(f"Deduplicated mechanical_barriers: {len(barriers)} → {len(deduped)}")
+                geometry["mechanical_barriers"] = deduped
 
         # Get policy-based formation tops
         policy_formations = []
@@ -1552,9 +1852,12 @@ class W3AConfirmGeometryView(APIView):
             mechanical_barriers_map = {mb["field_id"]: mb for mb in mechanical_barriers}
             
             for edit_data in edits:
-                # Determine if this is a user-added formation, mechanical barrier, or modification
+                # Determine if this is a user-added formation, mechanical barrier, casing, perf, or modification
                 is_user_added_formation = edit_data["original_value"] is None and "user_formation_" in edit_data["field_id"]
                 is_user_added_tool = edit_data["original_value"] is None and "user_tool_" in edit_data["field_id"]
+                is_user_added_casing = edit_data["original_value"] is None and "user_casing_" in edit_data["field_id"]
+                is_user_added_perf = edit_data["original_value"] is None and "user_perf_" in edit_data["field_id"]
+                is_user_added_cement = edit_data["original_value"] is None and "user_cement_" in edit_data["field_id"]
                 
                 # Save to audit trail
                 audit_entry = WellEditAudit.objects.create(
@@ -1602,7 +1905,65 @@ class W3AConfirmGeometryView(APIView):
                     }
                     mechanical_barriers_map[field_id] = new_tool
                     logger.info(f"🔧 User added existing tool: {tool_data.get('type')} @ {tool_data.get('depth_ft')} ft")
-                
+
+                elif is_user_added_casing:
+                    # Add new user-defined casing string
+                    # edited_value should be JSON with size, depth_set, top_of_cement, casing_type
+                    casing_data = edit_data["edited_value"]
+                    new_casing = {
+                        "field_id": field_id,
+                        "field_label": edit_data.get("field_label", ""),
+                        "value": {
+                            "size_in": _parse_fraction(casing_data.get("size")),
+                            "weight_per_ft": _parse_fraction(casing_data.get("weight")),
+                            "hole_size_in": _parse_fraction(casing_data.get("hole_size")),
+                            "shoe_depth_ft": _safe_float(casing_data.get("depth_set")),
+                            "cement_top_ft": _safe_float(casing_data.get("top_of_cement")),
+                            "cement_bottom_ft": _safe_float(casing_data.get("bottom_of_cement")),
+                            "string": casing_data.get("casing_type"),
+                        },
+                        "source": "User Added",
+                        "editable": True,
+                    }
+                    geometry.setdefault("casing_strings", []).append(new_casing)
+                    logger.info(f"🔧 User added casing string: {casing_data.get('casing_type')} @ {casing_data.get('depth_set')} ft")
+
+                elif is_user_added_perf:
+                    # Add new user-defined perforation
+                    # edited_value should be JSON with top_ft, bottom_ft
+                    perf_data = edit_data["edited_value"]
+                    new_perf = {
+                        "field_id": field_id,
+                        "field_label": edit_data.get("field_label", ""),
+                        "value": {
+                            "top_ft": perf_data.get("top_ft"),
+                            "bottom_ft": perf_data.get("bottom_ft"),
+                        },
+                        "source": "User Added",
+                        "editable": True,
+                    }
+                    geometry.setdefault("perforations", []).append(new_perf)
+                    logger.info(f"📍 User added perforation: {perf_data.get('top_ft')}-{perf_data.get('bottom_ft')} ft")
+
+                elif is_user_added_cement:
+                    # Add new user-defined historic cement job
+                    cement_data = edit_data["edited_value"]
+                    new_cement_job = {
+                        "field_id": field_id,
+                        "field_label": edit_data.get("field_label", ""),
+                        "value": {
+                            "job_type": cement_data.get("job_type", "unknown"),
+                            "cement_top_ft": cement_data.get("cement_top_ft"),
+                            "interval_bottom_ft": cement_data.get("cement_bottom_ft"),  # Map to kernel's expected key
+                            "sacks": cement_data.get("sacks"),
+                            "description": cement_data.get("description", ""),
+                        },
+                        "source": "User Added",
+                        "editable": True,
+                    }
+                    geometry.setdefault("cement_jobs", []).append(new_cement_job)
+                    logger.info(f"🧱 User added cement job: {cement_data.get('job_type')} @ {cement_data.get('cement_top_ft')}-{cement_data.get('cement_bottom_ft')} ft")
+
                 else:
                     # Update existing formation or tool
                     if field_id in formation_tops_map:
@@ -1796,8 +2157,20 @@ class W3AConfirmGeometryView(APIView):
         
         # Get extractions from snapshot
         extractions = snapshot.payload.get("extractions", [])
+
+        # Apply any pending extraction edits (user modifications from confirm-extractions step)
+        extraction_edits = WellEditAudit.objects.filter(
+            plan_snapshot=snapshot,
+            context=WellEditAudit.CONTEXT_EXTRACTION,
+            stage=WellEditAudit.STAGE_PENDING,
+        )
+        if extraction_edits.exists():
+            extractions = W3AGeometryView._apply_edits_to_extractions(self, extractions, extraction_edits)
+            logger.info(f"Applied {extraction_edits.count()} extraction edits to plan builder input")
+
         geometry = snapshot.payload.get("geometry", {})
         policy_id = snapshot.payload.get("policy_id", "tx.w3a")
+        logger.warning(f"DIAG-4: geometry formation_tops={len(geometry.get('formation_tops', []))}, geometry keys={list(geometry.keys())}")
 
         # 🔍 DEBUG: Log what geometry we received at the start
         logger.error(f"🔍 _build_plan_from_snapshot START: geometry has {len(geometry.get('casing_strings', []))} casing_strings")
@@ -1846,11 +2219,12 @@ class W3AConfirmGeometryView(APIView):
         # Extract well info
         well_info = w2_data.get("well_info", {})
         api14 = (well_info.get("api") or "").replace("-", "")
-        county = well_info.get("county") or ""
-        field = well_info.get("field") or ""
-        district = well_info.get("district") or ""
-        lease = well_info.get("lease") or ""
-        well_no = well_info.get("well_no") or ""
+        well_metadata = snapshot.payload.get("well_metadata", {})
+        county = well_info.get("county") or well_metadata.get("county") or ""
+        field = well_info.get("field") or well_metadata.get("field_name") or ""
+        district = well_info.get("district") or well_metadata.get("district") or ""
+        lease = well_info.get("lease") or well_metadata.get("lease") or ""
+        well_no = well_info.get("well_no") or well_metadata.get("well_no") or ""
         
         # Extract lat/lon from W-2 (critical for geographic zone evaluation)
         loc = well_info.get("location") or {}
@@ -1866,11 +2240,15 @@ class W3AConfirmGeometryView(APIView):
                 lon = gau_loc.get("lon") or gau_loc.get("longitude")
         
         logger.info(f"📍 Extracted coordinates: lat={lat}, lon={lon} (for geographic zone eval)")
-        
+
+        # Resolve jurisdiction — payload is authoritative, fallback to API number detection
+        jurisdiction = snapshot.payload.get("jurisdiction") or detect_jurisdiction(api or "")
+        logger.error(f"🚨 JURISDICTION RESOLVED: {jurisdiction} (from payload={snapshot.payload.get('jurisdiction')}, api={api})")
+
         # Build facts dictionary (mirroring w3a_from_api._build_plan)
         facts: Dict[str, Any] = {
             "api14": wrap(api14),
-            "state": wrap(snapshot.payload.get("jurisdiction", "TX")),
+            "state": wrap(jurisdiction),
             "district": wrap(district),
             "county": wrap(county),
             "field": wrap(field),
@@ -1890,6 +2268,32 @@ class W3AConfirmGeometryView(APIView):
         
         facts["has_uqw"] = wrap(bool(uqw_depth or gau_data))
         facts["uqw_base_ft"] = wrap(uqw_depth)
+
+        # Fallback to manual entry UQW data
+        if not facts.get("has_uqw") or not facts["has_uqw"].get("value"):
+            if well_metadata.get("has_uqw"):
+                facts["has_uqw"] = wrap(True)
+                uqw_base = well_metadata.get("uqw_base_depth_ft")
+                if uqw_base:
+                    facts["uqw_base_ft"] = wrap(float(uqw_base))
+                    facts["base_uqw_ft"] = float(uqw_base)
+                logger.info(f"🔵 UQW from manual entry: base={well_metadata.get('uqw_base_depth_ft')} ft")
+
+        # Add total depth from W-2 if available, fallback to manual entry
+        total_depth_w2 = None
+        well_info_td = well_info.get("total_depth_ft") or well_info.get("td_ft") or well_info.get("total_depth")
+        if well_info_td:
+            try:
+                total_depth_w2 = float(well_info_td)
+            except (ValueError, TypeError):
+                pass
+        if total_depth_w2:
+            facts["total_depth_ft"] = total_depth_w2
+        else:
+            td = well_metadata.get("total_depth_ft")
+            if td:
+                facts["total_depth_ft"] = float(td)
+
         facts["use_cibp"] = wrap(False)  # Default to False, can be overridden
         
         # Add casing record from W-2 (or geometry if available)
@@ -1917,7 +2321,15 @@ class W3AConfirmGeometryView(APIView):
         else:
             casing_to_process = []
             logger.error(f"❌❌❌ NO CASING DATA FOUND - casing_strings will be empty!")
-        
+
+        # Normalize casing values - ensure numeric fields are floats, not fraction strings
+        # This handles plans already saved with string fractions like "9 5/8"
+        for casing in casing_to_process:
+            for key in ("size_in", "hole_size_in", "weight_per_ft", "shoe_depth_ft", "cement_top_ft", "cement_bottom_ft"):
+                val = casing.get(key)
+                if val is not None and not isinstance(val, (int, float)):
+                    casing[key] = _parse_fraction(val)
+
         # Extract surface shoe depth and production TOC (critical for plug type determination)
         for casing in casing_to_process:
             string_type = casing.get("string", "").lower()
@@ -1928,6 +2340,14 @@ class W3AConfirmGeometryView(APIView):
                     facts["surface_shoe_ft"] = wrap(float(shoe_depth))
                     logger.info(f"📍 Surface shoe: {shoe_depth} ft")
             
+            elif string_type == "intermediate":
+                intermediate_shoe = casing.get("shoe_depth_ft") or casing.get("bottom_ft")
+                if intermediate_shoe:
+                    facts["intermediate_shoe_ft"] = float(intermediate_shoe)
+                intermediate_toc = casing.get("cement_top_ft") or casing.get("toc_ft")
+                if intermediate_toc is not None:
+                    facts["intermediate_toc_ft"] = float(intermediate_toc)
+
             elif string_type == "production":
                 # Production casing TOC is CRITICAL for determining spot vs perf&squeeze
                 toc = casing.get("cement_top_ft") or casing.get("toc_ft")
@@ -1977,51 +2397,107 @@ class W3AConfirmGeometryView(APIView):
             logger.info(f"📍 Using {len(prod_perfs)} perforations from W-2: {prod_perfs}")
         else:
             logger.warning("⚠️ NO PERFORATIONS FOUND - CIBP detection will fail!")
-        
+
+        # Auto-derive producing interval from perforations if not set from W-2
+        if not facts.get("producing_interval_ft") and facts.get("perforations"):
+            perf_tops = []
+            perf_bottoms = []
+            for p in facts["perforations"]:
+                p_val = p.get("value", p) if isinstance(p, dict) else {}
+                top = p_val.get("top_ft") or p_val.get("from_ft")
+                bottom = p_val.get("bottom_ft") or p_val.get("to_ft")
+                if top is not None:
+                    try:
+                        perf_tops.append(float(top))
+                    except (ValueError, TypeError):
+                        pass
+                if bottom is not None:
+                    try:
+                        perf_bottoms.append(float(bottom))
+                    except (ValueError, TypeError):
+                        pass
+            if perf_tops and perf_bottoms:
+                facts["producing_interval_ft"] = {
+                    "top": min(perf_tops),
+                    "bottom": max(perf_bottoms),
+                }
+                # Also set production_perforations for plan output
+                if not facts.get("production_perforations"):
+                    facts["production_perforations"] = facts["perforations"]
+                logger.info(f"📍 Auto-derived producing interval from perfs: {min(perf_tops)}-{max(perf_bottoms)} ft")
+
         # Check for existing CIBP or bridge plug - from both W-2 AND user-added tools in geometry
-        # The kernel checks facts["existing_mechanical_barriers"] for "CIBP"
+        # The kernel checks facts["existing_mechanical_barriers"] for barrier dicts with type + depth_ft
         mechanical_equipment = w2_data.get("mechanical_equipment", [])
         mechanical_barriers_geometry = geometry.get("mechanical_barriers", [])
-        existing_barriers = []
-        
+        logger.warning(f"BARRIER-DIAG: w2_data mechanical_equipment={len(mechanical_equipment)}, geometry mechanical_barriers={len(mechanical_barriers_geometry)}")
+        existing_barrier_types = []  # String list for cibp_present check
+        existing_barrier_dicts = []  # Full dicts for C-103 barrier filtering
+
         # Process W-2 mechanical equipment
         if mechanical_equipment:
             for equip in mechanical_equipment:
                 equip_type = str(equip.get("type", "")).upper()
+                depth = equip.get("depth_ft") or equip.get("set_depth_ft")
+                desc = equip.get("description", "")
                 if "CIBP" in equip_type or "BRIDGE" in equip_type:
-                    existing_barriers.append("CIBP")
-                    depth = equip.get("depth_ft") or equip.get("set_depth_ft")
+                    existing_barrier_types.append("CIBP")
+                    existing_barrier_dicts.append({"type": "CIBP", "depth_ft": float(depth) if depth else 0, "description": desc})
                     if depth:
                         facts["cibp_depth_ft"] = wrap(float(depth))
                         logger.info(f"🔧 Detected existing CIBP from W-2 at {depth} ft")
                 elif "PACKER" in equip_type:
-                    existing_barriers.append("PACKER")
+                    existing_barrier_types.append("PACKER")
+                    existing_barrier_dicts.append({
+                        "type": "PACKER",
+                        "depth_ft": float(depth) if depth else 0,
+                        "description": desc,
+                        "cement_top_ft": equip.get("cement_top_ft"),
+                        "sacks": equip.get("sacks"),
+                    })
                 elif "RETAINER" in equip_type:
-                    existing_barriers.append("RETAINER")
-        
+                    existing_barrier_types.append("RETAINER")
+                    existing_barrier_dicts.append({"type": "RETAINER", "depth_ft": float(depth) if depth else 0, "description": desc})
+
         # Process user-added mechanical tools from geometry (including user additions)
         if mechanical_barriers_geometry:
             for mb in mechanical_barriers_geometry:
                 tool_data = mb.get("value", {})
                 tool_type = str(tool_data.get("type", "")).upper()
                 tool_depth = tool_data.get("depth_ft")
-                
+                tool_desc = tool_data.get("description", "")
+
                 if "CIBP" in tool_type or "BRIDGE" in tool_type:
-                    if "CIBP" not in existing_barriers:
-                        existing_barriers.append("CIBP")
+                    if "CIBP" not in existing_barrier_types:
+                        existing_barrier_types.append("CIBP")
+                    existing_barrier_dicts.append({"type": "CIBP", "depth_ft": float(tool_depth) if tool_depth else 0, "description": tool_desc})
                     if tool_depth and not facts.get("cibp_depth_ft"):
                         facts["cibp_depth_ft"] = wrap(float(tool_depth))
                         logger.info(f"🔧 Detected existing CIBP from user geometry at {tool_depth} ft")
-                elif "PACKER" in tool_type and "PACKER" not in existing_barriers:
-                    existing_barriers.append("PACKER")
-                elif "RETAINER" in tool_type and "RETAINER" not in existing_barriers:
-                    existing_barriers.append("RETAINER")
-        
-        if existing_barriers:
-            facts["existing_mechanical_barriers"] = existing_barriers
-            # Only set cibp_present if there's actually a CIBP, not just any barrier
-            facts["cibp_present"] = wrap("CIBP" in existing_barriers)
-            logger.info(f"🔧 Final existing mechanical barriers: {existing_barriers}, cibp_present={'CIBP' in existing_barriers}")
+                elif "PACKER" in tool_type:
+                    if "PACKER" not in existing_barrier_types:
+                        existing_barrier_types.append("PACKER")
+                    existing_barrier_dicts.append({
+                        "type": "PACKER",
+                        "depth_ft": float(tool_depth) if tool_depth else 0,
+                        "description": tool_desc,
+                        "cement_top_ft": tool_data.get("cement_top_ft"),
+                        "sacks": tool_data.get("sacks"),
+                    })
+                elif "RETAINER" in tool_type:
+                    if "RETAINER" not in existing_barrier_types:
+                        existing_barrier_types.append("RETAINER")
+                    existing_barrier_dicts.append({"type": "RETAINER", "depth_ft": float(tool_depth) if tool_depth else 0, "description": tool_desc})
+
+        logger.warning(f"BARRIER-DIAG-2: existing_barrier_dicts={len(existing_barrier_dicts)}, types={existing_barrier_types}")
+        if existing_barrier_dicts:
+            facts["existing_mechanical_barriers"] = existing_barrier_dicts  # Full dicts for C-103 filtering
+            facts["cibp_present"] = wrap("CIBP" in existing_barrier_types)
+            logger.warning(f"🔧 Final existing mechanical barriers: {len(existing_barrier_dicts)} barriers, cibp_present={'CIBP' in existing_barrier_types}")
+            for bd in existing_barrier_dicts:
+                logger.warning(f"  barrier: {bd}")
+        else:
+            logger.warning("BARRIER-DIAG-2: NO barriers found despite having equipment data!")
         
         # Add tubing from W-2
         tubing = w2_data.get("tubing_record", [])
@@ -2053,58 +2529,100 @@ class W3AConfirmGeometryView(APIView):
                 if historic_jobs:
                     facts["historic_cement_jobs"] = historic_jobs
                     logger.info(f"📋 Added {len(historic_jobs)} historic cement jobs from W-15")
-        
-        # Get policy — jurisdiction-aware
-        jurisdiction = snapshot.payload.get("jurisdiction", "TX")
+
+        # Add user-entered cement jobs from geometry (manual entry mode)
+        user_cement_jobs = geometry.get("cement_jobs", [])
+        if user_cement_jobs:
+            cementing_data_from_user = []
+            for job in user_cement_jobs:
+                job_val = job.get("value", job) if isinstance(job, dict) else {}
+                cementing_data_from_user.append({
+                    "job_type": job_val.get("job_type", "unknown"),
+                    "interval_top_ft": job_val.get("interval_top_ft"),
+                    "interval_bottom_ft": job_val.get("interval_bottom_ft"),
+                    "cement_top_ft": job_val.get("cement_top_ft"),
+                    "sacks": job_val.get("sacks"),
+                })
+            # Merge with any existing cementing_data from W-15
+            existing_cementing = facts.get("cementing_data", [])
+            facts["cementing_data"] = existing_cementing + cementing_data_from_user
+            logger.info(f"🧱 Added {len(cementing_data_from_user)} user-entered cement jobs to cementing_data")
+
+            # Also check for CIBP cap specifically
+            for job in cementing_data_from_user:
+                if job.get("job_type") == "cibp_cap":
+                    facts["cibp_cap_present"] = True
+                    cap_top = job.get("cement_top_ft")
+                    cap_bottom = job.get("interval_bottom_ft")
+                    if cap_top is not None and cap_bottom is not None:
+                        try:
+                            facts["existing_cibp_cap_length_ft"] = float(cap_bottom) - float(cap_top)
+                        except (ValueError, TypeError):
+                            pass
+                    logger.info(f"🧱 CIBP cap detected from user entry")
+
+        # Get policy — jurisdiction-aware (jurisdiction already resolved above, but re-derive with API fallback for safety)
+        jurisdiction = snapshot.payload.get("jurisdiction")
+        if not jurisdiction:
+            api_str = snapshot.payload.get("api", "")
+            jurisdiction = detect_jurisdiction(api_str) if api_str else "TX"
+        logger.info(f"Policy loading: jurisdiction={jurisdiction}")
         if jurisdiction == "NM":
-            from apps.kernel.services.jurisdiction_registry import get_handler
-            nm_handler = get_handler("NM")
-            if nm_handler:
-                logger.info("🔍 Loading NM policy via jurisdiction handler")
-                policy = nm_handler.load_effective_policy(facts)
-            else:
-                logger.warning("NM handler not registered, falling back to default policy")
-                policy = get_effective_policy(district=district, county=county, field=field)
+            from apps.kernel.handlers.nm.handler import NMJurisdictionHandler
+            nm_handler = NMJurisdictionHandler()
+            logger.info("Loading NM C-103 policy via NMJurisdictionHandler")
+            policy = nm_handler.load_effective_policy(facts)
+            policy["policy_id"] = "nm.c103"
+            policy["complete"] = True
         else:
-            logger.info(f"🔍 Loading policy for district={district}, county={county}, field={field}")
             policy = get_effective_policy(district=district, county=county, field=field)
         
-        # ✅ INJECT USER-ADDED FORMATIONS INTO POLICY
+        # INJECT FORMATIONS INTO POLICY
         # The kernel only processes formations from policy["effective"]["district_overrides"]["formation_tops"]
-        # So we need to add user-added formations there for the kernel to see them
         formation_tops_geometry = geometry.get("formation_tops", [])
+        logger.warning(f"FORMATION INJECT CHECK: geometry has {len(formation_tops_geometry)} formation_tops, jurisdiction={jurisdiction}")
         if formation_tops_geometry:
+            logger.warning(f"FORMATION INJECT: first={formation_tops_geometry[0]}")
             policy_effective = policy.setdefault("effective", {})
             district_overrides = policy_effective.setdefault("district_overrides", {})
             policy_formation_tops = district_overrides.setdefault("formation_tops", [])
-            
-            # Find user-added formations (those with source="User Added")
-            user_added_formations = [
-                ft for ft in formation_tops_geometry 
-                if "User Added" in str(ft.get("source", ""))
-            ]
-            
-            if user_added_formations:
-                logger.info(f"🎯 INJECTING {len(user_added_formations)} user-added formations into policy for kernel")
-                for ft in user_added_formations:
-                    formation_name = ft.get("formation_name") or ft.get("field_label")
-                    depth = ft.get("value") or ft.get("top_ft")
-                    
-                    if formation_name and depth is not None:
-                        # Add to policy formation tops so kernel will process it
-                        policy_formation_tops.append({
-                            "formation": formation_name,
-                            "top_ft": float(depth),
-                            "plug_required": True,
-                            "use_when": "always",  # User explicitly wants this
-                            "source": "User Added",
-                            "additional_requirements": None,
-                        })
-                        logger.info(f"   ✅ Added user formation: {formation_name} @ {depth} ft")
-        
-        # Override policy metadata
-        policy["policy_id"] = policy_id
-        policy["complete"] = True
+
+            if jurisdiction == "NM":
+                # NM requires isolation of every formation — inject ALL geometry formation tops
+                injected = []
+                for ft in formation_tops_geometry:
+                    name = ft.get("formation_name") or ft.get("field_label", "")
+                    depth = ft.get("value")
+                    if name and depth is not None:
+                        injected.append({"formation": name, "top_ft": float(depth)})
+                if injected:
+                    district_overrides["formation_tops"] = injected
+                    logger.info(f"Injected {len(injected)} formation tops into NM policy")
+            else:
+                # TX: inject only user-added formations so kernel sees them
+                user_added_formations = [
+                    ft for ft in formation_tops_geometry
+                    if "User Added" in str(ft.get("source", ""))
+                ]
+                if user_added_formations:
+                    logger.info(f"Injecting {len(user_added_formations)} user-added formations into TX policy for kernel")
+                    for ft in user_added_formations:
+                        formation_name = ft.get("formation_name") or ft.get("field_label")
+                        depth = ft.get("value") or ft.get("top_ft")
+                        if formation_name and depth is not None:
+                            policy_formation_tops.append({
+                                "formation": formation_name,
+                                "top_ft": float(depth),
+                                "plug_required": True,
+                                "use_when": "always",
+                                "source": "User Added",
+                                "additional_requirements": None,
+                            })
+
+        # Override policy metadata (NM policy already has policy_id/complete set above)
+        if jurisdiction != "NM":
+            policy["policy_id"] = policy_id
+            policy["complete"] = True
         
         # Set merge preferences
         prefs = policy.setdefault("preferences", {})
@@ -2119,13 +2637,42 @@ class W3AConfirmGeometryView(APIView):
         })
         prefs.setdefault("long_plug_merge", {})
         prefs["long_plug_merge"]["enabled"] = (plugs_mode == "combined")
-        prefs["long_plug_merge"]["sack_limit_no_tag"] = float(sack_limit_no_tag)
-        prefs["long_plug_merge"]["sack_limit_with_tag"] = float(sack_limit_with_tag)
-        prefs["long_plug_merge"].setdefault("types", ["formation_top_plug", "cement_plug", "uqw_isolation_plug"])
+        # Merge constraint is footage-based (max_length_ft), not sack-based
+        # Set sack limits very high so length is the real constraint
+        prefs["long_plug_merge"]["sack_limit_no_tag"] = 99999.0
+        prefs["long_plug_merge"]["sack_limit_with_tag"] = 99999.0
+        prefs["long_plug_merge"].setdefault("types", [
+            "formation_top_plug",
+            "formation_plug",        # NM C-103 formation plug type
+            "cement_plug",
+            "uqw_isolation_plug",
+            "fill_plug",             # Fill plugs can merge with adjacent formations
+            "shoe_plug",             # Shoe plugs can merge with adjacent formations (e.g., Delaware + intermediate shoe)
+            "perforate_and_squeeze_plug",  # Perf+squeeze can merge with other perf+squeeze
+        ])
         prefs["long_plug_merge"].setdefault("preserve_tagging", True)
+        # NM regulatory limit: max 1000 ft per plug (TX allows 1250 ft)
+        if jurisdiction == "NM":
+            prefs["long_plug_merge"]["max_length_ft"] = 1000
         
         logger.info(f"🎯 Merge config: enabled={plugs_mode == 'combined'}, sack_limit_no_tag={sack_limit_no_tag}, sack_limit_with_tag={sack_limit_with_tag}")
         
+        # Inject geometry formation tops into facts for C-103 kernel
+        # The NM C-103 step generator reads from facts["formation_tops_map"], NOT from policy
+        # This MUST run after policy enrichment to pick up all formation tops
+        geometry_ft = geometry.get("formation_tops", [])
+        if geometry_ft:
+            ft_map = {}
+            for ft in geometry_ft:
+                name = ft.get("formation_name") or ft.get("field_label", "")
+                depth = ft.get("value")
+                if name and depth is not None:
+                    ft_map[name] = float(depth)
+            if ft_map:
+                facts["formation_tops_map"] = ft_map  # Override any earlier empty assignment
+                facts["formation_tops"] = [{"name": k, "depth_ft": v} for k, v in ft_map.items()]
+                logger.info(f"FINAL formation_tops_map for kernel: {len(ft_map)} formations: {list(ft_map.keys())}")
+
         # Log critical facts for debugging
         logger.info("=" * 80)
         logger.info("🔍 FACTS SUMMARY BEFORE KERNEL CALL:")
@@ -2143,8 +2690,10 @@ class W3AConfirmGeometryView(APIView):
         logger.info(f"   - Use CIBP: {facts.get('use_cibp', {}).get('value')}")
         logger.info(f"   - Policy formation tops: {len(policy.get('effective', {}).get('district_overrides', {}).get('formation_tops', []))}")
         logger.info("=" * 80)
-        
+
         # Call kernel
+        lpm = policy.get("preferences", {}).get("long_plug_merge", {})
+        logger.warning(f"MERGE-DIAG: enabled={lpm.get('enabled')}, types={lpm.get('types')}, max_length={lpm.get('max_length_ft')}, sack_no_tag={lpm.get('sack_limit_no_tag')}")
         logger.info("🚀 Calling plan_from_facts with edited geometry...")
         out_kernel = plan_from_facts(facts, policy)
         
@@ -2155,6 +2704,8 @@ class W3AConfirmGeometryView(APIView):
         # Build plan payload
         plan_payload = {
             "api": api14,
+            "jurisdiction": jurisdiction,
+            "form_type": "c_103" if jurisdiction == "NM" else "w3a",
             "county": county,
             "field": field,
             "district": district,
@@ -2174,6 +2725,14 @@ class W3AConfirmGeometryView(APIView):
                 "status": "success",
                 "files": [e.get("filename") for e in extractions],
             },
+            # ALL well formation tops for WBD display (geological markers, not just plug targets)
+            # These include formations below barriers that don't have plugs
+            "formations": [
+                {"formation_name": ft.get("formation_name") or ft.get("field_label", ""),
+                 "top_ft": ft.get("value")}
+                for ft in geometry.get("formation_tops", [])
+                if (ft.get("formation_name") or ft.get("field_label")) and ft.get("value") is not None
+            ],
             # Add casing strings for well_geometry (CRITICAL: needed for diagram rendering)
             "casing_strings": facts.get("casing_record", []),
             # Add historic cement jobs from W-15 for well_geometry
@@ -2181,12 +2740,7 @@ class W3AConfirmGeometryView(APIView):
             # Add production perforations for well_geometry
             "production_perforations": facts.get("production_perforations", []),
         }
-        
-        logger.error(f"❌ FINAL PAYLOAD: casing_strings count = {len(plan_payload.get('casing_strings', []))}")
-        if plan_payload.get('casing_strings'):
-            logger.error(f"❌ FINAL PAYLOAD: Sample casing = {plan_payload['casing_strings'][0]}")
-        else:
-            logger.error(f"❌❌❌ FINAL PAYLOAD: casing_strings is EMPTY!")
+        logger.info(f"Plan payload: jurisdiction={jurisdiction}, form_type={plan_payload['form_type']}, steps={len(steps)}, casing_strings={len(plan_payload.get('casing_strings', []))}")
         
         # Add mechanical_equipment from geometry (including user-added tools)
         mechanical_barriers_geometry = geometry.get("mechanical_barriers", [])
@@ -2205,16 +2759,36 @@ class W3AConfirmGeometryView(APIView):
         
         plan_payload["mechanical_equipment"] = mechanical_equipment_list
         plan_payload["existing_tools"] = mechanical_equipment_list  # Alias for compatibility
-        
-        # Debug logging to verify casing_strings is in payload
-        casing_in_payload = plan_payload.get("casing_strings", [])
-        logger.info(f"📦 PAYLOAD CASING_STRINGS: {len(casing_in_payload)} items saved to plan payload")
-        if casing_in_payload:
-            logger.info(f"📦 PAYLOAD CASING_STRINGS sample: {casing_in_payload[0] if len(casing_in_payload) > 0 else 'none'}")
-        else:
-            logger.warning(f"⚠️ PAYLOAD CASING_STRINGS IS EMPTY!")
-        
+
         return plan_payload
+
+
+def _apply_field_edit(target: dict, field_path: str, value) -> dict:
+    """Apply an edit to a nested dict using a dotpath.
+
+    Supports paths like:
+    - "county" → target["county"] = value
+    - "casing_record.0.cement_top_ft" → target["casing_record"][0]["cement_top_ft"] = value
+    - "formation_record.2.name" → target["formation_record"][2]["name"] = value
+
+    Returns the modified dict.
+    Raises KeyError if path is invalid.
+    """
+    parts = field_path.split(".")
+    obj = target
+    for part in parts[:-1]:
+        if part.isdigit():
+            obj = obj[int(part)]
+        else:
+            obj = obj[part]
+
+    final_key = parts[-1]
+    if final_key.isdigit():
+        obj[int(final_key)] = value
+    else:
+        obj[final_key] = value
+
+    return target
 
 
 class W3AApplyEditsView(APIView):
@@ -2257,15 +2831,43 @@ class W3AApplyEditsView(APIView):
             applied_count = 0
             with transaction.atomic():
                 for edit in edits:
-                    # TODO: Implement actual field updates to WellRegistry
-                    # This requires JSON path parsing and safe field updates
-                    
+                    try:
+                        if edit.context == WellEditAudit.CONTEXT_PLAN:
+                            # Plan-only edits don't touch WellRegistry or documents
+                            pass
+                        elif edit.context in (WellEditAudit.CONTEXT_EXTRACTION, WellEditAudit.CONTEXT_GEOMETRY):
+                            # Check if field_path targets a direct WellRegistry field
+                            well_fields = {f.name for f in WellRegistry._meta.get_fields() if hasattr(f, 'column')}
+                            top_field = edit.field_path.split(".")[0]
+
+                            if top_field in well_fields and "." not in edit.field_path:
+                                # Direct model field update
+                                setattr(edit.well, top_field, edit.edited_value)
+                                edit.well.save(update_fields=[top_field, "updated_at"])
+                            else:
+                                # Nested path → update the ExtractedDocument json_data
+                                ext_doc = ExtractedDocument.objects.filter(
+                                    api_number=edit.well.api14
+                                ).order_by('-created_at').first()
+
+                                if ext_doc and ext_doc.json_data:
+                                    _apply_field_edit(ext_doc.json_data, edit.field_path, edit.edited_value)
+                                    ext_doc.save(update_fields=["json_data", "updated_at"])
+                                else:
+                                    logger.warning(
+                                        "Cannot apply edit %s: no ExtractedDocument for well %s",
+                                        edit.id, edit.well.api14 if edit.well else "unknown"
+                                    )
+                    except (KeyError, IndexError, TypeError) as exc:
+                        logger.warning("Failed to apply edit %s (path=%s): %s", edit.id, edit.field_path, exc)
+                        # Still mark as applied — the edit is recorded for audit purposes
+
                     # Mark as applied
                     edit.stage = WellEditAudit.STAGE_APPLIED
                     edit.applied_by = request.user
-                    edit.applied_at = __import__("django.utils.timezone").utils.timezone.now()
+                    edit.applied_at = timezone.now()
                     edit.save()
-                    
+
                     applied_count += 1
             
             logger.info(f"✅ Applied {applied_count} edits to WellRegistry")

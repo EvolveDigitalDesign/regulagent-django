@@ -8,6 +8,7 @@ from simple_history.models import HistoricalRecords
 from .well_registry import WellRegistry
 from .plan_snapshot import PlanSnapshot
 from .w3_orm import W3FormORM
+from apps.kernel.services.jurisdiction_registry import detect_jurisdiction
 
 
 class W3WizardSession(models.Model):
@@ -150,10 +151,7 @@ class W3WizardSession(models.Model):
     @property
     def jurisdiction(self) -> str:
         """Infer jurisdiction from API number prefix."""
-        api = (self.api_number or "").replace("-", "")
-        if api.startswith("30"):
-            return "NM"
-        return "TX"
+        return detect_jurisdiction(self.api_number or "")
 
     @property
     def form_type(self) -> str:

@@ -142,7 +142,7 @@ def map_nm_well_to_extractions(well_data: Dict[str, Any]) -> Dict[str, Any]:
             "mechanical_equipment": [],
             # Formation record from scraped formation tops
             "formation_record": [
-                {"formation": ft["formation_name"], "top_ft": ft["top_ft"]}
+                {"formation": ft["formation_name"], "top_ft": ft["top_ft"], "validated": True}
                 for ft in well_data.get("formation_tops", [])
                 if ft.get("formation_name") and ft.get("top_ft") is not None
             ],

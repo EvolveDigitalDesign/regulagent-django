@@ -12,6 +12,7 @@ from apps.public_core.models import WellRegistry
 from apps.public_core.services.api_normalization import get_well_by_api
 from apps.public_core.models.document_vector import DocumentVector
 from apps.public_core.models import ExtractedDocument, PlanSnapshot
+from apps.kernel.services.jurisdiction_registry import detect_jurisdiction
 
 
 def haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -45,7 +46,8 @@ class SimilarWellsView(APIView):
         w_context = float(request.query_params.get('w_context', 0.10))
         w_quality = float(request.query_params.get('w_quality', 0.05))
         alpha_geo = float(request.query_params.get('alpha_geo', 0.5))
-        state = request.query_params.get('state') or 'TX'
+        api_number = request.query_params.get('api_number')
+        state = request.query_params.get('state') or (detect_jurisdiction(api_number) if api_number else 'TX')
         county = request.query_params.get('county')
         field = request.query_params.get('field')
         require_county = str(request.query_params.get('require_county', 'auto')).lower()

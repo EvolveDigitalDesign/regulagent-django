@@ -286,6 +286,73 @@ def _load_7c_formations_for_field(formation_json: Dict[str, Any], county: str, f
     return formation_tops
 
 
+def _load_7c_default_formations(formation_json: Dict[str, Any], county: str) -> list[Dict[str, Any]]:
+    """
+    Load default (field-independent) formation_tops from 7C plugging book JSON for a county.
+
+    When no field is specified, returns unique formations that appear across multiple fields
+    in the county, using the most common depth. Only includes formations without use_when conditions.
+    """
+    counties = formation_json.get('counties', {})
+
+    # Normalize county name for lookup
+    county_norm = str(county).lower().strip()
+    county_data = None
+    for ck, cv in counties.items():
+        name = str(cv.get('name', '')).lower().strip()
+        if county_norm in name or name in county_norm:
+            county_data = cv
+            break
+
+    if not county_data:
+        return []
+
+    field_specs = county_data.get('fieldSpecs', [])
+
+    # Collect formations without use_when (universal formations)
+    # Group by formation name, take the most common depth
+    from collections import Counter, defaultdict
+    formation_depths: defaultdict = defaultdict(list)
+    formation_tags: Dict[str, bool] = {}
+    formation_addl: Dict[str, str] = {}
+
+    for spec in field_specs:
+        use_when = spec.get('use_when', '')
+        if use_when:
+            continue  # Skip field-specific formations
+        formation = spec.get('formation')
+        tops = spec.get('tops')
+        if not formation or tops is None:
+            continue
+        try:
+            depth_val = float(tops)
+        except (ValueError, TypeError):
+            continue
+        formation_depths[formation].append(depth_val)
+        if spec.get('additional_requirements', '').strip().lower() == 'tag':
+            formation_tags[formation] = True
+        if spec.get('additional_requirements'):
+            formation_addl[formation] = spec['additional_requirements']
+
+    formation_tops = []
+    for formation, depths in formation_depths.items():
+        # Use median depth as the representative
+        depths_sorted = sorted(depths)
+        median_depth = depths_sorted[len(depths_sorted) // 2]
+        entry: Dict[str, Any] = {
+            'formation': formation,
+            'top_ft': median_depth,
+            'plug_required': True,
+        }
+        if formation_tags.get(formation):
+            entry['tag_required'] = True
+        if formation_addl.get(formation):
+            entry['additional_requirements'] = formation_addl[formation]
+        formation_tops.append(entry)
+
+    return formation_tops
+
+
 def _normalize_county_key(name: str) -> Tuple[str, str]:
     """Return (base, with_suffix) normalized county keys for lookups.
     Collapses whitespace and strips a trailing 'county'."""
@@ -493,6 +560,12 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
             if county_proposal:
                 merged = _merge(merged, {'proposal': county_proposal})
 
+            # 7C hybrid: when no field is specified, load default (field-independent) formations
+            if is_7c_hybrid and formation_json and not field:
+                default_formations = _load_7c_default_formations(formation_json, county)
+                if default_formations:
+                    merged.setdefault('district_overrides', {})['formation_tops'] = default_formations
+
             # Field-level merge (county → field, else nearest county’s field)
             if field:
                 field_norm = _normalize_field_name(str(field))
@@ -628,6 +701,14 @@ def get_effective_policy(district: Optional[str] = None, county: Optional[str] =
                         merged['district_overrides']['formation_tops'] = formation_tops_from_json
                     else:
                         print(f"⚠️ LOADER: formation_tops_from_json is empty!", flush=True)
+                elif is_7c_hybrid and formation_json and not field:
+                    # No field specified: load universal formations (no use_when) for the county
+                    print(f"🔍 LOADER: No field specified; loading default formations for county={county}", flush=True)
+                    formation_tops_from_json = _load_7c_default_formations(formation_json, county)
+                    if formation_tops_from_json:
+                        print(f"🔍 LOADER: Loaded {len(formation_tops_from_json)} default formations for {county}", flush=True)
+                        merged.setdefault('district_overrides', {})
+                        merged['district_overrides']['formation_tops'] = formation_tops_from_json
                 
                 if chosen_field_cfg:
                     if isinstance(chosen_field_cfg.get('requirements'), dict):

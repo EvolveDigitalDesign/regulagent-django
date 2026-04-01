@@ -91,7 +91,7 @@ def _get_active_casing_stack(facts: Dict[str, Any], target_depth_ft: float) -> L
                 continue
             
             try:
-                bottom = float(casing.get("bottom_ft") or 0)
+                bottom = float(casing.get("bottom_ft") or casing.get("shoe_depth_ft") or casing.get("setting_depth_ft") or 0)
             except (ValueError, TypeError):
                 continue
             
@@ -747,8 +747,8 @@ def _requires_perforation_at_depth(
             if not isinstance(perf, dict):
                 continue
             
-            perf_from = perf.get('from_ft')
-            perf_to = perf.get('to_ft')
+            perf_from = perf.get('from_ft') or perf.get('top_ft')
+            perf_to = perf.get('to_ft') or perf.get('bottom_ft')
             
             try:
                 perf_from = float(perf_from) if perf_from not in (None, '') else None

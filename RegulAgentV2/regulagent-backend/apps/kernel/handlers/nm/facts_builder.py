@@ -14,14 +14,10 @@ def build_nm_facts(well_info: dict, geometry: dict, extractions: list[dict]) -> 
     - Township/Range instead of district/field
     - County-based regional rules
     """
-    # Extract formation tops from c105 extraction data
-    formation_tops = []
-    for ext in extractions:
-        c105 = ext.get("c105") or ext
-        fr = c105.get("formation_record", [])
-        if fr:
-            formation_tops = fr
-            break
+    # Extract formation tops from c105 extraction data only
+    from apps.kernel.handlers.nm.handler import _find_c105
+    c105 = _find_c105(extractions)
+    formation_tops = (c105.get("formation_record") or []) if c105 else []
 
     # Convert formation_record format to formation_tops format for c103 rules
     # formation_record: [{"formation": "Dakota", "top_ft": null}, ...]
@@ -61,6 +57,9 @@ def build_nm_facts(well_info: dict, geometry: dict, extractions: list[dict]) -> 
         "mechanical_barriers": geometry.get("mechanical_barriers", []),
         "tubing": geometry.get("tubing", []),
         "total_depth_ft": total_depth,
+        # KOP from geometry (derive_geometry extracts it from c105)
+        # or from well_info if provided directly
+        "kop": geometry.get("kop_ft") or well_info.get("kop") or well_info.get("kop_ft"),
     }
     return facts
 

@@ -13,6 +13,8 @@ from __future__ import annotations
 from typing import Any, Dict, List
 from rest_framework import serializers
 
+from apps.kernel.services.jurisdiction_registry import detect_jurisdiction
+
 
 class W3AInitialRequestSerializer(serializers.Serializer):
     """
@@ -26,11 +28,21 @@ class W3AInitialRequestSerializer(serializers.Serializer):
         help_text="Jurisdiction for the well (TX or NM). Auto-detected from API prefix if not specified."
     )
     input_mode = serializers.ChoiceField(
-        choices=("extractions", "user_files", "hybrid"),
+        choices=("extractions", "user_files", "hybrid", "manual"),
         required=False,
         default="extractions"
     )
     workspace_id = serializers.IntegerField(required=False, allow_null=True)
+
+    # Optional well metadata fields for manual entry mode
+    district = serializers.CharField(required=False, allow_blank=True)
+    county = serializers.CharField(required=False, allow_blank=True)
+    field_name = serializers.CharField(required=False, allow_blank=True)
+    lease = serializers.CharField(required=False, allow_blank=True)
+    well_no = serializers.CharField(required=False, allow_blank=True)
+    total_depth = serializers.FloatField(required=False, allow_null=True, default=None)
+    has_uqw = serializers.BooleanField(required=False, default=False)
+    uqw_base_depth = serializers.FloatField(required=False, allow_null=True, default=None)
 
     # Optional uploaded files
     gau_file = serializers.FileField(required=False, allow_null=True)
@@ -57,11 +69,7 @@ class W3AInitialRequestSerializer(serializers.Serializer):
 
         # Auto-detect jurisdiction from API prefix if not explicitly provided
         if not jurisdiction or jurisdiction == "TX":
-            # NM API numbers start with "30" (state code)
-            if api10.startswith("30"):
-                attrs["jurisdiction"] = "NM"
-            else:
-                attrs["jurisdiction"] = "TX"
+            attrs["jurisdiction"] = detect_jurisdiction(api10)
 
         return attrs
 

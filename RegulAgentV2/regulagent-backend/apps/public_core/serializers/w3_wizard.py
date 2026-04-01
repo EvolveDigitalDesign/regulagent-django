@@ -163,7 +163,7 @@ class W3WizardSessionSerializer(serializers.ModelSerializer):
         if not api14:
             return None
 
-        geometry = build_well_geometry(api14, payload)
+        geometry = build_well_geometry(api14, payload, jurisdiction=obj.jurisdiction)
         geometry["casing_strings"] = normalize_casing_for_frontend(geometry.get("casing_strings", []))
         if geometry.get("liner"):
             geometry["liner"] = normalize_casing_for_frontend(geometry["liner"])
