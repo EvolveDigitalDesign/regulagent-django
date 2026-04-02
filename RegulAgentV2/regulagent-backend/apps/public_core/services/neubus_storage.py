@@ -37,6 +37,16 @@ class ColdStorageManager:
         self.lease_id = lease_id
         self.base_dir = Path(settings.MEDIA_ROOT) / "rrc" / "neubus" / lease_id
         self._manifest: Optional[Dict[str, Any]] = None
+        self._use_s3 = getattr(settings, 'USE_S3', False)
+        if self._use_s3:
+            import boto3
+            self._s3 = boto3.client('s3', region_name=getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1'))
+            self._bucket = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'regulagent-uploads')
+            self._prefix = f"rrc/neubus/{lease_id}/"
+
+    def _s3_key(self, filename: str) -> str:
+        """Return the S3 object key for a given filename."""
+        return f"{self._prefix}{filename}"
 
     @property
     def manifest_path(self) -> Path:
@@ -50,34 +60,54 @@ class ColdStorageManager:
         return self._manifest
 
     def _load_manifest(self) -> Dict[str, Any]:
-        """Read manifest.json from disk."""
-        if self.manifest_path.exists():
+        """Read manifest.json from S3 or disk."""
+        if self._use_s3:
+            from botocore.exceptions import ClientError
             try:
-                with open(self.manifest_path, "r") as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, OSError) as e:
-                logger.warning(f"Failed to read manifest for lease {self.lease_id}: {e}")
-
-        return {
-            "lease_id": self.lease_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "files": {},
-        }
+                resp = self._s3.get_object(Bucket=self._bucket, Key=self._s3_key("manifest.json"))
+                return json.loads(resp["Body"].read().decode("utf-8"))
+            except ClientError as e:
+                if e.response["Error"]["Code"] == "NoSuchKey":
+                    return {"files": {}, "created_at": None, "updated_at": None}
+                raise
+        # Local filesystem fallback
+        try:
+            with open(self.manifest_path, "r") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {"files": {}, "created_at": None, "updated_at": None}
 
     def _save_manifest(self) -> None:
-        """Write manifest.json to disk."""
-        self.base_dir.mkdir(parents=True, exist_ok=True)
+        """Write manifest.json to S3 or disk."""
         self.manifest["updated_at"] = datetime.now(timezone.utc).isoformat()
-
+        if self._use_s3:
+            self._s3.put_object(
+                Bucket=self._bucket,
+                Key=self._s3_key("manifest.json"),
+                Body=json.dumps(self._manifest, indent=2).encode("utf-8"),
+                ContentType="application/json",
+            )
+            return
+        # Local filesystem fallback
+        self.base_dir.mkdir(parents=True, exist_ok=True)
         with open(self.manifest_path, "w") as f:
             json.dump(self.manifest, f, indent=2, default=str)
 
-    def file_path(self, filename: str) -> Path:
-        """Get the full path for a file in cold storage."""
+    def file_path(self, filename: str) -> str | Path:
+        """Return the local Path or S3 key for a given filename."""
+        if self._use_s3:
+            return self._s3_key(filename)
         return self.base_dir / filename
 
     def file_exists(self, filename: str) -> bool:
         """Check if a file exists in cold storage."""
+        if self._use_s3:
+            from botocore.exceptions import ClientError
+            try:
+                self._s3.head_object(Bucket=self._bucket, Key=self._s3_key(filename))
+                return True
+            except ClientError:
+                return False
         return self.file_path(filename).exists()
 
     def is_known(self, filename: str) -> bool:
