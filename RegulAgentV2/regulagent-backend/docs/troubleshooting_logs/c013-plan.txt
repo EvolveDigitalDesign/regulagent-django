@@ -1,0 +1,981 @@
+{
+    "id": 62,
+    "plan_id": "3001528841:combined",
+    "kind": "baseline",
+    "status": "draft",
+    "visibility": "public",
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "well": {
+        "api14": "30015288410000",
+        "state": "NM",
+        "county": "",
+        "operator_name": "Permian Resources Operating, LLC",
+        "field_name": "",
+        "lease_name": "GOVERNMENT NBFD",
+        "well_number": "",
+        "lat": 32.582787,
+        "lon": -104.155609
+    },
+    "well_geometry": {
+        "casing_strings": [
+            {
+                "grade": null,
+                "sacks": 420,
+                "string": "Surface Casing",
+                "top_ft": 0.0,
+                "weight": 54.4,
+                "size_in": 13.365,
+                "depth_ft": 400.0,
+                "cement_bottom": 400.0,
+                "cement_top_ft": 0.0,
+                "shoe_depth_ft": 400.0
+            },
+            {
+                "grade": null,
+                "sacks": 2475,
+                "string": "Intermediate 1 Casing",
+                "top_ft": 0.0,
+                "weight": 24.0,
+                "size_in": 8.625,
+                "depth_ft": 3000.0,
+                "cement_bottom": 3000.0,
+                "cement_top_ft": 0.0,
+                "shoe_depth_ft": 3000.0
+            },
+            {
+                "grade": null,
+                "sacks": 700,
+                "string": "Production Casing",
+                "top_ft": 0.0,
+                "weight": 17.0,
+                "size_in": 5.5,
+                "depth_ft": 12375.0,
+                "cement_bottom": 12375.0,
+                "cement_top_ft": 7500.0,
+                "shoe_depth_ft": 12375.0
+            }
+        ],
+        "formation_tops": [
+            {
+                "formation": "Wolfcamp",
+                "top_ft": 9080.0
+            },
+            {
+                "formation": "Canyon",
+                "top_ft": 9855.0
+            },
+            {
+                "formation": "Morrow",
+                "top_ft": 10617.0
+            },
+            {
+                "formation": "Miss.",
+                "top_ft": 11670.0
+            },
+            {
+                "formation": "Devonian",
+                "top_ft": 12173.0
+            },
+            {
+                "formation": "Yates",
+                "top_ft": 972.0
+            },
+            {
+                "formation": "Delaware",
+                "top_ft": 3130.0
+            },
+            {
+                "formation": "Bone Springs",
+                "top_ft": 4921.0
+            }
+        ],
+        "perforations": [],
+        "production_perforations": [
+            {
+                "top_ft": 9122.0,
+                "bottom_ft": 9226.0,
+                "open_hole": false
+            },
+            {
+                "top_ft": 11262.0,
+                "bottom_ft": 11270.0,
+                "open_hole": false
+            },
+            {
+                "top_ft": 12204.0,
+                "bottom_ft": 12324.0,
+                "open_hole": false
+            }
+        ],
+        "tubing": [],
+        "liner": [],
+        "historic_cement_jobs": [],
+        "mechanical_equipment": [
+            {
+                "type": "CIBP",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 12150.0,
+                "description": "CIBP set at 12,150 ft [Source: c_103 - _raw_text__chunk_28]",
+                "equipment_status": null
+            },
+            {
+                "type": "CIBP",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 9072.0,
+                "description": "CIBP at 9072.0 ft (regex scan)",
+                "equipment_status": null
+            },
+            {
+                "type": "PACKER",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 11167.0,
+                "description": "Packer at 11167.0 ft with cement on top (regex scan)",
+                "equipment_status": null
+            }
+        ],
+        "existing_tools": [
+            {
+                "type": "CIBP",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 12150.0,
+                "description": "CIBP set at 12,150 ft [Source: c_103 - _raw_text__chunk_28]",
+                "equipment_status": null
+            },
+            {
+                "type": "CIBP",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 9072.0,
+                "description": "CIBP at 9072.0 ft (regex scan)",
+                "equipment_status": null
+            },
+            {
+                "type": "PACKER",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 11167.0,
+                "description": "Packer at 11167.0 ft with cement on top (regex scan)",
+                "equipment_status": null
+            }
+        ]
+    },
+    "kernel_version": "",
+    "policy_id": "",
+    "overlay_id": "",
+    "extraction_meta": {},
+    "created_at": "2026-03-31T16:47:18.367233Z",
+    "payload": {
+        "api": "3001528841",
+        "field": "",
+        "steps": [
+            {
+                "type": "existing_cement",
+                "sacks": null,
+                "recipe": {
+                    "id": "class_h_neat_15_8",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.8,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.18
+                },
+                "top_ft": 11117.0,
+                "details": {
+                    "source": "Cement on top of packer at 11167.0 ft",
+                    "is_existing": true,
+                    "cement_class": ""
+                },
+                "bottom_ft": 11167.0,
+                "formation": "",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_purpose": "existing_cement",
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "existing_cement",
+                "sacks": null,
+                "recipe": {
+                    "id": "class_h_neat_15_8",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 15.8,
+                    "water_gal_per_sk": 5.2,
+                    "yield_ft3_per_sk": 1.18
+                },
+                "top_ft": 11117.0,
+                "details": {
+                    "source": "Cement on top of packer at 11167.0 ft",
+                    "is_existing": true,
+                    "cement_class": ""
+                },
+                "bottom_ft": 11167.0,
+                "formation": "",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_purpose": "existing_cement",
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "mechanical_plug",
+                "recipe": {
+                    "id": "nm_class_c",
+                    "class": "C",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 14.8,
+                    "water_gal_per_sk": 6.3,
+                    "yield_ft3_per_sk": 1.32
+                },
+                "top_ft": 9072.0,
+                "details": {
+                    "wait_hours": 0,
+                    "cement_class": "C",
+                    "excess_factor": 0.5,
+                    "nmac_compliant": true,
+                    "sacks_required": 0.0,
+                    "special_instructions": "Set CIBP at 9,072 ft (shallowest perf top 9,122' - 50')"
+                },
+                "bottom_ft": 9073.0,
+                "hole_type": "cased",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_purpose": "mechanical_plug",
+                "tag_required": false,
+                "operation_type": "spot",
+                "regulatory_basis": [
+                    "NMAC 19.15.25.14.A — CIBP placement required above perforations"
+                ],
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "cibp_cap",
+                "recipe": {
+                    "id": "nm_class_h",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 16.4,
+                    "water_gal_per_sk": 4.3,
+                    "yield_ft3_per_sk": 1.15
+                },
+                "top_ft": 8972.0,
+                "details": {
+                    "wait_hours": 4,
+                    "cement_class": "H",
+                    "depth_mid_ft": 9022.0,
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "excess_factor": 0.5,
+                    "nmac_compliant": true,
+                    "sacks_required": 25.0,
+                    "special_instructions": "Standard CIBP cap 100' above bridge plug. NM: 100' minimum (NMAC 19.15.25.14.A.1)."
+                },
+                "bottom_ft": 9072.0,
+                "hole_type": "cased",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": "dumpbail_plug",
+                "casing_id_in": 5.5,
+                "plug_purpose": "cibp_cap",
+                "tag_required": true,
+                "operation_type": "spot",
+                "regulatory_basis": [
+                    "NMAC 19.15.25.14.A.1 — 100 ft minimum cement cap above CIBP; cement class: H"
+                ],
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "formation_plug",
+                "sacks": 25,
+                "recipe": {
+                    "id": "nm_class_h",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 16.4,
+                    "water_gal_per_sk": 4.3,
+                    "yield_ft3_per_sk": 1.15
+                },
+                "top_ft": 9030.0,
+                "details": {
+                    "wait_hours": 4,
+                    "cement_class": "H",
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "excess_factor": 0.5,
+                    "nmac_compliant": true,
+                    "sacks_required": 25.0,
+                    "region_requirements": [
+                        "NM COA Figure — NMAC 19.15.25 formation isolation requirement (region: south_artesia, sub_area: default)"
+                    ],
+                    "special_instructions": "Wait 4 hrs & Tag TOC. Wait 4 hrs & Tag TOC"
+                },
+                "bottom_ft": 9130.0,
+                "formation": "Wolfcamp",
+                "hole_type": "cased",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {
+                        "ft3": 28.75,
+                        "sacks": 25,
+                        "explain": "Pre-computed by C-103 rules engine: 25 sacks",
+                        "additives": [],
+                        "total_bbl": 5.12,
+                        "water_bbl": 0
+                    }
+                },
+                "casing_id_in": 5.5,
+                "plug_purpose": "formation_plug",
+                "tag_required": true,
+                "operation_type": "spot",
+                "regulatory_basis": [
+                    "NMAC 19.15.25 — Formation isolation mandatory for all NM wells; cement class: H"
+                ],
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "perforate_and_squeeze_plug",
+                "recipe": {
+                    "id": "nm_class_c",
+                    "class": "C",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 14.8,
+                    "water_gal_per_sk": 6.3,
+                    "yield_ft3_per_sk": 1.32
+                },
+                "top_ft": 4871.0,
+                "details": {
+                    "wait_hours": 4,
+                    "cement_class": "C",
+                    "depth_mid_ft": 4921.0,
+                    "inside_sacks": 17.5,
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "excess_factor": 0.5,
+                    "outside_sacks": 7.5,
+                    "nmac_compliant": true,
+                    "sacks_required": 25.0,
+                    "region_requirements": [
+                        "NM COA Figure — NMAC 19.15.25 formation isolation requirement (region: south_artesia, sub_area: default)"
+                    ],
+                    "squeeze_behind_pipe": true,
+                    "perforation_interval": {
+                        "top_ft": 4921.0,
+                        "bottom_ft": 4971.0,
+                        "length_ft": 50.0,
+                        "description": "Perforations for squeeze behind pipe"
+                    },
+                    "special_instructions": "Perforate 5.500-in production casing at 4,921 ft; squeeze cement behind pipe",
+                    "cement_cap_inside_casing": {
+                        "top_ft": 4871.0,
+                        "bottom_ft": 4921.0,
+                        "height_ft": 50.0,
+                        "description": "Cement cap above perforations"
+                    },
+                    "perforation_required_reason": "No cement behind production casing above TOC — perforation required to squeeze cement into annulus"
+                },
+                "bottom_ft": 4971.0,
+                "formation": "Bone Springs",
+                "hole_type": "cased",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": "perf_and_squeeze_plug",
+                "casing_id_in": 5.5,
+                "plug_purpose": "perforate_and_squeeze_plug",
+                "tag_required": true,
+                "operation_type": "perforate_and_squeeze",
+                "regulatory_basis": [
+                    "NMAC 19.15.25 — Formation isolation mandatory for all NM wells; cement class: C"
+                ],
+                "requires_perforation": true,
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "perforate_and_squeeze_plug",
+                "recipe": {
+                    "id": "nm_class_c",
+                    "class": "C",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 14.8,
+                    "water_gal_per_sk": 6.3,
+                    "yield_ft3_per_sk": 1.32
+                },
+                "top_ft": 3080.0,
+                "details": {
+                    "wait_hours": 4,
+                    "cement_class": "C",
+                    "depth_mid_ft": 3130.0,
+                    "inside_sacks": 17.5,
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "excess_factor": 0.5,
+                    "outside_sacks": 7.5,
+                    "nmac_compliant": true,
+                    "sacks_required": 25.0,
+                    "region_requirements": [
+                        "NM COA Figure — NMAC 19.15.25 formation isolation requirement (region: south_artesia, sub_area: default)"
+                    ],
+                    "squeeze_behind_pipe": true,
+                    "perforation_interval": {
+                        "top_ft": 3130.0,
+                        "bottom_ft": 3180.0,
+                        "length_ft": 50.0,
+                        "description": "Perforations for squeeze behind pipe"
+                    },
+                    "special_instructions": "Perforate 5.500-in production casing at 3,130 ft; squeeze cement behind pipe",
+                    "cement_cap_inside_casing": {
+                        "top_ft": 3080.0,
+                        "bottom_ft": 3130.0,
+                        "height_ft": 50.0,
+                        "description": "Cement cap above perforations"
+                    },
+                    "perforation_required_reason": "No cement behind production casing above TOC — perforation required to squeeze cement into annulus"
+                },
+                "bottom_ft": 3180.0,
+                "formation": "Delaware",
+                "hole_type": "cased",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": "perf_and_squeeze_plug",
+                "casing_id_in": 5.5,
+                "plug_purpose": "perforate_and_squeeze_plug",
+                "tag_required": true,
+                "operation_type": "perforate_and_squeeze",
+                "regulatory_basis": [
+                    "NMAC 19.15.25 — Formation isolation mandatory for all NM wells; cement class: C"
+                ],
+                "requires_perforation": true,
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "perforate_and_squeeze_plug",
+                "recipe": {
+                    "id": "nm_class_c",
+                    "class": "C",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 14.8,
+                    "water_gal_per_sk": 6.3,
+                    "yield_ft3_per_sk": 1.32
+                },
+                "top_ft": 922.0,
+                "details": {
+                    "wait_hours": 4,
+                    "cement_class": "C",
+                    "depth_mid_ft": 972.0,
+                    "inside_sacks": 17.5,
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "excess_factor": 0.5,
+                    "outside_sacks": 7.5,
+                    "nmac_compliant": true,
+                    "sacks_required": 25.0,
+                    "region_requirements": [
+                        "NM COA Figure — NMAC 19.15.25 formation isolation requirement (region: south_artesia, sub_area: default)"
+                    ],
+                    "squeeze_behind_pipe": true,
+                    "perforation_interval": {
+                        "top_ft": 972.0,
+                        "bottom_ft": 1022.0,
+                        "length_ft": 50.0,
+                        "description": "Perforations for squeeze behind pipe"
+                    },
+                    "special_instructions": "Perforate 5.500-in production casing at 972 ft; squeeze cement behind pipe",
+                    "cement_cap_inside_casing": {
+                        "top_ft": 922.0,
+                        "bottom_ft": 972.0,
+                        "height_ft": 50.0,
+                        "description": "Cement cap above perforations"
+                    },
+                    "perforation_required_reason": "No cement behind production casing above TOC — perforation required to squeeze cement into annulus"
+                },
+                "bottom_ft": 1022.0,
+                "formation": "Yates",
+                "hole_type": "cased",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": "perf_and_squeeze_plug",
+                "casing_id_in": 5.5,
+                "plug_purpose": "perforate_and_squeeze_plug",
+                "tag_required": true,
+                "operation_type": "perforate_and_squeeze",
+                "regulatory_basis": [
+                    "NMAC 19.15.25 — Formation isolation mandatory for all NM wells; cement class: C"
+                ],
+                "requires_perforation": true,
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "shoe_plug",
+                "sacks": 25,
+                "recipe": {
+                    "id": "nm_class_c",
+                    "class": "C",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 14.8,
+                    "water_gal_per_sk": 6.3,
+                    "yield_ft3_per_sk": 1.32
+                },
+                "top_ft": 350.0,
+                "details": {
+                    "wait_hours": 4,
+                    "cement_class": "C",
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "excess_factor": 0.5,
+                    "nmac_compliant": true,
+                    "sacks_required": 25.0,
+                    "special_instructions": "Wait 4 hrs & Tag TOC."
+                },
+                "bottom_ft": 450.0,
+                "hole_type": "cased",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {
+                        "ft3": 33.0,
+                        "sacks": 25,
+                        "explain": "Pre-computed by C-103 rules engine: 25 sacks",
+                        "additives": [],
+                        "total_bbl": 5.88,
+                        "water_bbl": 0
+                    }
+                },
+                "casing_id_in": 13.365,
+                "plug_purpose": "shoe_plug",
+                "tag_required": true,
+                "operation_type": "spot",
+                "regulatory_basis": [
+                    "NMAC 19.15.25 Surface Casing §(2) — ±50 ft cement plug at each casing shoe; cement class: C"
+                ],
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "shoe_plug",
+                "sacks": 25,
+                "recipe": {
+                    "id": "nm_class_c",
+                    "class": "C",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 14.8,
+                    "water_gal_per_sk": 6.3,
+                    "yield_ft3_per_sk": 1.32
+                },
+                "top_ft": 2950.0,
+                "details": {
+                    "wait_hours": 4,
+                    "cement_class": "C",
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "excess_factor": 0.5,
+                    "nmac_compliant": true,
+                    "sacks_required": 25.0,
+                    "special_instructions": "Wait 4 hrs & Tag TOC."
+                },
+                "bottom_ft": 3050.0,
+                "hole_type": "cased",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {
+                        "ft3": 33.0,
+                        "sacks": 25,
+                        "explain": "Pre-computed by C-103 rules engine: 25 sacks",
+                        "additives": [],
+                        "total_bbl": 5.88,
+                        "water_bbl": 0
+                    }
+                },
+                "casing_id_in": 8.625,
+                "plug_purpose": "shoe_plug",
+                "tag_required": true,
+                "operation_type": "spot",
+                "regulatory_basis": [
+                    "NMAC 19.15.25 Surface Casing §(2) — ±50 ft cement plug at each casing shoe; cement class: C"
+                ],
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "shoe_plug",
+                "sacks": 25,
+                "recipe": {
+                    "id": "nm_class_h",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 16.4,
+                    "water_gal_per_sk": 4.3,
+                    "yield_ft3_per_sk": 1.15
+                },
+                "top_ft": 12322.53999305096,
+                "details": {
+                    "wait_hours": 4,
+                    "cement_class": "H",
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "excess_factor": 1.0,
+                    "nmac_compliant": true,
+                    "sacks_required": 25.0,
+                    "special_instructions": "Wait 4 hrs & Tag TOC."
+                },
+                "bottom_ft": 12427.46000694904,
+                "hole_type": "open",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {
+                        "ft3": 28.75,
+                        "sacks": 25,
+                        "explain": "Pre-computed by C-103 rules engine: 25 sacks",
+                        "additives": [],
+                        "total_bbl": 5.12,
+                        "water_bbl": 0
+                    }
+                },
+                "casing_id_in": 5.5,
+                "plug_purpose": "shoe_plug",
+                "tag_required": true,
+                "operation_type": "spot",
+                "regulatory_basis": [
+                    "NMAC 19.15.25 Surface Casing §(2) — ±50 ft cement plug at each casing shoe; cement class: H"
+                ],
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "surface_plug",
+                "sacks": 25,
+                "recipe": {
+                    "id": "nm_class_c",
+                    "class": "C",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 14.8,
+                    "water_gal_per_sk": 6.3,
+                    "yield_ft3_per_sk": 1.32
+                },
+                "top_ft": 0.0,
+                "details": {
+                    "wait_hours": 0,
+                    "cement_class": "C",
+                    "excess_factor": 0.5,
+                    "nmac_compliant": true,
+                    "sacks_required": 25.0,
+                    "special_instructions": "Hold 30-min static pressure observation after placing surface plug. Cut & cap all casing strings 3 ft below grade."
+                },
+                "bottom_ft": 50.0,
+                "hole_type": "cased",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {
+                        "ft3": 33.0,
+                        "sacks": 25,
+                        "explain": "Pre-computed by C-103 rules engine: 25 sacks",
+                        "additives": [],
+                        "total_bbl": 5.88,
+                        "water_bbl": 0
+                    }
+                },
+                "casing_id_in": 13.375,
+                "plug_purpose": "surface_plug",
+                "tag_required": false,
+                "operation_type": "circulate",
+                "regulatory_basis": [
+                    "NMAC 19.15.25 — Surface plug required; 30-min static observation; Class C cement; cut & cap all strings 3 ft below grade"
+                ],
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "fill_plug",
+                "sacks": 25,
+                "recipe": {
+                    "id": "nm_class_h",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 16.4,
+                    "water_gal_per_sk": 4.3,
+                    "yield_ft3_per_sk": 1.15
+                },
+                "top_ft": 10676.26999652548,
+                "details": {
+                    "wait_hours": 4,
+                    "cement_class": "H",
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "excess_factor": 1.0,
+                    "nmac_compliant": true,
+                    "sacks_required": 25.0,
+                    "special_instructions": "Fill plug: gap of 3,193' exceeds 2,000' open maximum (NMAC 19.15.25). Wait 4 hrs & Tag TOC."
+                },
+                "bottom_ft": 10776.26999652548,
+                "hole_type": "open",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {
+                        "ft3": 28.75,
+                        "sacks": 25,
+                        "explain": "Pre-computed by C-103 rules engine: 25 sacks",
+                        "additives": [],
+                        "total_bbl": 5.12,
+                        "water_bbl": 0
+                    }
+                },
+                "casing_id_in": 5.5,
+                "plug_purpose": "fill_plug",
+                "tag_required": true,
+                "operation_type": "spot",
+                "regulatory_basis": [
+                    "NMAC 19.15.25 — Fill plug required: max spacing 3000' cased / 2000' open; cement class: H"
+                ],
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            },
+            {
+                "type": "perforate_and_squeeze_plug",
+                "recipe": {
+                    "id": "nm_class_h",
+                    "class": "H",
+                    "rounding": "nearest",
+                    "additives": [],
+                    "density_ppg": 16.4,
+                    "water_gal_per_sk": 4.3,
+                    "yield_ft3_per_sk": 1.15
+                },
+                "top_ft": 6950.5,
+                "details": {
+                    "wait_hours": 4,
+                    "cement_class": "H",
+                    "depth_mid_ft": 7000.5,
+                    "inside_sacks": 17.5,
+                    "verification": {
+                        "action": "TAG",
+                        "required_wait_hr": 4
+                    },
+                    "excess_factor": 0.5,
+                    "outside_sacks": 7.5,
+                    "nmac_compliant": true,
+                    "sacks_required": 25.0,
+                    "squeeze_behind_pipe": true,
+                    "perforation_interval": {
+                        "top_ft": 7000.5,
+                        "bottom_ft": 7050.5,
+                        "length_ft": 50.0,
+                        "description": "Perforations for squeeze behind pipe"
+                    },
+                    "special_instructions": "Perforate 5.500-in production casing at 7,000 ft; squeeze cement behind pipe",
+                    "cement_cap_inside_casing": {
+                        "top_ft": 6950.5,
+                        "bottom_ft": 7000.5,
+                        "height_ft": 50.0,
+                        "description": "Cement cap above perforations"
+                    },
+                    "perforation_required_reason": "No cement behind production casing above TOC — perforation required to squeeze cement into annulus"
+                },
+                "bottom_ft": 7050.5,
+                "hole_type": "cased",
+                "materials": {
+                    "fluids": {},
+                    "slurry": {}
+                },
+                "plug_type": "perf_and_squeeze_plug",
+                "casing_id_in": 5.5,
+                "plug_purpose": "perforate_and_squeeze_plug",
+                "tag_required": true,
+                "operation_type": "perforate_and_squeeze",
+                "regulatory_basis": [
+                    "NMAC 19.15.25 — Fill plug required: max spacing 3000' cased / 2000' open; cement class: H"
+                ],
+                "requires_perforation": true,
+                "special_instructions": "Mud ≥9.5 ppg; Funnel ≥40 s"
+            }
+        ],
+        "county": "Eddy",
+        "district": "",
+        "form_type": "c_103",
+        "policy_id": "nm.c103",
+        "extraction": {
+            "files": [
+                "nm_ocd_scrape_3001528841.json"
+            ],
+            "status": "success"
+        },
+        "formations": [
+            {
+                "top_ft": 9080.0,
+                "formation_name": "Wolfcamp"
+            },
+            {
+                "top_ft": 9855.0,
+                "formation_name": "Canyon"
+            },
+            {
+                "top_ft": 10617.0,
+                "formation_name": "Morrow"
+            },
+            {
+                "top_ft": 11670.0,
+                "formation_name": "Miss."
+            },
+            {
+                "top_ft": 12173.0,
+                "formation_name": "Devonian"
+            },
+            {
+                "top_ft": 972.0,
+                "formation_name": "Yates"
+            },
+            {
+                "top_ft": 3130.0,
+                "formation_name": "Delaware"
+            },
+            {
+                "top_ft": 4921.0,
+                "formation_name": "Bone Springs"
+            }
+        ],
+        "jurisdiction": "NM",
+        "casing_strings": [
+            {
+                "grade": null,
+                "sacks": 420,
+                "string": "Surface Casing",
+                "top_ft": 0.0,
+                "weight": 54.4,
+                "size_in": 13.365,
+                "depth_ft": 400.0,
+                "cement_bottom": 400.0,
+                "cement_top_ft": 0.0,
+                "shoe_depth_ft": 400.0
+            },
+            {
+                "grade": null,
+                "sacks": 2475,
+                "string": "Intermediate 1 Casing",
+                "top_ft": 0.0,
+                "weight": 24.0,
+                "size_in": 8.625,
+                "depth_ft": 3000.0,
+                "cement_bottom": 3000.0,
+                "cement_top_ft": 0.0,
+                "shoe_depth_ft": 3000.0
+            },
+            {
+                "grade": null,
+                "sacks": 700,
+                "string": "Production Casing",
+                "top_ft": 0.0,
+                "weight": 17.0,
+                "size_in": 5.5,
+                "depth_ft": 12375.0,
+                "cement_bottom": 12375.0,
+                "cement_top_ft": 7500.0,
+                "shoe_depth_ft": 12375.0
+            }
+        ],
+        "existing_tools": [
+            {
+                "type": "CIBP",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 12150.0,
+                "description": "CIBP set at 12,150 ft [Source: c_103 - _raw_text__chunk_28]",
+                "equipment_status": null
+            },
+            {
+                "type": "CIBP",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 9072.0,
+                "description": "CIBP at 9072.0 ft (regex scan)",
+                "equipment_status": null
+            },
+            {
+                "type": "PACKER",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 11167.0,
+                "description": "Packer at 11167.0 ft with cement on top (regex scan)",
+                "equipment_status": null
+            }
+        ],
+        "kernel_version": "0.1.0",
+        "materials_totals": {},
+        "formations_targeted": [
+            "Bone Springs",
+            "Delaware",
+            "Wolfcamp",
+            "Yates"
+        ],
+        "historic_cement_jobs": [],
+        "mechanical_equipment": [
+            {
+                "type": "CIBP",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 12150.0,
+                "description": "CIBP set at 12,150 ft [Source: c_103 - _raw_text__chunk_28]",
+                "equipment_status": null
+            },
+            {
+                "type": "CIBP",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 9072.0,
+                "description": "CIBP at 9072.0 ft (regex scan)",
+                "equipment_status": null
+            },
+            {
+                "type": "PACKER",
+                "source": "C-105 mechanical_equipment",
+                "depth_ft": 11167.0,
+                "description": "Packer at 11167.0 ft with cement on top (regex scan)",
+                "equipment_status": null
+            }
+        ],
+        "production_perforations": [
+            {
+                "top_ft": 9122.0,
+                "bottom_ft": 9226.0,
+                "open_hole": false
+            },
+            {
+                "top_ft": 11262.0,
+                "bottom_ft": 11270.0,
+                "open_hole": false
+            },
+            {
+                "top_ft": 12204.0,
+                "bottom_ft": 12324.0,
+                "open_hole": false
+            }
+        ]
+    }
+}

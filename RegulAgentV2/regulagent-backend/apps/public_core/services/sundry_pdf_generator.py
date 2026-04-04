@@ -331,6 +331,211 @@ def _render_steps_page(doc: "fitz.Document", steps_content: str, header: dict) -
 
 
 # ===========================================================================
+# WBD page
+# ===========================================================================
+
+def _render_wbd_page(
+    doc,
+    wbd_image_path: str,
+    header: dict,
+    wbd_formations: list,
+    wbd_casings: list,
+) -> None:
+    """
+    Append a Letter-size WBD (Wellbore Diagram) page to the PDF document.
+
+    Layout:
+      - Header block at top with well name, operator, lease name, API number
+      - WBD image at 70% height on the left column
+      - Formation tops table on the right sidebar
+      - Casing table below the formation table on the right sidebar
+
+    Args:
+        doc: Open PyMuPDF document to append to.
+        wbd_image_path: Absolute path to the WBD image file.
+        header: Dict with keys well_name, well_number, operator, api_number,
+                and optionally lease_name.
+        wbd_formations: List of dicts with keys "name" and "depth_ft".
+        wbd_casings: List of dicts with keys "type", "size", and "depth_ft".
+    """
+    page = doc.new_page(width=612, height=792)
+
+    # --- Header values ---
+    well_name = _safe_str(header.get("well_name"))
+    well_number = _safe_str(header.get("well_number"))
+    operator = _safe_str(header.get("operator"))
+    lease_name = _safe_str(header.get("lease_name") or header.get("well_name"))
+    api_number = _safe_str(header.get("api_number"))
+
+    well_display = f"{well_name} #{well_number}" if well_number else well_name
+
+    # --- Header block (y=40 to y=96) ---
+    y = 40
+    if well_display:
+        page.insert_text(
+            fitz.Point(36, y),
+            well_display,
+            fontname="hebo",
+            fontsize=12,
+            color=(0, 0, 0),
+        )
+    y += 18
+    if operator:
+        page.insert_text(
+            fitz.Point(36, y),
+            f"Operator: {operator}",
+            fontname="helv",
+            fontsize=9,
+            color=(0, 0, 0),
+        )
+        y += 13
+    if lease_name:
+        page.insert_text(
+            fitz.Point(36, y),
+            f"Lease: {lease_name}",
+            fontname="helv",
+            fontsize=9,
+            color=(0, 0, 0),
+        )
+        y += 13
+    if api_number:
+        page.insert_text(
+            fitz.Point(36, y),
+            f"API: {api_number}",
+            fontname="helv",
+            fontsize=9,
+            color=(0, 0, 0),
+        )
+
+    # Horizontal rule at y=98
+    page.draw_line(
+        fitz.Point(36, 98),
+        fitz.Point(576, 98),
+        color=(0.5, 0.5, 0.5),
+        width=0.5,
+    )
+
+    # --- WBD Image (left column: 36, 100, 358, 554) ---
+    img_rect = fitz.Rect(36, 100, 358, 554)
+    page.insert_image(img_rect, filename=wbd_image_path)
+
+    # --- Right sidebar ---
+    sidebar_x = 368
+    sidebar_x2 = 576
+    sidebar_y = 100
+    row_height = 12
+
+    # --- Formation Tops table ---
+    page.insert_text(
+        fitz.Point(sidebar_x, sidebar_y),
+        "FORMATION TOPS",
+        fontname="hebo",
+        fontsize=9,
+        color=(0, 0, 0),
+    )
+    sidebar_y += 3
+    page.draw_line(
+        fitz.Point(sidebar_x, sidebar_y),
+        fitz.Point(sidebar_x2, sidebar_y),
+        color=(0.5, 0.5, 0.5),
+        width=0.5,
+    )
+    sidebar_y += 10
+
+    # Column headers
+    page.insert_text(
+        fitz.Point(sidebar_x, sidebar_y),
+        "Formation",
+        fontname="hebo",
+        fontsize=8,
+        color=(0, 0, 0),
+    )
+    depth_header = "Depth (ft)"
+    depth_header_w = fitz.get_text_length(depth_header, fontname="hebo", fontsize=8)
+    page.insert_text(
+        fitz.Point(sidebar_x2 - depth_header_w, sidebar_y),
+        depth_header,
+        fontname="hebo",
+        fontsize=8,
+        color=(0, 0, 0),
+    )
+    sidebar_y += row_height
+
+    # Formation data rows
+    for formation in wbd_formations:
+        name = _safe_str(formation.get("name") or formation.get("formation") or "")
+        depth = _safe_str(formation.get("depth_ft") or formation.get("depth") or "")
+        if len(name) > 22:
+            name = name[:22]
+        page.insert_text(
+            fitz.Point(sidebar_x, sidebar_y),
+            name,
+            fontname="helv",
+            fontsize=8,
+            color=(0, 0, 0),
+        )
+        depth_w = fitz.get_text_length(depth, fontname="helv", fontsize=8)
+        page.insert_text(
+            fitz.Point(sidebar_x2 - depth_w, sidebar_y),
+            depth,
+            fontname="helv",
+            fontsize=8,
+            color=(0, 0, 0),
+        )
+        sidebar_y += row_height
+
+    # --- Casing table (20pt gap below formations) ---
+    sidebar_y += 20
+
+    page.insert_text(
+        fitz.Point(sidebar_x, sidebar_y),
+        "CASING RECORD",
+        fontname="hebo",
+        fontsize=9,
+        color=(0, 0, 0),
+    )
+    sidebar_y += 3
+    page.draw_line(
+        fitz.Point(sidebar_x, sidebar_y),
+        fitz.Point(sidebar_x2, sidebar_y),
+        color=(0.5, 0.5, 0.5),
+        width=0.5,
+    )
+    sidebar_y += 10
+
+    # Column headers: Type | Size | Hole | Depth
+    col_type = sidebar_x
+    col_size = 430
+    col_hole = 470
+    col_depth = 520
+    page.insert_text(fitz.Point(col_type, sidebar_y), "Type",
+                     fontname="hebo", fontsize=7, color=(0, 0, 0))
+    page.insert_text(fitz.Point(col_size, sidebar_y), "Size",
+                     fontname="hebo", fontsize=7, color=(0, 0, 0))
+    page.insert_text(fitz.Point(col_hole, sidebar_y), "Hole",
+                     fontname="hebo", fontsize=7, color=(0, 0, 0))
+    page.insert_text(fitz.Point(col_depth, sidebar_y), "Depth",
+                     fontname="hebo", fontsize=7, color=(0, 0, 0))
+    sidebar_y += row_height
+
+    # Casing data rows
+    for casing in wbd_casings:
+        casing_type = _safe_str(casing.get("type") or "")
+        casing_size = _safe_str(casing.get("size_inches") or casing.get("size") or "")
+        hole_size = _safe_str(casing.get("hole_size_inches") or "")
+        casing_depth = _safe_str(casing.get("shoe_depth_ft") or casing.get("depth_ft") or "")
+        page.insert_text(fitz.Point(col_type, sidebar_y), casing_type,
+                         fontname="helv", fontsize=7, color=(0, 0, 0))
+        page.insert_text(fitz.Point(col_size, sidebar_y), casing_size,
+                         fontname="helv", fontsize=7, color=(0, 0, 0))
+        page.insert_text(fitz.Point(col_hole, sidebar_y), hole_size,
+                         fontname="helv", fontsize=7, color=(0, 0, 0))
+        page.insert_text(fitz.Point(col_depth, sidebar_y), casing_depth,
+                         fontname="helv", fontsize=7, color=(0, 0, 0))
+        sidebar_y += row_height
+
+
+# ===========================================================================
 # Main entry point
 # ===========================================================================
 
@@ -421,11 +626,10 @@ def generate_sundry_pdf(c103_form_data: dict, wbd_image_path: str = "") -> Dict[
         # --- Append wellbore diagram page if image exists ---
         if wbd_image_path and os.path.isfile(wbd_image_path):
             try:
-                wbd_page = doc.new_page(width=612, height=792)  # Letter size
-                margin = 36  # 0.5 inch
-                img_rect = fitz.Rect(margin, margin, 612 - margin, 792 - margin)
-                wbd_page.insert_image(img_rect, filename=wbd_image_path)
-                logger.info("Sundry PDF: appended WBD diagram page from %s", wbd_image_path)
+                wbd_formations = c103_form_data.get("wbd_formations") or []
+                wbd_casings = c103_form_data.get("wbd_casings") or []
+                _render_wbd_page(doc, wbd_image_path, header, wbd_formations, wbd_casings)
+                logger.info("Sundry PDF: appended enhanced WBD page from %s", wbd_image_path)
             except Exception as wbd_err:
                 logger.warning("Sundry PDF: failed to append WBD page (non-fatal): %s", wbd_err)
 

@@ -4,6 +4,8 @@ from typing import Any, Dict
 
 from rest_framework import serializers
 
+from apps.kernel.services.jurisdiction_registry import detect_jurisdiction
+
 
 class W3AFromApiRequestSerializer(serializers.Serializer):
     api10 = serializers.CharField(help_text="10-digit API number")
@@ -58,11 +60,7 @@ class W3AFromApiRequestSerializer(serializers.Serializer):
         api10 = attrs.get("api10", "")
         jurisdiction = attrs.get("jurisdiction")
         if not jurisdiction:
-            # NM API numbers start with "30" (state code)
-            if api10.startswith("30"):
-                attrs["jurisdiction"] = "NM"
-            else:
-                attrs["jurisdiction"] = "TX"
+            attrs["jurisdiction"] = detect_jurisdiction(api10)
 
         # If user opted to provide a GAU override, require the file in the same request
         if attrs.get("use_gau_override_if_invalid"):

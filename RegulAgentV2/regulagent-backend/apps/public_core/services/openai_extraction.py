@@ -103,6 +103,14 @@ SUPPORTED_TYPES = {
             "duqw",
         ],
     },
+    "c_100": {
+        "prompt_key": "c_100",
+        "required_sections": [
+            "header",
+            "operator_info",
+            "well_info",
+        ],
+    },
     "c_101": {
         "prompt_key": "c_101",
         "required_sections": [
@@ -112,6 +120,17 @@ SUPPORTED_TYPES = {
             "proposed_work",
             "casing_record",
             "cement_record",
+            "remarks",
+        ],
+    },
+    "c_102": {
+        "prompt_key": "c_102",
+        "required_sections": [
+            "header",
+            "operator_info",
+            "well_info",
+            "completion_data",
+            "casing_record",
             "remarks",
         ],
     },
@@ -126,6 +145,16 @@ SUPPORTED_TYPES = {
             "casing_program",
             "cement_program",
             "plugging_procedure",
+            "remarks",
+        ],
+    },
+    "c_104": {
+        "prompt_key": "c_104",
+        "required_sections": [
+            "header",
+            "operator_info",
+            "well_info",
+            "subsequent_report",
             "remarks",
         ],
     },
@@ -235,9 +264,12 @@ SUPPORTED_TYPES = {
 }
 
 # Aliases — normalize document types stored with/without underscores
-SUPPORTED_TYPES["c105"] = SUPPORTED_TYPES["c_105"]
+SUPPORTED_TYPES["c100"] = SUPPORTED_TYPES["c_100"]
 SUPPORTED_TYPES["c101"] = SUPPORTED_TYPES["c_101"]
+SUPPORTED_TYPES["c102"] = SUPPORTED_TYPES["c_102"]
 SUPPORTED_TYPES["c103"] = SUPPORTED_TYPES["c_103"]
+SUPPORTED_TYPES["c104"] = SUPPORTED_TYPES["c_104"]
+SUPPORTED_TYPES["c105"] = SUPPORTED_TYPES["c_105"]
 
 
 # OpenAI Models - using latest available models with best performance
@@ -368,18 +400,77 @@ def classify_document(file_path: Path, candidate_types: list[str] | None = None)
     if re.search(r'\bswr[\s-]*10\b', name): return "swr10"
     if re.search(r'\bswr[\s-]*13\b', name): return "swr13"
 
-    # Upload and ask classifier (filename-based classification is typically sufficient)
+    # Extract first page text so the LLM has real content (not just the filename)
+    first_page_text = ""
     try:  # pragma: no cover
-        fobj = client.files.create(file=open(str(file_path), "rb"), purpose="assistants")
-        logger.info("classify_document: uploaded file_id=%s", getattr(fobj, 'id', ''))
+        import pdfplumber
+        with pdfplumber.open(str(file_path)) as pdf:
+            if pdf.pages:
+                first_page_text = (pdf.pages[0].extract_text() or "")[:2000]
+    except Exception:
+        pass  # PDF reading failed — proceed with filename only
+
+    # If pdfplumber found no text, try OCR (handles scanned/image PDFs)
+    if not first_page_text.strip():
+        try:
+            from pdf2image import convert_from_path
+            import pytesseract
+            images = convert_from_path(str(file_path), first_page=1, last_page=1, dpi=150)
+            if images:
+                first_page_text = (pytesseract.image_to_string(images[0]) or "")[:2000]
+        except Exception:
+            pass  # OCR failed, proceed with filename only
+
+    # Ask the LLM classifier using filename + first-page content
+    try:  # pragma: no cover
         type_list = candidate_types if candidate_types else list(SUPPORTED_TYPES.keys())
         type_str = ", ".join(type_list)
-        prompt = f"Classify the regulatory document type: one of [{type_str}, unknown]. If the document does not clearly match any of these types, return 'unknown'. Return only the key."
+
+        # Build form descriptions so the LLM can distinguish types
+        form_descriptions = {
+            # NM OCD forms
+            "c_100": "C-100: NM OCD well location/record form",
+            "c_101": "C-101: NM OCD Application for Permit to Drill (APD)",
+            "c_102": "C-102: NM OCD Completion or Workover Report",
+            "c_103": "C-103: NM OCD Application to Plug and Abandon",
+            "c_104": "C-104: NM OCD Subsequent/Sundry Report — Request for Allowable and Authorization to Transport, production data, monthly reports",
+            "c_105": "C-105: NM OCD Sundry Notice and Report on Wells — miscellaneous well operations",
+            "sundry": "Sundry Notice: general well operation notice (NM or TX)",
+            "apd": "Application for Permit to Drill — federal BLM Form 3160-3 or state APD",
+            # TX RRC forms
+            "w1": "W-1: TX RRC Drilling Permit",
+            "w2": "W-2: TX RRC Completion Report — ONLY for Texas wells",
+            "w3": "W-3: TX RRC Plugging Record — ONLY for Texas wells",
+            "w3a": "W-3A: TX RRC Application to Plug and Abandon — ONLY for Texas wells",
+            "w15": "W-15: TX RRC Completion/Recompletion — ONLY for Texas wells",
+            "w12": "W-12: TX RRC Cementing Report — ONLY for Texas wells",
+            "gau": "GAU: TX Gas Allowable Update — ONLY for Texas wells",
+            "g1": "G-1: TX RRC Organizational Report",
+            "schematic": "Well schematic or wellbore diagram",
+            "formation_tops": "Formation tops log or chart",
+        }
+        desc_lines = [f"  {k}: {form_descriptions.get(k, k)}" for k in type_list if k in form_descriptions]
+        descriptions_block = "\n".join(desc_lines)
+
+        system_msg = (
+            f"You are a regulatory document classifier for oil and gas wells. "
+            f"Classify the document into exactly one of these types:\n{descriptions_block}\n  unknown: document does not match any type above\n\n"
+            f"IMPORTANT: Look for the form number printed on the document (e.g., 'Form C-104', 'Form 3160-3', 'W-2'). "
+            f"Match the form number, not just keywords. If the document says 'C-104' classify as c_104. "
+            f"If the form is from a different state than the candidate types suggest, return 'unknown'. "
+            f"Federal BLM forms (3160-3, 3160-4, 3160-5) should be classified as 'apd' if they are drilling permits, otherwise 'unknown'. "
+            f"Return ONLY the key (e.g., c_103), nothing else."
+        )
+
+        content = f"Filename: {file_path.name}"
+        if first_page_text:
+            content += f"\n\nFirst page text:\n{first_page_text}"
+        content += f"\n\nClassify this document. Return only the type key."
         resp = client.chat.completions.create(
             model=MODEL_CLASSIFIER,
             messages=[
-                {"role": "system", "content": f"Return only one token from the set: {type_str}, unknown. Return 'unknown' if the document does not match any type."},
-                {"role": "user", "content": f"File: {file_path.name} (file_id: {getattr(fobj,'id','')}). {prompt}"},
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": content},
             ],
             temperature=0,
         )

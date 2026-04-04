@@ -19,6 +19,7 @@ requirements:
 preferences:
   operational:
     notice_hours_min: 4
+    mud_min_weight_ppg: 9.5
   cement:
     required_class: C
     classes:

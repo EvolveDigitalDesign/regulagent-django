@@ -103,7 +103,10 @@ def get_plan_detail(request, plan_id):
         logger.error(f"❌❌❌ RETRIEVED: casing_strings is EMPTY in payload!")
     
     # Fetch well geometry from extracted documents (pass payload for formation extraction)
-    well_geometry = build_well_geometry(snapshot.well.api14, payload)
+    # Derive jurisdiction from the well's state so W-2 (TX) data is not used for NM wells
+    _well_state = (snapshot.well.state or "").upper().strip()
+    _jurisdiction = "NM" if _well_state == "NM" else ("TX" if _well_state == "TX" else None)
+    well_geometry = build_well_geometry(snapshot.well.api14, payload, jurisdiction=_jurisdiction)
     if isinstance(payload, dict):
         if well_geometry.get("historic_cement_jobs"):
             payload["historic_cement_jobs"] = well_geometry["historic_cement_jobs"]

@@ -108,8 +108,6 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
     logger.info("kernel.plan_from_facts: start policy_id=%s district=%s", policy.get("policy_id"), district)
     logger.info("Policy ID: %s, Version: %s", policy.get("policy_id"), policy.get("policy_version"))
     logger.info("Applying policy with the following effective preferences: %s", policy.get("preferences"))
-    print(f"🔍 KERNEL MAIN: policy keys={list(policy.keys())}", flush=True)
-    print(f"🔍 KERNEL MAIN: policy['complete']={policy.get('complete')}", flush=True)
     
     constraints = _collect_constraints(policy)
     is_complete = policy.get("complete", False)
@@ -132,11 +130,9 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
 
     # Early return when policy is incomplete
     if not is_complete:
-        print(f"🔍 KERNEL MAIN: EARLY RETURN - policy incomplete!", flush=True)
         logger.warning("kernel.plan_from_facts: policy incomplete; constraints=%s", constraints)
         return plan
     
-    print(f"🔍 KERNEL MAIN: Policy is complete, proceeding to generate steps", flush=True)
 
     # Get jurisdiction-specific formula engine for cement calculations
     from apps.policy.services.formula_engine import get_formula_engine
@@ -255,7 +251,7 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
             shallowest_perf_from_perfs = None
             perforations_list = resolved_facts.get("perforations") or []
             if isinstance(perforations_list, list) and len(perforations_list) > 0:
-                logger.critical(f"🔧 CIBP: Found {len(perforations_list)} perforations in facts")
+                logger.debug(f"🔧 CIBP: Found {len(perforations_list)} perforations in facts")
                 for perf in perforations_list:
                     if isinstance(perf, dict):
                         # Support both interval_top_ft (old) and top_ft (new)
@@ -266,12 +262,12 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
                                 if shallowest_perf_from_perfs is None or top < shallowest_perf_from_perfs:
                                     shallowest_perf_from_perfs = top
                                     bottom = perf.get("bottom_ft") or perf.get("interval_bottom_ft", "?")
-                                    logger.critical(f"   Perf {top}-{bottom} ft")
+                                    logger.debug(f"   Perf {top}-{bottom} ft")
                             except (ValueError, TypeError):
                                 pass
                 
                 if shallowest_perf_from_perfs is not None:
-                    logger.critical(f"🔧 CIBP: Shallowest perforation top: {shallowest_perf_from_perfs} ft")
+                    logger.debug(f"🔧 CIBP: Shallowest perforation top: {shallowest_perf_from_perfs} ft")
             
             # STEP 2: Find deepest formation top (largest depth value = deepest)
             deepest_formation_top = None
@@ -286,7 +282,7 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
                             continue
                     if vals:
                         deepest_formation_top = max(vals)  # Largest depth = deepest
-                        logger.critical(f"🔧 CIBP: Deepest formation top: {deepest_formation_top} ft")
+                        logger.debug(f"🔧 CIBP: Deepest formation top: {deepest_formation_top} ft")
             except Exception:
                 deepest_formation_top = None
             
@@ -297,15 +293,15 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
             if shallowest_perf_from_perfs is not None and deepest_formation_top is not None:
                 # Both available - use the shallower (numerically smaller)
                 shallowest_perf_top_ft = min(shallowest_perf_from_perfs, deepest_formation_top)
-                logger.critical(f"🔧 CIBP: Using SHALLOWER of perf ({shallowest_perf_from_perfs}) and formation ({deepest_formation_top}): {shallowest_perf_top_ft} ft")
+                logger.debug(f"🔧 CIBP: Using SHALLOWER of perf ({shallowest_perf_from_perfs}) and formation ({deepest_formation_top}): {shallowest_perf_top_ft} ft")
             elif shallowest_perf_from_perfs is not None:
                 # Only perfs available
                 shallowest_perf_top_ft = shallowest_perf_from_perfs
-                logger.critical(f"🔧 CIBP: Using perforation top (no formations): {shallowest_perf_top_ft} ft")
+                logger.debug(f"🔧 CIBP: Using perforation top (no formations): {shallowest_perf_top_ft} ft")
             elif deepest_formation_top is not None:
                 # Only formations available (fallback)
                 shallowest_perf_top_ft = deepest_formation_top
-                logger.critical(f"🔧 CIBP: Using formation top (no perfs): {shallowest_perf_top_ft} ft")
+                logger.debug(f"🔧 CIBP: Using formation top (no perfs): {shallowest_perf_top_ft} ft")
             else:
                 # Neither available
                 shallowest_perf_top_ft = None
@@ -372,11 +368,11 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
 
             covered = _covered_by_ops(steps, float(shallowest_perf_top_ft)) if shallowest_perf_top_ft is not None else True
             
-            logger.critical(f"🔧 CIBP DETECTOR: exposed={exposed}, has_existing_cibp={has_existing_cibp}, has_cap_step={has_cap_step}, shallowest_perf_top_ft={shallowest_perf_top_ft}, covered_by_ops={covered}")
-            logger.critical(f"🔧 CIBP DETECTOR: production_shoe_ft={production_shoe_ft}")
+            logger.debug(f"🔧 CIBP DETECTOR: exposed={exposed}, has_existing_cibp={has_existing_cibp}, has_cap_step={has_cap_step}, shallowest_perf_top_ft={shallowest_perf_top_ft}, covered_by_ops={covered}")
+            logger.debug(f"🔧 CIBP DETECTOR: production_shoe_ft={production_shoe_ft}")
             
             if exposed and (not has_existing_cibp) and (not has_cap_step) and (not covered):
-                logger.critical("🔧🔧🔧 CIBP DETECTOR: ENTERED CIBP GENERATION BLOCK")
+                logger.debug("🔧🔧🔧 CIBP DETECTOR: ENTERED CIBP GENERATION BLOCK")
                 # Emit a mechanical plug (bridge plug) and a cement cap above it.
                 # Represent the bridge plug explicitly so downstream UIs can show both operations.
                 
@@ -384,43 +380,43 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
                     # Determine CIBP placement: consider both perforations and KOP (kick-off point)
                     # Rule: Shallowest depth wins (min of perf-50 and kop-50)
                     # Per requirement: Place 50 ft shallower than shallowest perforation top
-                    logger.critical(f"🔧 CIBP: Step 1 - Calculating perf-based depth from shallowest_perf_top_ft={shallowest_perf_top_ft}")
+                    logger.debug(f"🔧 CIBP: Step 1 - Calculating perf-based depth from shallowest_perf_top_ft={shallowest_perf_top_ft}")
                     plug_depth_from_perfs = max(float(shallowest_perf_top_ft) - 50.0, 0.0)
                     placement_reason = "perforations (50 ft above shallowest perf top)"
-                    logger.critical(f"🔧 CIBP: Step 1 COMPLETE - plug_depth_from_perfs={plug_depth_from_perfs} (50 ft above shallowest perf top)")
+                    logger.debug(f"🔧 CIBP: Step 1 COMPLETE - plug_depth_from_perfs={plug_depth_from_perfs} (50 ft above shallowest perf top)")
                     
                     # Check for KOP (Kick-Off Point) - horizontal well consideration
-                    logger.critical(f"🔧 CIBP: Step 2 - Checking for KOP in resolved_facts: {list(resolved_facts.keys())}")
+                    logger.debug(f"🔧 CIBP: Step 2 - Checking for KOP in resolved_facts: {list(resolved_facts.keys())}")
                     kop_data = resolved_facts.get("kop") or {}
-                    logger.critical(f"🔧 CIBP: Step 2 - kop_data={kop_data}")
+                    logger.debug(f"🔧 CIBP: Step 2 - kop_data={kop_data}")
                     kop_md_ft = kop_data.get("kop_md_ft") if isinstance(kop_data, dict) else None
-                    logger.critical(f"🔧 CIBP: Step 2 COMPLETE - kop_md_ft={kop_md_ft}")
+                    logger.debug(f"🔧 CIBP: Step 2 COMPLETE - kop_md_ft={kop_md_ft}")
                     
                     plug_depth = plug_depth_from_perfs  # Default
                     
                     if kop_md_ft is not None:
-                        logger.critical(f"🔧 CIBP: Step 3 - KOP FOUND, processing kop_md_ft={kop_md_ft}")
+                        logger.debug(f"🔧 CIBP: Step 3 - KOP FOUND, processing kop_md_ft={kop_md_ft}")
                         try:
                             kop_md = float(kop_md_ft)
                             plug_depth_from_kop = max(kop_md - 50.0, 0.0)
-                            logger.critical(f"🔧 CIBP: Step 3a - plug_depth_from_kop={plug_depth_from_kop}, plug_depth_from_perfs={plug_depth_from_perfs}")
+                            logger.debug(f"🔧 CIBP: Step 3a - plug_depth_from_kop={plug_depth_from_kop}, plug_depth_from_perfs={plug_depth_from_perfs}")
                             
                             # Shallowest wins (Option A)
                             if plug_depth_from_kop < plug_depth_from_perfs:
                                 plug_depth = plug_depth_from_kop
                                 placement_reason = f"KOP (50 ft above KOP at {kop_md} ft MD)"
-                                logger.critical(f"🔧 CIBP: Step 3b - KOP depth is shallower → using KOP-based depth {plug_depth}")
+                                logger.debug(f"🔧 CIBP: Step 3b - KOP depth is shallower → using KOP-based depth {plug_depth}")
                             else:
                                 plug_depth = plug_depth_from_perfs
-                                logger.critical(f"🔧 CIBP: Step 3b - Perf depth is shallower → using perf-based depth {plug_depth}")
+                                logger.debug(f"🔧 CIBP: Step 3b - Perf depth is shallower → using perf-based depth {plug_depth}")
                         except (ValueError, TypeError) as e:
                             logger.error(f"🔧 CIBP: Step 3 ERROR - Invalid KOP value {kop_md_ft}: {e}", exc_info=True)
                             plug_depth = plug_depth_from_perfs
-                        logger.critical(f"🔧 CIBP: Step 3 COMPLETE - Final plug_depth={plug_depth}")
+                        logger.debug(f"🔧 CIBP: Step 3 COMPLETE - Final plug_depth={plug_depth}")
                     else:
-                        logger.critical(f"🔧 CIBP: Step 3 SKIPPED - No KOP found, using perf-based depth={plug_depth}")
+                        logger.debug(f"🔧 CIBP: Step 3 SKIPPED - No KOP found, using perf-based depth={plug_depth}")
                     
-                    logger.critical(f"🔧 CIBP: Step 4 - Creating bridge_plug step at depth={plug_depth}, reason='{placement_reason}'")
+                    logger.debug(f"🔧 CIBP: Step 4 - Creating bridge_plug step at depth={plug_depth}, reason='{placement_reason}'")
                     bridge_plug_step = {
                     "type": "bridge_plug",
                     "depth_ft": plug_depth,  # Legacy field
@@ -433,13 +429,13 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
                             "kop_considered": kop_md_ft is not None,
                         },
                     }
-                    logger.critical(f"🔧 CIBP: Step 4a - About to append bridge_plug_step to steps (current steps count: {len(steps)})")
+                    logger.debug(f"🔧 CIBP: Step 4a - About to append bridge_plug_step to steps (current steps count: {len(steps)})")
                     steps.append(bridge_plug_step)
-                    logger.critical(f"🔧 CIBP: Step 4b - bridge_plug appended successfully (new steps count: {len(steps)})")
-                    logger.critical(f"🔧 CIBP: Step 4 COMPLETE - ✅ bridge_plug added")
+                    logger.debug(f"🔧 CIBP: Step 4b - bridge_plug appended successfully (new steps count: {len(steps)})")
+                    logger.debug(f"🔧 CIBP: Step 4 COMPLETE - ✅ bridge_plug added")
                     
                     # Step 5: Create bridge plug cap
-                    logger.critical("🔧 CIBP: Step 5 - Creating bridge_plug_cap")
+                    logger.debug("🔧 CIBP: Step 5 - Creating bridge_plug_cap")
                     # Default cap length 100 ft above the plug (policy preference may adjust this via overrides)
                     cap_len = 100.0
                     try:
@@ -450,7 +446,7 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
                         val = knob.get("value") if isinstance(knob, dict) else knob
                         if val not in (None, ""):
                             cap_len = float(val)
-                            logger.critical(f"🔧 CIBP: Step 5a - Policy override cap_len={cap_len}")
+                            logger.debug(f"🔧 CIBP: Step 5a - Policy override cap_len={cap_len}")
                     except Exception as e:
                         logger.warning(f"🔧 CIBP: Step 5a - Failed to get policy cap length: {e}")
 
@@ -466,12 +462,12 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
                             cid = float(casing_id_in)
                             # Typical match: 5.5" casing (4.778" ID) → 4.50" CIBP; apply ~0.25" safety delta
                             steps[-1]["details"]["recommended_cibp_size_in"] = max(round(cid - 0.25, 2), 1.0)
-                            logger.critical(f"🔧 CIBP: Step 5b - Added CIBP size hint: {steps[-1]['details']['recommended_cibp_size_in']}\"")
+                            logger.debug(f"🔧 CIBP: Step 5b - Added CIBP size hint: {steps[-1]['details']['recommended_cibp_size_in']}\"")
                     except Exception as e:
                         logger.warning(f"🔧 CIBP: Step 5b - Failed to add CIBP size hint: {e}")
 
                     # Build bridge_plug_cap with geometry fields for materials calculation
-                    logger.critical(f"🔧 CIBP: Step 5c - Building cap_step (cap_len={cap_len}, plug_depth={plug_depth})")
+                    logger.debug(f"🔧 CIBP: Step 5c - Building cap_step (cap_len={cap_len}, plug_depth={plug_depth})")
                     cap_step = {
                         "type": "bridge_plug_cap",  # alias accepted by materials compute
                         "cap_length_ft": cap_len,
@@ -502,31 +498,31 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
                         default_recipe = prefs.get("default_recipe")
                         if default_recipe:
                             cap_step["recipe"] = default_recipe
-                        logger.critical(f"🔧 CIBP: Step 5d - Added geometry to cap: casing_id={cap_step.get('casing_id_in')}, stinger_od={cap_step.get('stinger_od_in')}")
+                        logger.debug(f"🔧 CIBP: Step 5d - Added geometry to cap: casing_id={cap_step.get('casing_id_in')}, stinger_od={cap_step.get('stinger_od_in')}")
                     except Exception as e:
                         logger.warning(f"🔧 CIBP: Step 5d - Failed to add cap geometry: {e}")
                     
-                    logger.critical(f"🔧 CIBP: Step 5e - About to append cap_step (current steps count: {len(steps)})")
+                    logger.debug(f"🔧 CIBP: Step 5e - About to append cap_step (current steps count: {len(steps)})")
                     steps.append(cap_step)
-                    logger.critical(f"🔧 CIBP: Step 5f - cap appended successfully (new steps count: {len(steps)})")
-                    logger.critical(f"🔧 CIBP: Step 5 COMPLETE - ✅ bridge_plug_cap added with length {cap_len} ft")
+                    logger.debug(f"🔧 CIBP: Step 5f - cap appended successfully (new steps count: {len(steps)})")
+                    logger.debug(f"🔧 CIBP: Step 5 COMPLETE - ✅ bridge_plug_cap added with length {cap_len} ft")
                     
                     # Step 6: Remove productive_horizon_isolation_plug when CIBP is used
                     # CIBP mechanically isolates productive zones, making separate horizon plug redundant
-                    logger.critical("🔧 CIBP: Step 6 - Checking for redundant productive_horizon_isolation_plug")
+                    logger.debug("🔧 CIBP: Step 6 - Checking for redundant productive_horizon_isolation_plug")
                     original_count = len(steps)
                     steps = [s for s in steps if s.get("type") != "productive_horizon_isolation_plug"]
                     removed_count = original_count - len(steps)
                     if removed_count > 0:
-                        logger.critical(f"🔧 CIBP: Step 6 COMPLETE - ✅ Removed {removed_count} productive_horizon_isolation_plug(s) (CIBP provides isolation)")
+                        logger.debug(f"🔧 CIBP: Step 6 COMPLETE - ✅ Removed {removed_count} productive_horizon_isolation_plug(s) (CIBP provides isolation)")
                     else:
-                        logger.critical("🔧 CIBP: Step 6 COMPLETE - No productive_horizon_isolation_plug found to remove")
+                        logger.debug("🔧 CIBP: Step 6 COMPLETE - No productive_horizon_isolation_plug found to remove")
                     
                 except Exception as e:
                     logger.error(f"🔧🔧🔧 CIBP DETECTOR: CRITICAL ERROR during CIBP generation: {e}", exc_info=True)
                     raise
             else:
-                logger.critical(f"🔧 CIBP DETECTOR: ❌ SKIPPED - One or more conditions not met")
+                logger.debug(f"🔧 CIBP DETECTOR: ❌ SKIPPED - One or more conditions not met")
         except Exception:
             logger.exception("cibp-detector: failed")
 
@@ -541,9 +537,6 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
     # Apply default geometry/recipe from preferences when present
     plan_steps = _apply_step_defaults(steps, policy.get("preferences") if isinstance(policy.get("preferences"), dict) else {}, resolved_facts)
     # Apply district/county overrides (e.g., 08A tagging; 7C operational instructions)
-    print(f"🔍 KERNEL MAIN: About to call _apply_district_overrides with {len(plan_steps)} steps", flush=True)
-    print(f"🔍 KERNEL MAIN: policy.get('effective') type={type(policy.get('effective'))}", flush=True)
-    print(f"🔍 KERNEL MAIN: district={district}, county={policy.get('county')}", flush=True)
     plan_steps = _apply_district_overrides(
         plan_steps,
         policy.get("effective") or {},
@@ -552,7 +545,6 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
         policy.get("county"),
         resolved_facts,  # CRITICAL FIX: Pass resolved_facts so formation plugs can determine plug_type
     )
-    print(f"🔍 KERNEL MAIN: After _apply_district_overrides, got {len(plan_steps)} steps back", flush=True)
     
     # Apply county procedures (data-driven from policy YAML)
     county_procedures = (policy.get("effective") or {}).get("district_overrides", {}).get("county_procedures", {})
@@ -560,7 +552,6 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
         # Fallback: try top-level county_procedures
         county_procedures = (policy.get("effective") or {}).get("county_procedures", {})
     if county_procedures:
-        print(f"🔍 KERNEL MAIN: Applying county procedures: {list(county_procedures.keys())}", flush=True)
         plan_steps = _apply_county_procedures(
             plan_steps,
             county_procedures,
@@ -568,7 +559,6 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
             district,
             policy.get("county"),
         )
-        print(f"🔍 KERNEL MAIN: After _apply_county_procedures, got {len(plan_steps)} steps back", flush=True)
     
     # Apply explicit step overrides provided by caller/payload (cap length, squeeze intervals, etc.)
     plan_steps = _apply_steps_overrides(
@@ -746,7 +736,6 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
         prefs = policy.get("preferences") or {}
         lp = (prefs.get("long_plug_merge") or {}) if isinstance(prefs, dict) else {}
         enabled = bool(lp.get("enabled"))
-        threshold_ft = float(lp.get("threshold_ft", 0) or 0)  # Deprecated, kept for backward compat
         types = lp.get("types") or ["formation_top_plug"]
         preserve_tagging = True if lp.get("preserve_tagging", True) is not False else False
         
@@ -763,10 +752,10 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
             plan_steps = _merge_adjacent_plugs(
                 plan_steps,
                 types=types,
-                threshold_ft=threshold_ft,  # Deprecated but kept for compat
                 preserve_tagging=preserve_tagging,
                 sack_limit_no_tag=sack_limit_no_tag,
                 sack_limit_with_tag=sack_limit_with_tag,
+                max_length_ft=float(lp.get("max_length_ft", 1250) or 1250),
             )
     except Exception:
         logger.exception("kernel.long_plug_merge: merge failed; continuing with unmerged steps")
@@ -777,14 +766,18 @@ def plan_from_facts(resolved_facts: Dict[str, Any], policy: Dict[str, Any]) -> D
         logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
         
         # Update recipe yields based on cement class annotations (must happen AFTER class annotation, BEFORE materials)
+        # CRITICAL: Copy recipe dict per-step to avoid mutating shared references
         for s in plan["steps"]:
             if isinstance(s.get("recipe"), dict):
                 cement_class = s.get("details", {}).get("cement_class")
                 if cement_class:
+                    s["recipe"] = dict(s["recipe"])  # Copy to avoid mutating shared dict
                     correct_yield = get_cement_yield(cement_class)
-                    s["recipe"]["yield_ft3_per_sk"] = correct_yield
+                    # Only override yield if the recipe doesn't already have an explicit yield
+                    if not s["recipe"].get("yield_ft3_per_sk") or s["recipe"]["yield_ft3_per_sk"] == 0:
+                        s["recipe"]["yield_ft3_per_sk"] = correct_yield
                     s["recipe"]["class"] = cement_class
-                    logger.debug(f"Updated recipe for {s.get('type')} at depth {s.get('details', {}).get('depth_mid_ft')} ft: class={cement_class}, yield={correct_yield} ft³/sk")
+                    logger.debug(f"Updated recipe for {s.get('type')} at depth {s.get('details', {}).get('depth_mid_ft')} ft: class={cement_class}, yield={s['recipe']['yield_ft3_per_sk']} ft³/sk")
         
         logger.debug("kernel.plan_from_facts: computing materials for %d steps", len(plan["steps"]))
         plan["steps"] = _compute_materials_for_steps(plan["steps"], resolved_facts=resolved_facts, formula_engine=formula_engine)  # type: ignore
@@ -877,6 +870,28 @@ def _assign_plug_types_and_purposes(steps: List[Dict[str, Any]], production_toc_
                 step["plug_type"] = _determine_plug_type(step, production_toc_ft)
             elif step_type == "perforate_and_squeeze_plug":
                 step["plug_type"] = "perf_and_squeeze_plug"
+            elif step_type == "formation_plug":
+                # NM C-103 formation plugs — determine by operation_type
+                op = step.get("operation_type", "")
+                if op == "perforate_and_squeeze":
+                    step["plug_type"] = "perf_and_squeeze_plug"
+                else:
+                    step["plug_type"] = "spot_plug"
+            elif step_type == "shoe_plug":
+                # Shoe plugs are spot plugs (cement placed inside casing at shoe depth)
+                step["plug_type"] = "spot_plug"
+            elif step_type == "fill_plug":
+                # Fill plugs — determine by operation_type
+                op = step.get("operation_type", "")
+                if op == "perforate_and_squeeze":
+                    step["plug_type"] = "perf_and_squeeze_plug"
+                else:
+                    step["plug_type"] = "spot_plug"
+            elif step_type == "surface_plug":
+                # Surface plugs use circulate method
+                step["plug_type"] = "spot_plug"
+            elif step_type == "duqw_plug":
+                step["plug_type"] = "spot_plug"
             # formation_top_plug should already have plug_type from _apply_district_overrides
     
     return steps
@@ -1105,11 +1120,6 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
         except Exception:
             logger.warning("_compute_materials_for_steps: could not create formula_engine fallback")
     out: List[Dict[str, Any]] = []
-    
-    # Debug: Log all step types being processed
-    print(f"🔧 MATERIALS COMPUTE: Processing {len(steps)} steps", flush=True)
-    for idx, s in enumerate(steps):
-        print(f"   Step {idx+1}: type={s.get('type')}, top_ft={s.get('top_ft')}, bottom_ft={s.get('bottom_ft')}", flush=True)
     
     for step in steps:
         step_type = step.get("type")
@@ -1379,10 +1389,13 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                             s_bot = float(seg.get("bottom_ft"))
                             length = abs(s_bot - s_top)
                             outer = seg.get("casing_id_in") or seg.get("hole_d_in")
-                            # Tubing is always removed - calculate full bore capacity
+                            stinger_od_seg = seg.get("stinger_od_in")
                             if outer is None:
                                 continue
-                            cap = casing_capacity_bbl_per_ft(float(outer))
+                            if stinger_od_seg is not None:
+                                cap = annulus_capacity_bbl_per_ft(float(outer), float(stinger_od_seg))
+                            else:
+                                cap = casing_capacity_bbl_per_ft(float(outer))
                             ex = float(seg.get("annular_excess", ann_excess_default))
                             bbl = length * cap * (1.0 + ex)
                             total_bbl += bbl
@@ -1405,16 +1418,20 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                     hole_d = step.get("hole_d_in")
                     casing_id = step.get("casing_id_in")
                     ex = float(step.get("annular_excess", ann_excess_default))
-                    # Open-hole: tubing is always removed, calculate full bore capacity
+                    # Open-hole: tubing is always removed, calculate full bore capacity (or annulus if stinger present)
                     if hole_d is not None and (context.startswith("open_hole") or casing_id is None):
-                        cap = casing_capacity_bbl_per_ft(float(hole_d))
+                        stinger_od = step.get("stinger_od_in")
+                        if stinger_od is not None:
+                            cap = annulus_capacity_bbl_per_ft(float(hole_d), float(stinger_od))
+                        else:
+                            cap = casing_capacity_bbl_per_ft(float(hole_d))
                         total_bbl = interval_ft * cap * (1.0 + ex)
                         segments_calc.append({
                             "top_ft": top_ft,
                             "bottom_ft": bottom_ft,
                             "length_ft": interval_ft,
                             "outer_in": float(hole_d),
-                            "inner_in": 0.0,  # No tubing - full bore
+                            "inner_in": float(stinger_od) if stinger_od is not None else 0.0,
                             "cap_bbl_per_ft": cap,
                             "excess_used": ex,
                             "bbl": total_bbl,
@@ -1469,33 +1486,37 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                                             "description": "Production-to-surface annulus"
                                         })
                             else:
-                                # Spot plug: Only fill inside casing (full bore, no tubing)
-                                outer = float(casing_id)
-                                inner = 0.0  # No tubing - full bore
-                                cap = casing_capacity_bbl_per_ft(outer)
+                                # Spot plug: Only fill inside casing (annulus if stinger present, else full bore)
+                                stinger_od = step.get("stinger_od_in")
+                                if stinger_od is not None:
+                                    cap = annulus_capacity_bbl_per_ft(float(casing_id), float(stinger_od))
+                                else:
+                                    cap = casing_capacity_bbl_per_ft(float(casing_id))
                                 total_bbl = interval_ft * cap * (1.0 + ex)
                                 segments_calc.append({
                                     "top_ft": top_ft,
                                     "bottom_ft": bottom_ft,
                                     "length_ft": interval_ft,
-                                    "outer_in": float(outer),
-                                    "inner_in": 0.0,  # Full bore, no tubing
+                                    "outer_in": float(casing_id),
+                                    "inner_in": float(stinger_od) if stinger_od is not None else 0.0,
                                     "cap_bbl_per_ft": cap,
                                     "excess_used": ex,
                                     "bbl": total_bbl,
                                 })
                         elif hole_d is not None:
                             # Open hole section (no casing)
-                            outer = float(hole_d)
-                            inner = 0.0
-                            cap = casing_capacity_bbl_per_ft(outer)
+                            stinger_od = step.get("stinger_od_in")
+                            if stinger_od is not None:
+                                cap = annulus_capacity_bbl_per_ft(float(hole_d), float(stinger_od))
+                            else:
+                                cap = casing_capacity_bbl_per_ft(float(hole_d))
                             total_bbl = interval_ft * cap * (1.0 + ex)
                             segments_calc.append({
                                 "top_ft": top_ft,
                                 "bottom_ft": bottom_ft,
                                 "length_ft": interval_ft,
-                                "outer_in": float(outer),
-                                "inner_in": 0.0,
+                                "outer_in": float(hole_d),
+                                "inner_in": float(stinger_od) if stinger_od is not None else 0.0,
                                 "cap_bbl_per_ft": cap,
                                 "excess_used": ex,
                                 "bbl": total_bbl,
@@ -1516,66 +1537,7 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                     pass
                 if segments_calc:
                     materials["segments"] = segments_calc
-                    
-                    # Comprehensive logging for spot/cement plugs
-                    geometry_context = (step.get("geometry_context") or "").lower()
-                    print("="*80)
-                    print(f"✅ PLUG CALCULATION COMPLETE: {step_type.upper()}")
-                    print(f"   Type: SPOT PLUG (cement inside casing)")
-                    print(f"   Depth: {top_ft:.0f}-{bottom_ft:.0f} ft")
-                    print(f"   Fill method: Spot cement {'in open hole' if 'open_hole' in geometry_context else 'inside casing'}")
-                    print(f"")
-                    if len(segments_calc) > 1:
-                        print(f"   MULTI-SEGMENT CALCULATION ({len(segments_calc)} segments):")
-                        for idx, seg in enumerate(segments_calc, 1):
-                            if seg.get("length_ft"):
-                                top_ft = seg.get('top_ft')
-                                bottom_ft = seg.get('bottom_ft')
-                                if top_ft is not None and bottom_ft is not None:
-                                    print(f"      Segment {idx}: {top_ft:.0f}-{bottom_ft:.0f} ft")
-                                else:
-                                    print(f"      Segment {idx}: {top_ft}-{bottom_ft} ft")
-                                outer_in = seg.get('outer_in')
-                                inner_in = seg.get('inner_in')
-                                cap_bbl_per_ft = seg.get('cap_bbl_per_ft')
-                                bbl = seg.get('bbl')
-                                if outer_in is not None and inner_in is not None:
-                                    if inner_in == 0.0:
-                                        print(f"         Casing ID: {outer_in:.3f}\" | Full bore (no tubing)\"")
-                                    else:
-                                        print(f"         Outer: {outer_in:.3f}\" | Inner: {inner_in:.3f}\"")
-                                else:
-                                    print(f"         Outer: {outer_in} | Inner: {inner_in}")
-                                if cap_bbl_per_ft is not None:
-                                    print(f"         Capacity: {cap_bbl_per_ft:.6f} bbl/ft")
-                                if bbl is not None:
-                                    print(f"         Volume: {bbl:.2f} bbl")
-                    else:
-                        print(f"   SINGLE FILL SPACE:")
-                        if segments_calc:
-                            seg = segments_calc[0]
-                            outer_in = seg.get('outer_in')
-                            inner_in = seg.get('inner_in')
-                            cap_bbl_per_ft = seg.get('cap_bbl_per_ft')
-                            if outer_in is not None and inner_in is not None:
-                                if inner_in == 0.0:
-                                    print(f"      Casing ID: {outer_in:.3f}\" | Full bore (no tubing)")
-                                else:
-                                    print(f"      Outer: {outer_in:.3f}\" | Inner: {inner_in:.3f}\"")
-                            else:
-                                print(f"      Outer: {outer_in} | Inner: {inner_in}")
-                            if cap_bbl_per_ft is not None:
-                                print(f"      Capacity: {cap_bbl_per_ft:.6f} bbl/ft")
-                            length_ft = seg.get('length_ft')
-                            bbl = seg.get('bbl')
-                            if length_ft is not None:
-                                print(f"      Length: {length_ft:.0f} ft")
-                            if bbl is not None:
-                                print(f"      Volume: {bbl:.2f} bbl")
-                    print(f"")
-                    print(f"   ✓ TOTAL VOLUME: {total_bbl:.2f} bbl")
-                    print(f"   ✓ SACKS REQUIRED: {int(vb.sacks)} sacks")
-                    print("="*80)
+
             elif step_type in ("perforate_and_squeeze_plug",):
                 # Two-part compound plug: squeeze behind casing + cement cap inside casing
                 # Calculate materials for both components
@@ -1586,7 +1548,7 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                 stinger_od = step.get("stinger_od_in")
                 
                 if casing_id is not None and stinger_od is not None:
-                    squeeze_bbl = 0.0
+                    squeeze_vol_bbl = 0.0
                     cap_bbl = 0.0
                     
                     # Squeeze portion (behind casing) - use decision tree for context
@@ -1683,14 +1645,14 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                             
                             # Calculate squeeze volume with jurisdiction-specific depth excess
                             base_volume = perf_len * ann_cap
-                            squeeze_bbl = base_volume * depth_excess_factor
+                            squeeze_vol_bbl = base_volume * depth_excess_factor
 
                             details["squeeze_calculation"] = {
                                 "perf_length_ft": perf_len,
                                 "annular_capacity_bbl_per_ft": ann_cap,
                                 "base_volume_bbl": base_volume,
                                 "depth_excess_factor": depth_excess_factor,
-                                "final_volume_bbl": squeeze_bbl
+                                "final_volume_bbl": squeeze_vol_bbl
                             }
                     
                     # Cement cap portion (inside casing above perfs) - typically 50 ft
@@ -1704,12 +1666,12 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                             ann_cap = annulus_capacity_bbl_per_ft(float(casing_id), float(stinger_od))
                             cap_bbl = cap_len * ann_cap * (1.0 + cap_excess)
                     
-                    total_bbl = squeeze_bbl + cap_bbl
+                    total_bbl = squeeze_vol_bbl + cap_bbl
                     rounding_mode = (step.get("recipe", {}) or {}).get("rounding") or "up"  # Round up for safety
                     vb = compute_sacks(total_bbl, recipe, rounding=rounding_mode)
                     materials["slurry"] = {
                         "total_bbl": total_bbl,
-                        "squeeze_bbl": squeeze_bbl,
+                        "squeeze_bbl": squeeze_vol_bbl,
                         "cap_bbl": cap_bbl,
                         "ft3": vb.ft3,
                         "sacks": vb.sacks,
@@ -1769,19 +1731,6 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                             "annuli": annuli_breakdown,
                             "perforation_casings": perf_casings,
                         })
-                        
-                        print("="*80)
-                        print(f"✅ PLUG CALCULATION COMPLETE: {step_type.upper()}")
-                        print(f"   Type: PERF & SQUEEZE PLUG (cement-aware)")
-                        print(f"   Depth: {top_ft}-{bottom_ft} ft")
-                        print(f"   Fill method: Perforate casing and squeeze into annuli")
-                        print(f"   Perforate through: {', '.join(perf_casings)}")
-                        print(f"   Filling: {len(annuli_breakdown)} annuli (uncmented)")
-                        for ann in annuli_breakdown:
-                            print(f"      • {ann['inner']} to {ann['outer']}: {ann['base_volume_bbl']:.2f} bbl")
-                        print(f"   Total volume: {total_bbl:.2f} bbl")
-                        print(f"   ✓ SACKS REQUIRED: {int(vb.sacks)} sacks")
-                        print("="*80)
                         
                         # Mark success to skip standard calculation
                         cement_aware_success = True
@@ -1850,24 +1799,6 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                         }
                         
                         # Comprehensive logging
-                        print("="*80)
-                        print(f"✅ PLUG CALCULATION COMPLETE: {step_type.upper()}")
-                        print(f"   Type: {plug_type.upper() if plug_type else 'SPOT PLUG'}")
-                        print(f"   Depth: {t:.0f}-{b:.0f} ft (length: {interval_ft:.0f} ft)")
-                        print(f"   Fill method: Spot cement inside casing (annular)")
-                        print(f"")
-                        print(f"   ANNULAR SPACE CALCULATION:")
-                        print(f"      Casing ID: {float(casing_id):.3f}\"")
-                        print(f"      Stinger OD: {float(stinger_od):.3f}\"")
-                        print(f"      Capacity: {cap:.6f} bbl/ft")
-                        print(f"      Length: {interval_ft:.0f} ft")
-                        print(f"      Base volume: {interval_ft * cap:.2f} bbl")
-                        print(f"      × Annular excess: {(1.0 + ex):.2f}x (+{ex*100:.0f}%) → {base_volume_bbl:.2f} bbl")
-                        print(f"      × Depth excess: {depth_excess_factor:.4f}x (+{(depth_excess_factor-1)*100:.1f}% @ {b/1000.0:.2f} kft) → {total_bbl:.2f} bbl")
-                        print(f"")
-                        print(f"   ✓ TOTAL VOLUME: {total_bbl:.2f} bbl")
-                        print(f"   ✓ SACKS REQUIRED: {int(vb.sacks)} sacks")
-                        print("="*80)
             elif step_type == "perf_and_circulate_to_surface":
                 # Perforate inner string, circulate cement up outer annulus to surface
                 # Geometry: outer casing ID vs inner casing OD
@@ -1941,13 +1872,11 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
                 # Top plug: short spot plug at surface (0 to N ft)
                 # Calculate cement volume for full bore (no tubing at surface)
                 logger.info(f"🔧 TOP PLUG CALCULATION TRIGGERED for step: {step.get('type')}")
-                print(f"🔧 TOP PLUG CALCULATION TRIGGERED for step: {step.get('type')}", flush=True)
                 
                 top_ft = float(step.get("top_ft", 0) or 0)
                 bottom_ft = float(step.get("bottom_ft", 0) or 0)
                 
                 logger.info(f"🔧 TOP PLUG: top_ft={top_ft}, bottom_ft={bottom_ft}")
-                print(f"🔧 TOP PLUG: top_ft={top_ft}, bottom_ft={bottom_ft}", flush=True)
                 
                 if top_ft is not None and bottom_ft is not None:
                     length_ft = abs(bottom_ft - top_ft)
@@ -2060,7 +1989,8 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
         
         # TEXAS RULE: 25-sack minimum for cement-based plugs (excluding CIBP caps and large operations)
         # Apply to all cement plugs, formation plugs, squeeze plugs (except bridge_plug_cap/cibp_cap/large surface ops)
-        if step_type not in ("bridge_plug_cap", "cibp_cap", "bridge_plug", "cement_retainer", "perf_and_circulate_to_surface"):
+        # Skip for steps from explicit overrides (approved/filed values that should not be bumped)
+        if step_type not in ("bridge_plug_cap", "cibp_cap", "bridge_plug", "cement_retainer", "perf_and_circulate_to_surface") and not step.get("from_override"):
             try:
                 calculated_sacks = materials.get("slurry", {}).get("sacks")
                 if calculated_sacks is not None and isinstance(calculated_sacks, (int, float)):
@@ -2084,10 +2014,10 @@ def _compute_materials_for_steps(steps: List[Dict[str, Any]], resolved_facts: Di
 def _merge_adjacent_plugs(
     steps: List[Dict[str, Any]],
     types: List[str],
-    threshold_ft: float = None,  # Deprecated: kept for backward compatibility
     preserve_tagging: bool = True,
     sack_limit_no_tag: float = 50.0,  # Max sacks to merge plugs WITHOUT tag
     sack_limit_with_tag: float = 150.0,  # Max sacks to merge plugs WITH tag
+    max_length_ft: float = 1250.0,  # Max plug length in feet (NM=1000, TX=1250)
 ) -> List[Dict[str, Any]]:
     """Merge adjacent cement-bearing steps based on sack count requirements.
     
@@ -2102,7 +2032,7 @@ def _merge_adjacent_plugs(
     - Spot plugs: cement injected INSIDE casing only (below TOC)
     - Perf & squeeze plugs: perforate + squeeze behind pipe (above TOC)
     """
-    if not steps or (threshold_ft is not None and threshold_ft <= 0):
+    if not steps:
         return steps
     # Work on a shallow copy to avoid mutating input
     src: List[Dict[str, Any]] = list(steps)
@@ -2111,13 +2041,22 @@ def _merge_adjacent_plugs(
     fixed: List[Dict[str, Any]] = []
     for s in src:
         # Treat casing shoe plugs and top plug as mergeable when cross-type enabled
-        merge_ok = s.get("type") in types or s.get("type") in ("surface_casing_shoe_plug", "intermediate_casing_shoe_plug", "top_plug")
+        merge_ok = (s.get("type") in types or s.get("type") in ("surface_casing_shoe_plug", "intermediate_casing_shoe_plug", "top_plug")) and s.get("type") != "cibp_cap"
         if merge_ok and (s.get("top_ft") is not None) and (s.get("bottom_ft") is not None):
             mergeable.append(s)
         else:
             fixed.append(s)
     if not mergeable:
         return steps
+    # Extract mechanical barrier depths from fixed steps — plugs cannot merge across barriers
+    barrier_depths = []
+    for f in fixed:
+        f_type = f.get("type", "")
+        if f_type in ("mechanical_plug", "bridge_plug", "cibp"):
+            depth = f.get("top_ft") or f.get("bottom_ft")
+            if depth is not None:
+                barrier_depths.append(float(depth))
+    barrier_depths.sort()
     # Sort mergeable by depth (ascending by bottom)
     def _key(s: Dict[str, Any]) -> float:
         try:
@@ -2138,14 +2077,11 @@ def _merge_adjacent_plugs(
             merged.append(buf[0])
             return
         # Merge buffer into one long plug
-        tops = [float(x.get("top_ft")) for x in buf]
-        bots = [float(x.get("bottom_ft")) for x in buf]
-        top_ft = max(tops)  # shallower top (smaller depth) is larger number if top>bottom; we keep numeric max
-        bottom_ft = min(bots)
+        all_depths = [float(x.get("top_ft")) for x in buf] + [float(x.get("bottom_ft")) for x in buf]
+        top_ft = min(all_depths)    # Shallowest point (smallest depth number)
+        bottom_ft = max(all_depths)  # Deepest point (largest depth number)
         # Choose canonical merged type and plug_type with precedence rules
         out: Dict[str, Any] = dict(buf[0])
-        out_type = "cement_plug" if out.get("type") != "cement_plug" else out.get("type")
-        out["type"] = out_type
         
         # Determine merged plug_type with dominance rules:
         # Precedence order: perf_and_circulate > perf_and_squeeze > spot > dumpbail
@@ -2168,6 +2104,14 @@ def _merge_adjacent_plugs(
         
         if merged_plug_type:
             out["plug_type"] = merged_plug_type
+        # Preserve the most descriptive merged type based on plug_type dominance
+        # If any plug is perf_and_squeeze, the merged plug should reflect that
+        if "perf_and_squeeze_plug" in plug_types_in_buf or "perf_and_circulate_plug" in plug_types_in_buf:
+            out["type"] = "perforate_and_squeeze_plug"
+        elif any(x.get("type") == "shoe_plug" for x in buf):
+            out["type"] = "shoe_plug"
+        else:
+            out["type"] = "cement_plug"
         # If any member is a surface shoe or top plug, treat as surface-cased geometry for capacity
         ctx = "cased_production"
         if any(x.get("type") in ("surface_casing_shoe_plug", "top_plug") for x in buf):
@@ -2255,8 +2199,12 @@ def _merge_adjacent_plugs(
                 ("dumpbail_plug", "perf_and_circulate_plug"),
             }
             
-            # Check if combination is blocked
-            if (prev_plug_type, s_plug_type) in incompatible_pairs:
+            # Check if combination is blocked — BUT exempt shoe plugs
+            # (shoe plugs can merge with any adjacent plug type per NM filed plan practice)
+            prev_is_shoe = prev.get("type") == "shoe_plug" or prev.get("plug_purpose") == "shoe_plug"
+            s_is_shoe = s.get("type") == "shoe_plug" or s.get("plug_purpose") == "shoe_plug"
+
+            if (prev_plug_type, s_plug_type) in incompatible_pairs and not prev_is_shoe and not s_is_shoe:
                 logger.warning(
                     f"Cannot merge {prev_plug_type} and {s_plug_type} plugs - "
                     f"incompatible mechanical operations. Flushing buffer and starting new group."
@@ -2265,7 +2213,28 @@ def _merge_adjacent_plugs(
                 buf = [s]
                 prev = s
                 continue
-            
+
+            # CRITICAL: Cannot merge across mechanical barriers (CIBP, bridge plugs)
+            # Check if any barrier sits between the current buffer's depth range and this step
+            buf_min_depth = min(min(float(x.get("top_ft", 0)), float(x.get("bottom_ft", 0))) for x in buf)
+            buf_max_depth = max(max(float(x.get("top_ft", 0)), float(x.get("bottom_ft", 0))) for x in buf)
+            s_min_depth = min(s_top, s_bot)
+            s_max_depth = max(s_top, s_bot)
+            merge_zone_top = min(buf_min_depth, s_min_depth)
+            merge_zone_bot = max(buf_max_depth, s_max_depth)
+
+            barrier_between = any(merge_zone_top < bd < merge_zone_bot for bd in barrier_depths)
+            if barrier_between:
+                logger.warning(
+                    f"Cannot merge across mechanical barrier — barrier at depth(s) "
+                    f"{[bd for bd in barrier_depths if merge_zone_top < bd < merge_zone_bot]} "
+                    f"between {merge_zone_top:.0f} and {merge_zone_bot:.0f} ft. Flushing buffer."
+                )
+                _flush(buf)
+                buf = [s]
+                prev = s
+                continue
+
             # NEW: Check if tag is required in buffer
             has_tag_required = any(x.get("tag_required") is True for x in buf) or s.get("tag_required") is True
             applicable_sack_limit = sack_limit_with_tag if has_tag_required else sack_limit_no_tag
@@ -2315,10 +2284,10 @@ def _merge_adjacent_plugs(
                 merge_blocked = True
                 block_reason = f"sacks {total_merge_sacks:.0f} > limit {applicable_sack_limit}"
             
-            # Constraint 2: Max plug length (1250 ft)
-            elif merged_length > 1250.0:
+            # Constraint 2: Max plug length
+            elif merged_length > max_length_ft:
                 merge_blocked = True
-                block_reason = f"length {merged_length:.0f} ft > 1250 ft max"
+                block_reason = f"length {merged_length:.0f} ft > {max_length_ft:.0f} ft max"
             
             # Constraint 3: Max plugs per combination (3)
             elif merged_count > 3:
@@ -2512,8 +2481,6 @@ def _evaluate_use_when(use_when: str, resolved_facts: Dict[str, Any], county: st
         is_central_lon = abs(lon - center_lon) < 0.15
         
         # Debug logging for geographic evaluation
-        print(f"🗺️ GEO EVAL: use_when='{use_when}', lat={lat}, lon={lon}, center=({center_lat}, {center_lon})", flush=True)
-        print(f"🗺️ GEO FLAGS: N={is_north}, S={is_south}, E={is_east}, W={is_west}, CenterLat={is_central_lat}, CenterLon={is_central_lon}", flush=True)
         
         # Match condition to actual position
         # "North 1/4" or "North quarter"
@@ -2530,7 +2497,6 @@ def _evaluate_use_when(use_when: str, resolved_facts: Dict[str, Any], county: st
                 ('southeast' in use_when_lower and is_south and is_east) or
                 ('southwest' in use_when_lower and is_south and is_west)
             )
-            print(f"🗺️ 'Central and X' eval: '{use_when}' → central={is_central_lat and is_central_lon} OR directional={result}", flush=True)
             return result
         
         # Compound directions: "East Central", "Northeast", etc.
@@ -2770,20 +2736,13 @@ def _apply_district_overrides(
     county: Any,
     resolved_facts: Dict[str, Any] = None,  # Added to access production_casing_toc_ft
 ) -> List[Dict[str, Any]]:
-    print(f"🔍 KERNEL _apply_district_overrides: START", flush=True)
-    print(f"🔍 KERNEL: policy_effective type={type(policy_effective)}, keys={list(policy_effective.keys())[:10]}", flush=True)
     
     overrides = policy_effective.get("district_overrides") or {}
-    print(f"🔍 KERNEL: overrides type={type(overrides)}, keys={list(overrides.keys())}", flush=True)
     
     # use preferences provided by caller (policy.preferences with W-2 geometry), not from effective
     reqs = policy_effective.get("requirements") or {}
     out: List[Dict[str, Any]] = []
     formation_tops = overrides.get("formation_tops") or []
-    
-    print(f"🔍 KERNEL: formation_tops count={len(formation_tops)}", flush=True)
-    if formation_tops:
-        print(f"🔍 KERNEL: Formation names={[ft.get('formation') for ft in formation_tops]}", flush=True)
     
     logger.info(f"🔍 _apply_district_overrides: district={district}, county={county}")
     logger.info(f"🔍 Found {len(formation_tops)} formation tops in district_overrides")
@@ -2840,7 +2799,6 @@ def _apply_district_overrides(
         # We only add once at the end; defer adding here by collecting later
         out.append(s_out)
     # Append formation-top plug steps after base steps
-    print(f"🔍 KERNEL: About to iterate {len(formation_tops)} formation tops", flush=True)
     
     # Get county and field for conditional evaluation
     county_for_eval = str(county) if county else ""
@@ -2857,18 +2815,14 @@ def _apply_district_overrides(
             use_when = ft.get("use_when", "")
             additional_requirements = ft.get("additional_requirements", "")
             
-            print(f"🔍 KERNEL: Formation={formation}, plug_required={plug_required}, use_when='{use_when}'", flush=True)
             
             if not plug_required or formation is None:
-                print(f"🔍 KERNEL: SKIPPING {formation} - plug_required={plug_required}, formation={formation}", flush=True)
                 continue
             
             # Evaluate use_when condition (7C hybrid: conditional formation application)
             if use_when:
                 condition_met = _evaluate_use_when(use_when, resolved_facts or {}, county_for_eval, field_for_eval)
-                print(f"🔍 KERNEL: use_when '{use_when}' evaluated to {condition_met}", flush=True)
                 if not condition_met:
-                    print(f"🔍 KERNEL: SKIPPING {formation} - use_when condition not met", flush=True)
                     continue
             # Formation top plugs: set at formation top, extend 100 ft below (not ±50 ft)
             # Per regulatory best practices: plug top = formation top, plug bottom = 100 ft below top
@@ -2909,7 +2863,6 @@ def _apply_district_overrides(
             
             # Apply additional_requirements from 7C formation JSON (conditional actions)
             if additional_requirements:
-                print(f"🔍 KERNEL: Applying additional_requirements '{additional_requirements}' to {formation}", flush=True)
                 step = _apply_additional_requirements(step, additional_requirements, district, county)
             # Attach available W-2-derived geometry to enable materials computation downstream
             try:
@@ -2937,17 +2890,13 @@ def _apply_district_overrides(
                 })
             except Exception:
                 pass
-            print(f"🔍 KERNEL: Appending formation plug for {formation}", flush=True)
             out.append(step)
-            print(f"🔍 KERNEL: Successfully added {formation} plug to out list (now {len(out)} steps)", flush=True)
         except Exception as e:
-            print(f"🔍 KERNEL ERROR: Failed to create formation plug for {ft.get('formation')}: {type(e).__name__}: {e}", flush=True)
             logger.exception(f"Failed to create formation plug for {ft.get('formation')}")
             continue
     
     # Suppress formation plugs below CIBP (bridge_plug)
     # CIBP isolates everything below it - any formation plugs deeper than CIBP are redundant
-    print(f"🔍 KERNEL SUPPRESSION: Checking {len(out)} steps for CIBP", flush=True)
     cibp_depth = None
     for s in out:
         step_type = s.get('type')
@@ -2956,10 +2905,8 @@ def _apply_district_overrides(
             top = s.get('top_ft')
             bottom = s.get('bottom_ft')
             plug_depth = s.get('plug_depth_ft')
-            print(f"🔍 KERNEL SUPPRESSION: Found bridge_plug - top_ft={top}, bottom_ft={bottom}, plug_depth_ft={plug_depth}", flush=True)
             cibp_depth = top or bottom or plug_depth
             if cibp_depth:
-                print(f"🔍 KERNEL: Found CIBP at {cibp_depth} ft", flush=True)
                 break
     
     if cibp_depth:
@@ -2972,7 +2919,6 @@ def _apply_district_overrides(
         )]
         suppressed_count = initial_count - len(out)
         if suppressed_count > 0:
-            print(f"🔍 KERNEL: Suppressed {suppressed_count} formation plug(s) below CIBP at {cibp_depth} ft", flush=True)
             logger.info(f"Suppressed {suppressed_count} formation plugs below CIBP at {cibp_depth} ft")
     
     return out
@@ -3015,6 +2961,7 @@ def _apply_steps_overrides(
             "casing_id_in": float(geom_default.get("casing_id_in")) if geom_default.get("casing_id_in") is not None else None,
             "stinger_od_in": float(geom_default.get("stinger_od_in")) if geom_default.get("stinger_od_in") is not None else None,
             "squeeze_factor": squeeze_factor,
+            "from_override": True,  # Exempt from 25-sack minimum (approved/filed values)
             "regulatory_basis": sqz.get("citations") or [],
         }
         # Include placement interval for clarity
@@ -3061,6 +3008,7 @@ def _apply_steps_overrides(
                     "top_ft": top,
                     "bottom_ft": bottom,
                     "geometry_context": cp.get("geometry_context"),
+                    "from_override": True,  # Exempt from 25-sack minimum (approved/filed values)
                     # geometry: respect context; do not leak cased defaults into open-hole
                     "stinger_od_in": float(cp.get("stinger_od_in", geom_default_cp.get("stinger_od_in"))) if (cp.get("stinger_od_in") or geom_default_cp.get("stinger_od_in")) is not None else None,
                     "annular_excess": float(cp.get("annular_excess", geom_default_cp.get("annular_excess", 0.4))),

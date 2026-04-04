@@ -117,6 +117,9 @@ class AllFilingsView(APIView):
 
         # Get tenant ID from request user
         tenant_id = getattr(request.user, "tenant_id", None)
+        if not tenant_id:
+            user_tenant = request.user.tenants.first()
+            tenant_id = user_tenant.id if user_tenant else None
 
         if tenant_id:
             # User can see public filings or their own tenant's filings
@@ -138,7 +141,7 @@ class AllFilingsView(APIView):
         # Serialize
         for plan in w3a_plans:
             filing_data = W3AFilingSerializer(plan).data
-            # Add well information
+            # Add well information — prefer linked WellRegistry, fall back to payload
             if plan.well:
                 filing_data.update({
                     "api14": plan.well.api14,
@@ -148,6 +151,18 @@ class AllFilingsView(APIView):
                     "county": plan.well.county,
                     "state": plan.well.state,
                 })
+            else:
+                # Fall back to well_header in snapshot payload
+                wh = (plan.payload or {}).get("well_header", {})
+                if wh:
+                    filing_data.update({
+                        "api14": wh.get("api_number", ""),
+                        "lease_name": wh.get("lease_name", ""),
+                        "well_number": wh.get("well_number", ""),
+                        "operator_name": wh.get("operator", ""),
+                        "county": wh.get("county", ""),
+                        "state": wh.get("state", ""),
+                    })
 
             # Add workspace information
             filing_data["workspace_id"] = plan.workspace_id
@@ -191,7 +206,7 @@ class AllFilingsView(APIView):
         for form in w3_forms:
             filing_data = W3FilingSerializer(form).data
 
-            # Add well information
+            # Add well information — prefer linked WellRegistry, fall back to form_data
             if form.well:
                 filing_data.update({
                     "api14": form.well.api14,
@@ -201,6 +216,18 @@ class AllFilingsView(APIView):
                     "county": form.well.county,
                     "state": form.well.state,
                 })
+            else:
+                # Fall back to header in form_data
+                hdr = (form.form_data or {}).get("header", {})
+                if hdr:
+                    filing_data.update({
+                        "api14": hdr.get("api_number", ""),
+                        "lease_name": hdr.get("lease_name") or hdr.get("well_name", ""),
+                        "well_number": hdr.get("well_number", ""),
+                        "operator_name": hdr.get("operator", ""),
+                        "county": hdr.get("county", ""),
+                        "state": hdr.get("state", ""),
+                    })
 
             # Add workspace information
             filing_data["workspace_id"] = form.workspace_id

@@ -6,6 +6,89 @@ from apps.public_core.models import W3WizardSession
 logger = logging.getLogger(__name__)
 
 
+def _inject_dwr_cibp_tools(geometry: dict, parse_result: dict) -> None:
+    """Inject CIBP (and packer/retainer) tool placements from DWR parse_result into
+    geometry["existing_tools"] in-place.
+
+    Mirrors the Step 7b logic in tasks_w3_wizard.py so that DWR-placed tools are
+    visible when the AsPluggedWBD is first rendered (i.e. before W-3 generation runs).
+
+    Deduplicates against tools already present using a ±5 ft depth tolerance.
+    """
+    if not parse_result or not geometry:
+        return
+
+    # Collect DWR tool events
+    dwr_tools = []
+    for day in parse_result.get("days", []):
+        day_num = day.get("day_number", "?")
+        for event in day.get("events", []):
+            evt_type = event.get("event_type", "")
+            depth = event.get("depth_top_ft") or event.get("depth_ft")
+            if depth is None:
+                continue
+            if evt_type == "set_bridge_plug":
+                dwr_tools.append({
+                    "tool_type": "CIBP",
+                    "type": "CIBP",
+                    "depth_ft": depth,
+                    "top_ft": depth,
+                    "description": f"CIBP set at {depth} ft (from DWR)",
+                    "source": "dwr_actuals",
+                    "notes": f"Placed during plugging - Day {day_num}",
+                })
+            elif evt_type == "set_packer":
+                dwr_tools.append({
+                    "tool_type": "PACKER",
+                    "type": "PACKER",
+                    "depth_ft": depth,
+                    "top_ft": depth,
+                    "description": f"Packer set at {depth} ft (from DWR)",
+                    "source": "dwr_actuals",
+                    "notes": f"Placed during plugging - Day {day_num}",
+                })
+            elif evt_type == "set_retainer":
+                dwr_tools.append({
+                    "tool_type": "RETAINER",
+                    "type": "RETAINER",
+                    "depth_ft": depth,
+                    "top_ft": depth,
+                    "description": f"Retainer set at {depth} ft (from DWR)",
+                    "source": "dwr_actuals",
+                    "notes": f"Placed during plugging - Day {day_num}",
+                })
+
+    if not dwr_tools:
+        return
+
+    existing = geometry.get("existing_tools")
+    if not isinstance(existing, list):
+        existing = []
+
+    added = 0
+    for tool in dwr_tools:
+        tool_depth = tool["depth_ft"]
+        tool_type = tool["tool_type"].upper()
+        # Deduplicate: skip if a same-type tool already exists within ±5 ft
+        duplicate = any(
+            (
+                (t.get("tool_type") or t.get("type") or "").upper() == tool_type
+                and abs(float(t.get("depth_ft") or t.get("top_ft") or 0) - float(tool_depth)) <= 5
+            )
+            for t in existing
+        )
+        if not duplicate:
+            existing.append(tool)
+            added += 1
+
+    if added:
+        geometry["existing_tools"] = existing
+        logger.debug(
+            "_inject_dwr_cibp_tools: added %d DWR tool(s) to well_geometry existing_tools",
+            added,
+        )
+
+
 def _apply_cut_casing_events_to_geometry(geometry: dict, parse_result: dict) -> None:
     """Apply cut_casing events from parse_result to the geometry casing_strings in-place.
 
@@ -123,6 +206,16 @@ class W3WizardSessionSerializer(serializers.ModelSerializer):
         existing_geom = payload.get("well_geometry")
         if existing_geom and isinstance(existing_geom, dict) and existing_geom.get("casing_strings"):
             existing_geom["casing_strings"] = normalize_casing_for_frontend(existing_geom["casing_strings"])
+            # If liner array is empty, try to recover liner from top-level casing_record
+            if not existing_geom.get("liner"):
+                liner_from_cr = []
+                for cr in payload.get("casing_record", []):
+                    if isinstance(cr, dict):
+                        st = (cr.get("string_type") or cr.get("casing_type") or cr.get("string") or "").lower()
+                        if "liner" in st:
+                            liner_from_cr.append(cr)
+                if liner_from_cr:
+                    existing_geom["liner"] = liner_from_cr
             if existing_geom.get("liner"):
                 existing_geom["liner"] = normalize_casing_for_frontend(existing_geom["liner"])
 
@@ -155,6 +248,7 @@ class W3WizardSessionSerializer(serializers.ModelSerializer):
                 existing_geom["formation_tops"] = merged
 
             _apply_cut_casing_events_to_geometry(existing_geom, obj.parse_result)
+            _inject_dwr_cibp_tools(existing_geom, obj.parse_result)
             self._apply_excel_overrides(existing_geom, obj)
             return existing_geom
 
@@ -163,11 +257,22 @@ class W3WizardSessionSerializer(serializers.ModelSerializer):
         if not api14:
             return None
 
-        geometry = build_well_geometry(api14, payload)
+        geometry = build_well_geometry(api14, payload, jurisdiction=obj.jurisdiction)
         geometry["casing_strings"] = normalize_casing_for_frontend(geometry.get("casing_strings", []))
+        # If liner array is empty, try to recover liner from top-level casing_record
+        if not geometry.get("liner"):
+            liner_from_cr = []
+            for cr in payload.get("casing_record", []):
+                if isinstance(cr, dict):
+                    st = (cr.get("string_type") or cr.get("casing_type") or cr.get("string") or "").lower()
+                    if "liner" in st:
+                        liner_from_cr.append(cr)
+            if liner_from_cr:
+                geometry["liner"] = liner_from_cr
         if geometry.get("liner"):
             geometry["liner"] = normalize_casing_for_frontend(geometry["liner"])
         _apply_cut_casing_events_to_geometry(geometry, obj.parse_result)
+        _inject_dwr_cibp_tools(geometry, obj.parse_result)
         self._apply_excel_overrides(geometry, obj)
         return geometry
 

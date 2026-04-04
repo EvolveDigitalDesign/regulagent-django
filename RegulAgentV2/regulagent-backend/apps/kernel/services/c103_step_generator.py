@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
+from apps.kernel.services.c103_rules import STANDARD_HOLE_SIZES
+
 logger = logging.getLogger(__name__)
 
 
@@ -12,9 +14,10 @@ def _extract_fact_value(facts: Dict[str, Any], key: str) -> Any:
     """Extract a fact value from the kernel resolved_facts dict.
 
     Kernel facts may be plain values or dicts with a "value" key.
+    Plain dicts (like formation_tops_map) are returned as-is.
     """
     raw = facts.get(key)
-    if isinstance(raw, dict):
+    if isinstance(raw, dict) and "value" in raw:
         return raw.get("value")
     return raw
 
@@ -64,9 +67,9 @@ def _build_well_dict(resolved_facts: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(ft, dict):
         well["formation_tops"] = [{"name": k, "depth_ft": v} for k, v in ft.items()]
 
-    # Casing strings
-    casing_strings = _extract_fact_value(resolved_facts, "casing_strings")
-    if casing_strings:
+    # Casing strings (facts may use "casing_strings" or "casing_record")
+    casing_strings = _extract_fact_value(resolved_facts, "casing_strings") or _extract_fact_value(resolved_facts, "casing_record")
+    if casing_strings and isinstance(casing_strings, list):
         well["casing_strings"] = casing_strings
 
     # Perforations
@@ -83,10 +86,32 @@ def _build_well_dict(resolved_facts: Dict[str, Any]) -> Dict[str, Any]:
     if cbl_data:
         well["cbl_data"] = cbl_data
 
+    # Existing mechanical barriers (CIBP, packer, etc.)
+    barriers = _extract_fact_value(resolved_facts, "existing_mechanical_barriers")
+    if barriers and isinstance(barriers, list):
+        well["existing_mechanical_barriers"] = barriers
+
+    # Historic cement jobs
+    historic_cement = _extract_fact_value(resolved_facts, "historic_cement_jobs")
+    if historic_cement and isinstance(historic_cement, list):
+        well["historic_cement_jobs"] = historic_cement
+
+    # Production perforations (separate from general perforations)
+    prod_perfs = _extract_fact_value(resolved_facts, "production_perforations")
+    if prod_perfs and isinstance(prod_perfs, list):
+        well["production_perforations"] = prod_perfs
+
+    # Fix 1B: normalize alternate field names to canonical depth_ft / size_in
+    for cs in well.get("casing_strings", []):
+        if not cs.get("depth_ft"):
+            cs["depth_ft"] = cs.get("shoe_depth_ft") or cs.get("bottom") or 0
+        if not cs.get("size_in"):
+            cs["size_in"] = cs.get("od_in") or cs.get("diameter") or 0
+
     return well
 
 
-def _c103_plug_row_to_kernel_step(plug_row: Any) -> Dict[str, Any]:
+def _c103_plug_row_to_kernel_step(plug_row: Any, casing_strings: list = None) -> Dict[str, Any]:
     """Convert a C103PlugRow dataclass instance to a kernel step dict.
 
     Maps C103PlugRow fields to the step schema the frontend expects,
@@ -101,6 +126,9 @@ def _c103_plug_row_to_kernel_step(plug_row: Any) -> Dict[str, Any]:
         "hole_type": plug_row.hole_type,
         "tag_required": plug_row.tag_required,
     }
+
+    # Top-level sacks for frontend rendering
+    step["sacks"] = int(plug_row.sacks_required) if plug_row.sacks_required else None
 
     # Formation name for formation_plug and shoe_plug steps
     if plug_row.formation_name:
@@ -131,6 +159,81 @@ def _c103_plug_row_to_kernel_step(plug_row: Any) -> Dict[str, Any]:
         details["special_instructions"] = plug_row.special_instructions
 
     step["details"] = details
+
+    # Perforate-and-squeeze: override step type and add WBD rendering fields
+    if plug_row.operation_type == "perforate_and_squeeze":
+        step["type"] = "perforate_and_squeeze_plug"
+        step["plug_type"] = "perf_and_squeeze_plug"
+        step["requires_perforation"] = True
+
+        perf_top = plug_row.perf_top_ft if plug_row.perf_top_ft is not None else plug_row.top_ft
+        perf_bottom = plug_row.perf_bottom_ft if plug_row.perf_bottom_ft is not None else plug_row.bottom_ft
+        mid = (perf_top + perf_bottom) / 2
+
+        step["details"]["perforation_interval"] = {
+            "top_ft": mid,
+            "bottom_ft": perf_bottom,
+            "length_ft": perf_bottom - mid,
+            "description": "Perforations for squeeze behind pipe",
+        }
+        step["details"]["cement_cap_inside_casing"] = {
+            "top_ft": perf_top,
+            "bottom_ft": mid,
+            "height_ft": mid - perf_top,
+            "description": "Cement cap above perforations",
+        }
+        step["details"]["squeeze_behind_pipe"] = True
+        step["details"]["perforation_required_reason"] = (
+            "No cement behind production casing above TOC — "
+            "perforation required to squeeze cement into annulus"
+        )
+
+        # Annuli data for WBD rendering (cement extends through perforations into annulus)
+        # Find the production casing OD and the outer casing/hole at this depth
+        prod_od = plug_row.casing_size_in or 5.5
+        outer_id = None
+        outer_label = "openhole"
+
+        if casing_strings:
+            plug_mid = (plug_row.top_ft + plug_row.bottom_ft) / 2
+            # Sort casings by size (largest = outermost)
+            sorted_cs = sorted(
+                [cs for cs in casing_strings if cs.get("bottom") or cs.get("depth_ft") or cs.get("shoe_depth_ft")],
+                key=lambda c: c.get("diameter") or c.get("size_in") or 0,
+            )
+            # Find casings that cover this depth
+            for cs in sorted_cs:
+                cs_bottom = cs.get("bottom") or cs.get("depth_ft") or cs.get("shoe_depth_ft") or 0
+                cs_size = cs.get("diameter") or cs.get("size_in") or 0
+                cs_type = (cs.get("casing_type") or cs.get("string") or "").lower()
+                if float(cs_bottom) >= plug_mid and float(cs_size) > prod_od:
+                    # This casing is larger than production and covers this depth → outer casing
+                    outer_id = float(cs_size) * 0.94  # ID ≈ 94% of OD for intermediate
+                    outer_label = cs_type or "intermediate"
+                    # Also check hole_size if available
+                    hole = cs.get("hole_size_in") or cs.get("hole_size")
+                    if hole:
+                        outer_id = float(hole)
+                    break
+
+        if not outer_id:
+            # Use standard hole size lookup for accurate annular geometry
+            best = min(STANDARD_HOLE_SIZES.keys(), key=lambda k: abs(k - prod_od))
+            if abs(best - prod_od) < 1.0:
+                outer_id = STANDARD_HOLE_SIZES[best]
+            else:
+                outer_id = prod_od * 1.45  # Conservative fallback
+
+        step["details"]["annuli"] = [{
+            "inner": "production_casing",
+            "outer": outer_label,
+            "inner_od_in": prod_od,
+            "outer_id_in": outer_id,
+        }]
+        step["details"]["geometry_used"] = {
+            "casing_id_in": prod_od * 0.87,
+            "annulus": f"production_to_{outer_label}",
+        }
 
     # Add recipe for materials computation
     cement_class = plug_row.cement_class or "H"
@@ -198,9 +301,62 @@ def generate_c103_steps(
         plan = rules.generate_plugging_plan(well_data, options)
 
         steps: List[Dict[str, Any]] = []
+
+        # Add existing cement steps (documentation of what's already in the hole)
+        # These are prepended so they appear before new plugs in chronological order
+        existing_steps: List[Dict[str, Any]] = []
+        for cement_job in well_data.get("historic_cement_jobs", []):
+            top = cement_job.get("cement_top_ft") or cement_job.get("top_ft")
+            bottom = cement_job.get("interval_bottom_ft") or cement_job.get("bottom_ft")
+            if top is None or bottom is None:
+                continue
+            existing_steps.append({
+                "type": "existing_cement",
+                "top_ft": top,
+                "bottom_ft": bottom,
+                "formation": cement_job.get("formation", ""),
+                "sacks": cement_job.get("sacks"),
+                "details": {
+                    "cement_class": cement_job.get("cement_class", ""),
+                    "source": cement_job.get("description", "Historic cement"),
+                    "is_existing": True,
+                },
+            })
+
+        # Check for packer cement in existing mechanical barriers
+        for b in well_data.get("existing_mechanical_barriers", []):
+            if isinstance(b, str):
+                continue
+            barrier_data = b.get("value", b) if isinstance(b, dict) else {}
+            if not isinstance(barrier_data, dict):
+                continue
+            b_type = (barrier_data.get("type") or "").upper()
+            if b_type == "PACKER" and "cement" in str(barrier_data.get("description", "")).lower():
+                packer_depth = barrier_data.get("depth_ft")
+                if packer_depth:
+                    # Use user-edited cement_top_ft if available, otherwise default 50 ft
+                    cement_height = barrier_data.get("cement_top_ft") or 50
+                    cement_height = float(cement_height)
+                    cement_sacks = barrier_data.get("sacks")
+                    cement_sacks = int(cement_sacks) if cement_sacks else None
+                    existing_steps.append({
+                        "type": "existing_cement",
+                        "top_ft": float(packer_depth) - cement_height,
+                        "bottom_ft": float(packer_depth),
+                        "formation": "",
+                        "sacks": cement_sacks,
+                        "details": {
+                            "cement_class": "",
+                            "source": f"Cement on top of packer at {packer_depth} ft ({cement_height:.0f} ft)",
+                            "is_existing": True,
+                        },
+                    })
+
+        steps.extend(existing_steps)
+
         for plug_row in plan.steps:
             try:
-                step = _c103_plug_row_to_kernel_step(plug_row)
+                step = _c103_plug_row_to_kernel_step(plug_row, casing_strings=well_data.get("casing_strings"))
                 steps.append(step)
             except Exception:
                 logger.exception("c103_step_generator: failed to convert plug row %r", plug_row)

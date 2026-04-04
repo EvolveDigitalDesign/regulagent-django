@@ -89,8 +89,12 @@ class NMDocumentFetcher:
 
                 filename = href.split('/')[-1]
 
-                # Try to detect document type from filename
-                doc_type = self._detect_doc_type(filename)
+                # Extract link text and parent row text for context-based detection
+                link_text = link.get_text(strip=True)
+                row = link.find_parent('tr')
+                row_text = row.get_text(separator=' ', strip=True) if row else ''
+
+                doc_type = self._detect_doc_type_from_context(link_text, row_text, filename)
 
                 documents.append(NMDocument(
                     filename=filename,
@@ -102,16 +106,54 @@ class NMDocumentFetcher:
 
         return documents
 
-    def _detect_doc_type(self, filename: str) -> Optional[str]:
-        """Try to detect document type from filename."""
-        filename_lower = filename.lower()
-        if 'c-101' in filename_lower or 'c101' in filename_lower:
-            return 'C-101'
-        elif 'c-103' in filename_lower or 'c103' in filename_lower:
-            return 'C-103'
-        elif 'c-105' in filename_lower or 'c105' in filename_lower:
-            return 'C-105'
+    def _detect_doc_type_from_context(
+        self, link_text: str, row_text: str, filename: str
+    ) -> Optional[str]:
+        """
+        Detect document type from link text, row text, or filename.
+
+        NM OCD filenames are typically bare API numbers + timestamps (e.g.
+        30015288410000_07_31_2018_02_37_53.pdf) so the page context is the
+        primary signal; filename check is a fallback for the rare cases where
+        the form type is embedded in the name.
+        """
+        # Combine link text, row text, and filename for a single pass
+        combined = f"{link_text} {row_text}".lower()
+        combined_and_filename = combined + " " + filename.lower()
+
+        # C-103 / plug & abandon (check before generic "plug" to avoid overlap)
+        if (re.search(r'\bc-?103\b', combined_and_filename)
+                or (re.search(r'\bplug', combined_and_filename)
+                    and re.search(r'\babandon|p&a\b', combined_and_filename))):
+            return 'c_103'
+
+        # C-101 / well location
+        if re.search(r'\bc-?101\b', combined_and_filename):
+            return 'c_101'
+
+        # C-102 / completion or workover
+        if (re.search(r'\bc-?102\b', combined_and_filename)
+                or re.search(r'\bcompletion\b', combined_and_filename)
+                or re.search(r'\bworkover\b', combined_and_filename)):
+            return 'c_102'
+
+        # C-104 / subsequent report
+        if re.search(r'\bc-?104\b', combined_and_filename):
+            return 'c_104'
+
+        # C-105 / sundry notice
+        if re.search(r'\bc-?105\b', combined_and_filename) or re.search(r'\bsundry\b', combined_and_filename):
+            return 'c_105'
+
+        # APD
+        if re.search(r'\bapd\b', combined_and_filename) or re.search(r'application.*permit.*drill', combined_and_filename):
+            return 'apd'
+
         return None
+
+    def _detect_doc_type(self, filename: str) -> Optional[str]:
+        """Try to detect document type from filename only (legacy helper)."""
+        return self._detect_doc_type_from_context('', '', filename)
 
     def download_document(self, doc: NMDocument) -> bytes:
         """

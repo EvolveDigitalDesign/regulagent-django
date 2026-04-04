@@ -11,12 +11,16 @@ from __future__ import annotations
 
 import logging
 import os
+import tempfile
+import time
 from dataclasses import asdict
-from datetime import date, time
+from datetime import date, time as dt_time
 from typing import Any, Dict, List, Optional
 
 from celery import shared_task
 from django.conf import settings
+from django.core.exceptions import SuspiciousFileOperation
+from django.core.files.storage import default_storage
 from django.utils import timezone
 
 from apps.tenants.context import set_current_tenant
@@ -34,9 +38,41 @@ def _jsonable(obj):
         return [_jsonable(v) for v in obj]
     if isinstance(obj, (datetime.date, datetime.datetime)):
         return obj.isoformat()
-    if isinstance(obj, datetime.time):
+    if isinstance(obj, dt_time):
         return obj.isoformat()
     return obj
+
+
+# ---------------------------------------------------------------------------
+# Storage helpers
+# ---------------------------------------------------------------------------
+
+def _resolve_storage_path(storage_key: str) -> str:
+    """Download a file from Django's storage backend to a local temp path.
+
+    Returns the local file path. Caller is responsible for cleanup.
+    When using local storage, just returns the direct path.
+    """
+    if hasattr(default_storage, 'path'):
+        # Local storage — return direct path
+        try:
+            return default_storage.path(storage_key)
+        except (NotImplementedError, SuspiciousFileOperation):
+            pass
+
+    # S3 or other remote storage — download to temp file
+    ext = os.path.splitext(storage_key)[1]
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
+    try:
+        with default_storage.open(storage_key, 'rb') as src:
+            for chunk in src.chunks(8192) if hasattr(src, 'chunks') else iter(lambda: src.read(8192), b''):
+                tmp.write(chunk)
+        tmp.close()
+        return tmp.name
+    except Exception:
+        tmp.close()
+        os.unlink(tmp.name)
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -72,16 +108,19 @@ def parse_wizard_tickets(self, session_id: str) -> None:
     session.save(update_fields=["status", "updated_at"])
 
     try:
-        # Build absolute file paths from storage_keys
-        media_root = settings.MEDIA_ROOT
+        # Build file paths from storage_keys via Django storage backend
         file_paths: List[str] = []
+        temp_files: List[str] = []
         for doc in session.uploaded_documents:
             if doc.get("category") == "plan":
                 continue  # Plan processed by import_wizard_plan
             storage_key = doc.get("storage_key", "")
             if storage_key:
-                abs_path = os.path.join(media_root, storage_key)
-                file_paths.append(abs_path)
+                local_path = _resolve_storage_path(storage_key)
+                file_paths.append(local_path)
+                # Track temp files for cleanup (only if downloaded from remote storage)
+                if not hasattr(default_storage, 'path'):
+                    temp_files.append(local_path)
 
         if not file_paths:
             logger.warning(
@@ -107,6 +146,13 @@ def parse_wizard_tickets(self, session_id: str) -> None:
         session.status = W3WizardSession.STATUS_PARSED
         session.current_step = 2
         session.save(update_fields=["parse_result", "status", "current_step", "updated_at"])
+
+        # Clean up temp files downloaded from remote storage
+        for tmp in temp_files:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
 
         logger.info(
             "parse_wizard_tickets: session %s parsed %d day(s), warnings=%s",
@@ -284,8 +330,18 @@ def import_wizard_plan(self, session_id: str, storage_key: str) -> None:
     session.save(update_fields=["status", "updated_at"])
 
     try:
-        file_path = os.path.join(settings.MEDIA_ROOT, storage_key)
-        ext = os.path.splitext(file_path)[1].lower()
+        # Resolve file from Django storage (S3 or local)
+        # Retry up to 10 times with 1s delay for eventual consistency
+        file_path = None
+        for _attempt in range(10):
+            if default_storage.exists(storage_key):
+                file_path = _resolve_storage_path(storage_key)
+                break
+            logger.info("import_wizard_plan: waiting for file %s (attempt %d)", storage_key, _attempt + 1)
+            time.sleep(1)
+        if not file_path:
+            raise FileNotFoundError(f"File not found after 10s wait: {storage_key}")
+        ext = os.path.splitext(storage_key)[1].lower()
 
         if ext == ".pdf":
             # PDF plan: extract via OpenAI, then create PlanSnapshot directly
@@ -735,6 +791,26 @@ def _build_sundry_data(form_dict: dict, session) -> dict:
 
     steps_content = "\n".join(steps_lines)
 
+    wbd_formations = []
+    for f in formations:
+        if not isinstance(f, dict):
+            continue
+        name = f.get("formation_name") or f.get("formation") or "Unknown"
+        top = f.get("top_ft")
+        if top is not None:
+            wbd_formations.append({"name": name, "depth_ft": top})
+
+    wbd_casings = []
+    for c in casing_record:
+        if not isinstance(c, dict):
+            continue
+        wbd_casings.append({
+            "type": c.get("string_type") or c.get("casing_type") or c.get("type") or "",
+            "size_inches": c.get("od_in") or c.get("size_inches") or c.get("size") or "",
+            "hole_size_inches": c.get("bit_size_in") or c.get("hole_size_in") or "",
+            "shoe_depth_ft": c.get("shoe_depth_ft") or c.get("bottom_ft") or "",
+        })
+
     return {
         "header": {
             "api_number": header.get("api_number", session.api_number),
@@ -759,6 +835,8 @@ def _build_sundry_data(form_dict: dict, session) -> dict:
             "title": "",
             "date": "",
         },
+        "wbd_formations": wbd_formations,
+        "wbd_casings": wbd_casings,
     }
 
 
@@ -844,10 +922,10 @@ def generate_wizard_w3(self, session_id: str) -> None:
 
             for event_dict in day.get("events", []):
                 # Parse optional time strings
-                def _parse_time(val: Any) -> Optional[time]:
+                def _parse_time(val: Any) -> Optional[dt_time]:
                     if not val:
                         return None
-                    if isinstance(val, time):
+                    if isinstance(val, dt_time):
                         return val
                     try:
                         from datetime import datetime as _dt2

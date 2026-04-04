@@ -25,8 +25,9 @@ class W3AFilingSerializer(serializers.Serializer):
         return str(obj.id)
     
     def get_form_type(self, obj):
-        return "W-3A"
-    
+        state = ((obj.payload or {}).get("well_header") or {}).get("state", "")
+        return "C-103" if state == "NM" else "W-3A"
+
     def get_updated_at(self, obj):
         # PlanSnapshot only has created_at, so we use that for updated_at
         return obj.created_at
@@ -53,8 +54,25 @@ class W3FilingSerializer(serializers.Serializer):
         return str(obj.id)
     
     def get_form_type(self, obj):
+        # Check linked wizard session jurisdiction first
+        session = getattr(obj, "w3_wizard_sessions", None)
+        if session is not None:
+            try:
+                ws = session.first()
+                if ws and getattr(ws, "jurisdiction", "") == "NM":
+                    return "Sundry"
+            except Exception:
+                pass
+        # Fall back to state in form_data header
+        state = ((obj.form_data or {}).get("header") or {}).get("state", "")
+        if state == "NM":
+            return "Sundry"
+        # Fall back to API number prefix (NM APIs start with "30-0")
+        api = getattr(obj, "api_number", "") or ""
+        if api.startswith("30-0") or api.startswith("300"):
+            return "Sundry"
         return "W-3"
-    
+
     def get_metadata(self, obj):
         w3_events_count = 0
         if hasattr(obj, 'w3_events'):
@@ -62,12 +80,26 @@ class W3FilingSerializer(serializers.Serializer):
                 w3_events_count = obj.w3_events.count()
             except Exception:
                 w3_events_count = 0
-        
+
+        # Find linked wizard session for navigation
+        session_id = None
+        pdf_url = None
+        try:
+            ws = obj.w3_wizard_sessions.first()
+            if ws:
+                session_id = str(ws.id)
+                gen_result = ws.w3_generation_result or {}
+                pdf_url = gen_result.get("pdf_url")
+        except Exception:
+            pass
+
         return {
             "submitted_by": obj.submitted_by,
             "submitted_at": obj.submitted_at.isoformat() if obj.submitted_at else None,
             "rrc_confirmation_number": obj.rrc_confirmation_number,
             "events_count": w3_events_count,
+            "session_id": session_id,
+            "pdf_url": pdf_url,
         }
 
 

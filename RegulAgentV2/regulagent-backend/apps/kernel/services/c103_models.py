@@ -68,10 +68,11 @@ class C103PlugRow:
     ]
 
     # NM-specific: operation type for C-103 form
-    # spot     = good cement behind casing per CBL
-    # squeeze  = annular cement needed (perforations or casing defect)
-    # circulate = surface plug placed by circulation
-    operation_type: Literal["spot", "squeeze", "circulate"]
+    # spot                = good cement behind casing per CBL
+    # squeeze             = annular cement needed (perforations or casing defect)
+    # circulate           = surface plug placed by circulation
+    # perforate_and_squeeze = perforate production casing then squeeze cement behind pipe
+    operation_type: Literal["spot", "squeeze", "circulate", "perforate_and_squeeze"]
 
     # NM-specific: hole type at plug interval
     hole_type: Literal["cased", "open"]
@@ -98,6 +99,10 @@ class C103PlugRow:
     # Tag & wait requirements
     tag_required: bool = True   # NM: all plugs must be tagged
     wait_hours: int = NM_WOC_HOURS
+
+    # Perforation interval (for perforate_and_squeeze operation)
+    perf_top_ft: Optional[float] = None
+    perf_bottom_ft: Optional[float] = None
 
     # Compliance
     nmac_compliant: bool = True

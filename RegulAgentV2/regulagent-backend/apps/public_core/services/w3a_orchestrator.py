@@ -48,33 +48,9 @@ from apps.tenant_overlay.models import TenantArtifact, WellEngagement
 from apps.tenant_overlay.services.engagement_tracker import track_well_interaction
 from apps.policy.services.loader import get_effective_policy
 from apps.kernel.services.policy_kernel import plan_from_facts
+from apps.kernel.services.jurisdiction_registry import detect_jurisdiction as _detect_jurisdiction
 
 logger = logging.getLogger(__name__)
-
-
-def _detect_jurisdiction(api_number: str, explicit_jurisdiction: str = None) -> str:
-    """
-    Detect jurisdiction from API prefix or explicit parameter.
-
-    Args:
-        api_number: API number in any format
-        explicit_jurisdiction: Explicitly specified jurisdiction (TX or NM)
-
-    Returns:
-        Jurisdiction code: "TX" or "NM"
-    """
-    if explicit_jurisdiction:
-        return explicit_jurisdiction.upper()
-
-    # Normalize to digits only
-    normalized = re.sub(r"\D+", "", str(api_number or ""))
-
-    # NM API numbers start with "30" (state code)
-    if normalized.startswith("30"):
-        return "NM"
-
-    # Default to TX (state code 42)
-    return "TX"
 
 
 def fetch_nm_extraction_data(api_number: str) -> Dict[str, Any]:
@@ -1343,6 +1319,9 @@ def _generate_w3a_for_nm_api(
     from apps.public_core.services.nm_extraction_mapper import (
         map_nm_well_to_extractions,
         create_nm_extracted_document_data,
+        _county_from_api,
+        _extract_county,
+        _extract_township_range,
     )
 
     logger.info("=" * 80)
@@ -1445,36 +1424,119 @@ def _generate_w3a_for_nm_api(
             pass
 
         # ============================================================
-        # STEP 5: BUILD PLAN (placeholder for NM)
+        # STEP 5: BUILD NM PLAN
         # ============================================================
         logger.info("\n🏗️ STEP 5: Building NM plan...")
 
-        # For NM, we return the scraped data and let the user fill in missing fields
-        # via the segmented flow. Plan generation requires casing data which
-        # must be entered manually for NM wells.
+        from apps.kernel.handlers.nm.handler import NMJurisdictionHandler
 
-        plan_output = {
-            "jurisdiction": "NM",
-            "api": api_number,
-            "api10": nm_data.get("well_data", {}).get("api10", api_number),
-            "api14": nm_data.get("well_data", {}).get("api14", api_number + "0000"),
-            "well_data": nm_data.get("well_data", {}),
-            "extraction": nm_data.get("extraction", {}),
-            "documents": nm_data.get("documents", []),
-            "combined_pdf_url": nm_data.get("combined_pdf_url"),
-            "steps": [],  # No steps yet - requires casing data
-            "plan_notes": [
-                "NM well data scraped from OCD portal.",
-                "Casing record must be entered manually from well file documents.",
-                "Plan will be generated after casing data is confirmed.",
-            ],
-            "requires_manual_entry": True,
-            "missing_data": [
-                "casing_record",
-                "producing_injection_disposal_interval",
-                "formation_record",
-            ],
+        nm_handler = NMJurisdictionHandler()
+        nm_extractions = []
+
+        # Build extraction list from the ExtractedDocument created in Step 3
+        if extraction is not None:
+            nm_extractions.append({
+                "c105": extraction.json_data,
+                "document_type": "c105",
+            })
+        else:
+            # Fall back to any existing c105 in the database for this API
+            existing_c105 = ExtractedDocument.objects.filter(
+                api_number=api_number, document_type="c105"
+            ).order_by("-created_at").first()
+            if existing_c105:
+                nm_extractions.append({
+                    "c105": existing_c105.json_data,
+                    "document_type": "c105",
+                })
+
+        # Derive geometry from extractions
+        geometry = nm_handler.derive_geometry(nm_extractions)
+
+        # Build well_info from scraped data
+        well_data = nm_data.get("well_data", {})
+        _api_str = well_data.get("api10") or well_data.get("api14") or api_number
+        _county = (
+            _county_from_api(_api_str)
+            or _extract_county(well_data.get("surface_location", ""))
+        )
+        _township, _range = _extract_township_range(well_data.get("surface_location", ""))
+        well_info = {
+            "api_number": api_number,
+            "api14": well_data.get("api14", api_number + "0000"),
+            "well_name": well_data.get("well_name", ""),
+            "operator": well_data.get("operator_name", ""),
+            "county": _county,
+            "township": _township,
+            "range": _range,
+            "field": well_data.get("formation", ""),
+            "total_depth": well_data.get("tvd_ft"),
         }
+
+        # Build resolved facts
+        facts = nm_handler.build_resolved_facts(well_info, geometry, nm_extractions)
+
+        # Check if we have enough data to generate a plan
+        has_casing = bool(geometry.get("casing_strings"))
+
+        if has_casing:
+            logger.info("   ✅ Casing data found — generating NM plan from facts")
+            # Load policy and generate plan
+            policy = nm_handler.load_effective_policy(facts, geometry)
+            policy["complete"] = True
+            policy["jurisdiction"] = "NM"
+            policy["form"] = "C-103"
+
+            plan_result = plan_from_facts(facts, policy)
+
+            plan_output = {
+                "jurisdiction": "NM",
+                "api": api_number,
+                "api10": well_data.get("api10", api_number),
+                "api14": well_data.get("api14", api_number + "0000"),
+                "well_data": well_data,
+                "extraction": nm_data.get("extraction", {}),
+                "documents": nm_data.get("documents", []),
+                "combined_pdf_url": nm_data.get("combined_pdf_url"),
+                "geometry": geometry,
+                "facts": facts,
+                **plan_result,  # includes steps, citations, constraints, kernel_version
+                "plan_notes": [
+                    "NM plugging plan generated from C-105 extraction data.",
+                    f"Region: {facts.get('county', 'unknown')} county.",
+                ],
+            }
+            logger.info(f"   ✅ NM plan built: {len(plan_output.get('steps', []))} steps")
+        else:
+            logger.info("   ⚠️ No casing data — returning placeholder requiring manual entry")
+            missing_data = []
+            if not geometry.get("casing_strings"):
+                missing_data.append("casing_record")
+            if not geometry.get("perforations"):
+                missing_data.append("producing_injection_disposal_interval")
+            if not geometry.get("formation_tops"):
+                missing_data.append("formation_record")
+
+            plan_output = {
+                "jurisdiction": "NM",
+                "api": api_number,
+                "api10": well_data.get("api10", api_number),
+                "api14": well_data.get("api14", api_number + "0000"),
+                "well_data": well_data,
+                "extraction": nm_data.get("extraction", {}),
+                "documents": nm_data.get("documents", []),
+                "combined_pdf_url": nm_data.get("combined_pdf_url"),
+                "geometry": geometry,
+                "facts": facts,
+                "steps": [],
+                "plan_notes": [
+                    "NM well data scraped from OCD portal.",
+                    "Casing record must be entered manually from well file documents.",
+                    "Plan will be generated after casing data is confirmed.",
+                ],
+                "requires_manual_entry": True,
+                "missing_data": missing_data,
+            }
 
         # ============================================================
         # STEP 6: CREATE PLANSNAPSHOT

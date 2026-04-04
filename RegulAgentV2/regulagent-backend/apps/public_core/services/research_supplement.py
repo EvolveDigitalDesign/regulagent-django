@@ -589,12 +589,30 @@ def merge_research_into_extractions(extractions: dict, research_data: dict) -> t
     """
     c105 = extractions.get("c105", {})
 
+    # Detect NM jurisdiction for validation bypass (NM wells accept all research data)
+    api = extractions.get("api_number") or extractions.get("api", "")
+    if not api:
+        for key in ("c103", "c105", "c101", "w2", "w15"):
+            sub = extractions.get(key, {})
+            if isinstance(sub, dict):
+                api = sub.get("api_number") or sub.get("api", "")
+                if not api:
+                    api = (sub.get("header", {}) or {}).get("api_number", "")
+                    if not api:
+                        api = (sub.get("well_info", {}) or {}).get("api", "")
+                if api:
+                    break
+    if not api:
+        api = research_data.get("api_number") or research_data.get("api", "")
+    is_nm = str(api).replace("-", "").startswith("30")
+
     # Formation tops: merge only validated items if scraper had none
     existing_formations = c105.get("formation_record", [])
     research_formations = research_data.get("formation_tops", [])
     if not existing_formations and research_formations:
-        validated = [f for f in research_formations if f.get("validated", False)]
-        skipped = [f for f in research_formations if not f.get("validated", False)]
+        logger.info("merge_research: api=%s, is_nm=%s, research_formations=%d", api, is_nm, len(research_formations))
+        validated = [f for f in research_formations if f.get("validated", False) or is_nm]
+        skipped = [f for f in research_formations if not (f.get("validated", False) or is_nm)]
         if skipped:
             logger.warning(
                 "Skipped %d unvalidated formation tops: %s",
@@ -615,11 +633,12 @@ def merge_research_into_extractions(extractions: dict, research_data: dict) -> t
             )
 
     # Perforations: merge only validated items if scraper had none
+    # For NM wells, accept all research perforations (same bypass as formations)
     existing_perfs = c105.get("producing_injection_disposal_interval", [])
     research_perfs = research_data.get("perforations", [])
     if not existing_perfs and research_perfs:
-        validated = [p for p in research_perfs if p.get("validated", False)]
-        skipped = [p for p in research_perfs if not p.get("validated", False)]
+        validated = [p for p in research_perfs if p.get("validated", False) or is_nm]
+        skipped = [p for p in research_perfs if not (p.get("validated", False) or is_nm)]
         if skipped:
             logger.warning(
                 "Skipped %d unvalidated perforations: %s",

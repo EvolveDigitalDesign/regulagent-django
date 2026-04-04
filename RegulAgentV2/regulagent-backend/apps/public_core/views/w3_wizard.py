@@ -24,6 +24,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -274,15 +276,8 @@ class W3WizardUploadView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            save_dir = Path(settings.MEDIA_ROOT) / "w3_wizard" / str(session.id) / "plan"
-            save_dir.mkdir(parents=True, exist_ok=True)
-
-            dest = save_dir / f.name
-            with open(dest, "wb") as out:
-                for chunk in f.chunks():
-                    out.write(chunk)
-
             storage_key = f"w3_wizard/{session.id}/plan/{f.name}"
+            default_storage.save(storage_key, f)
             file_type = "pdf" if ext == ".pdf" else "docx"
             doc_meta = {
                 "file_name": f.name,
@@ -321,9 +316,6 @@ class W3WizardUploadView(APIView):
             )
 
         # Ticket upload: current behavior with category tag
-        save_dir = Path(settings.MEDIA_ROOT) / "w3_wizard" / str(session.id)
-        save_dir.mkdir(parents=True, exist_ok=True)
-
         new_documents = []
         rejected = []
 
@@ -339,12 +331,8 @@ class W3WizardUploadView(APIView):
                 )
                 continue
 
-            dest = save_dir / f.name
-            with open(dest, "wb") as out:
-                for chunk in f.chunks():
-                    out.write(chunk)
-
             storage_key = f"w3_wizard/{session.id}/{f.name}"
+            default_storage.save(storage_key, f)
             doc_meta = {
                 "file_name": f.name,
                 "file_type": file_type,
