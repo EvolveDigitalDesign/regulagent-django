@@ -2322,6 +2322,28 @@ class W3AConfirmGeometryView(APIView):
             casing_to_process = []
             logger.error(f"❌❌❌ NO CASING DATA FOUND - casing_strings will be empty!")
 
+        # ── Merge liner entries into casing_record for kernel visibility ──
+        # The geometry builder separates liners from casing_strings for frontend
+        # rendering (dashed lines), but the kernel needs them in casing_record
+        # to calculate correct annular volumes at liner depths.
+        liner_geometry = geometry.get("liner", [])
+        if not liner_geometry:
+            # Fallback: try W-2 liner_record
+            liner_geometry = w2_data.get("liner_record", [])
+        if liner_geometry:
+            for liner_entry in liner_geometry:
+                # Ensure each liner entry is tagged so the kernel recognizes it
+                if isinstance(liner_entry, dict):
+                    # Normalize: ensure it has a "string" key identifying it as liner
+                    if not any(k in liner_entry for k in ("string", "string_type", "casing_type")):
+                        liner_entry["string"] = "liner"
+                    elif not liner_entry.get("string"):
+                        liner_entry["string"] = liner_entry.get("string_type") or liner_entry.get("casing_type") or "liner"
+                    facts["casing_record"] = facts.get("casing_record", [])
+                    facts["casing_record"].append(liner_entry)
+                    casing_to_process.append(liner_entry)
+            logger.info(f"Merged {len(liner_geometry)} liner entries into casing_record for kernel")
+
         # Normalize casing values - ensure numeric fields are floats, not fraction strings
         # This handles plans already saved with string fractions like "9 5/8"
         for casing in casing_to_process:

@@ -165,16 +165,16 @@ def _enrich_event_from_description(event: dict) -> dict:
     #   to_val   → depth_top_ft     (shallower / lower numeric value)
 
     # --- "from (X') to surface" — surface = 0 ft ---
-    if event.get("depth_top_ft") is None or event.get("depth_bottom_ft") is None:
-        m = re.search(
-            r"from\s*\(?(\d+)['′\u2018\u2019]?\)?\s*to\s+surface",
-            desc, re.IGNORECASE
-        )
-        if m:
-            if event.get("depth_top_ft") is None:
-                event["depth_top_ft"] = 0
-            if event.get("depth_bottom_ft") is None:
-                event["depth_bottom_ft"] = int(m.group(1))
+    # "to surface" means the cement interval goes from depth X down to surface (0').
+    # Top of cement = 0 (surface), bottom of cement = X (deeper).
+    m_surface = re.search(
+        r"from\s*\(?(\d+)['′\u2018\u2019]?\)?\s*to\s+surface",
+        desc, re.IGNORECASE
+    )
+    if m_surface:
+        from_depth = int(m_surface.group(1))
+        event["depth_top_ft"] = 0
+        event["depth_bottom_ft"] = from_depth
 
     if event.get("depth_top_ft") is None or event.get("depth_bottom_ft") is None:
         m = re.search(
@@ -210,6 +210,19 @@ def _enrich_event_from_description(event: dict) -> dict:
         )
         if m:
             event["tagged_depth_ft"] = int(m.group(1))
+
+    # --- perf_and_circulate with only one depth → assume circulated to surface (0') ---
+    if event.get("placement_method") == "perf_and_circulate":
+        top = event.get("depth_top_ft")
+        bot = event.get("depth_bottom_ft")
+        if top is not None and bot is None:
+            # "from 150 to <cut off>" → bottom is the deeper depth, top is surface
+            event["depth_bottom_ft"] = top
+            event["depth_top_ft"] = 0
+        elif top is not None and bot is not None and top > 0 and bot == 0:
+            # Already set but backwards (top=150, bot=0) → swap
+            event["depth_top_ft"] = 0
+            event["depth_bottom_ft"] = top
 
     return event
 
@@ -290,6 +303,78 @@ def extract_actual_events_from_parse_result(parse_result: dict) -> list:
         else:
             seen[key] = ev
             deduped.append(ev)
+
+    # --- Post-process: attach tag_toc and woc data to preceding plug events ---
+    # Walk through all events chronologically. When we see a plug event that
+    # matches one in our list, set it as "current". When we see tag_toc or woc
+    # events, attach their data to "current".
+    last_plug = None
+    for day in days:
+        if not isinstance(day, dict):
+            continue
+        for event in day.get("events", []):
+            if not isinstance(event, dict):
+                continue
+            etype = event.get("event_type", "")
+
+            # Track the last plug placement event
+            if etype in _PLUG_PLACEMENT_TYPES:
+                # Find matching event in our deduped list by depth
+                top = event.get("depth_top_ft")
+                bot = event.get("depth_bottom_ft")
+                for ev in deduped:
+                    if ev.get("depth_top_ft") == top and ev.get("depth_bottom_ft") == bot:
+                        last_plug = ev
+                        break
+
+            # tag_toc: extract tagged depth and attach to last plug
+            elif etype == "tag_toc" and last_plug is not None:
+                desc = event.get("description", "")
+                m = re.search(
+                    r"(?:tag(?:ged)?|TOC)\s+.*?(?:at|@)?\s*\(?(\d[\d,]*)\s*['\u2032\u2018\u2019)']?",
+                    desc,
+                    re.IGNORECASE,
+                )
+                if m:
+                    tagged_depth = int(m.group(1).replace(",", ""))
+                    if last_plug.get("tagged_depth_ft") is None:
+                        last_plug["tagged_depth_ft"] = tagged_depth
+                    if last_plug.get("woc_tagged") is None:
+                        last_plug["woc_tagged"] = True
+
+            # woc: compute hours from timestamps if available, mark WOC occurred
+            elif etype == "woc" and last_plug is not None:
+                if last_plug.get("woc_tagged") is None:
+                    last_plug["woc_tagged"] = True
+                # Compute WOC hours from start_time/end_time
+                if last_plug.get("woc_hours") is None:
+                    start_t = event.get("start_time")
+                    end_t = event.get("end_time")
+                    if start_t and end_t:
+                        try:
+                            from datetime import datetime as _dt
+                            def _to_dt(t):
+                                if not isinstance(t, str):
+                                    return _dt.combine(_dt.today(), t)
+                                for fmt in ("%H:%M:%S", "%H:%M"):
+                                    try:
+                                        return _dt.strptime(t, fmt)
+                                    except ValueError:
+                                        continue
+                                return None
+                            s_dt = _to_dt(start_t)
+                            e_dt = _to_dt(end_t)
+                            if s_dt and e_dt and e_dt > s_dt:
+                                hours = round((e_dt - s_dt).total_seconds() / 3600, 1)
+                                last_plug["woc_hours"] = hours
+                        except Exception:
+                            pass
+                # Fallback: try to extract hours from description text
+                if last_plug.get("woc_hours") is None:
+                    desc = event.get("description", "")
+                    m = re.search(r"(\d+)\s*(?:hr|hour)", desc, re.IGNORECASE)
+                    if m:
+                        last_plug["woc_hours"] = int(m.group(1))
 
     return deduped
 

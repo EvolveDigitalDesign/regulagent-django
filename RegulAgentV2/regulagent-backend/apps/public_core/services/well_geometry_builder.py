@@ -586,8 +586,8 @@ def normalize_casing_for_frontend(casing_list: list) -> list:
     for c in casing_list:
         if not isinstance(c, dict):
             continue
-        size_in = _first(c.get("size_in"), c.get("diameter"))
-        hole_size = c.get("hole_size_in")
+        size_in = _first(c.get("size_in"), c.get("od_in"), c.get("diameter"))
+        hole_size = _first(c.get("hole_size_in"), c.get("bit_size_in"))
         if hole_size is None and size_in:
             hole_size = _infer_hole_size(float(size_in))
         normalized.append({
@@ -596,8 +596,9 @@ def normalize_casing_for_frontend(casing_list: list) -> list:
             "top_ft": _first(c.get("top_ft"), c.get("top")),
             "bottom_ft": _first(c.get("shoe_depth_ft"), c.get("bottom_ft"), c.get("bottom")),
             "hole_size_in": hole_size,
-            "cement_top_ft": _first(c.get("cement_top_ft"), c.get("cement_top")),
+            "cement_top_ft": _first(c.get("cement_top_ft"), c.get("top_cmt_ft"), c.get("cement_top")),
             "id_in": c.get("id_in"),
+            "weight_ppf": c.get("weight_ppf") or c.get("weight_per_ft"),
             "removed_to_depth_ft": c.get("removed_to_depth_ft"),
         })
     return normalized

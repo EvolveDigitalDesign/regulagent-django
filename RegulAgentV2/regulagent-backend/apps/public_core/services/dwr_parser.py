@@ -689,6 +689,27 @@ class DWRParser:
         events: List[DWREvent] = []
         lower = text.lower()
 
+        # --- Pre-process: merge JMR time-description triplets ---
+        # JMR PDFs extract as: "09:00 AM\n09:30 AM\nDescription text"
+        # Merge into: "09:00 AM - 09:30 AM Description text" so time extraction works
+        _TIME_PAT = re.compile(r'^\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*$')
+        raw_lines = re.split(r'[\n\r]+', text)
+        merged_lines = []
+        i = 0
+        while i < len(raw_lines):
+            m1 = _TIME_PAT.match(raw_lines[i])
+            if m1 and i + 2 < len(raw_lines):
+                m2 = _TIME_PAT.match(raw_lines[i + 1])
+                if m2:
+                    desc = raw_lines[i + 2].strip()
+                    merged = f"{m1.group(1)} - {m2.group(1)} {desc}"
+                    merged_lines.append(merged)
+                    i += 3
+                    continue
+            merged_lines.append(raw_lines[i])
+            i += 1
+        text = '\n'.join(merged_lines)
+
         # Split into sentence-like chunks for line-level matching
         lines = re.split(r'[\n\r]+|[.;]', text)
         for line in lines:
@@ -850,7 +871,15 @@ class DWRParser:
         return None
 
     def _extract_time_range(self, text: str) -> Tuple[Optional[time], Optional[time]]:
-        """Extract start/end time from text like '0800-1000' or '08:00 to 10:00'."""
+        """Extract start/end time from text like '0800-1000', '08:00 to 10:00', or '10:00 AM - 02:30 PM'."""
+        # AM/PM format: "10:00 AM - 02:30 PM" or "10:00AM-2:30PM"
+        m = re.search(
+            r'(\d{1,2}:\d{2}\s*(?:AM|PM))\s*(?:-|to)\s*(\d{1,2}:\d{2}\s*(?:AM|PM))',
+            text, re.IGNORECASE
+        )
+        if m:
+            return self._parse_time(m.group(1)), self._parse_time(m.group(2))
+        # 24-hour format: "0800-1000" or "08:00 to 10:00"
         m = re.search(
             r'(\d{1,2}[:h]?\d{2})\s*(?:-|to)\s*(\d{1,2}[:h]?\d{2})',
             text, re.IGNORECASE
@@ -890,17 +919,24 @@ class DWRParser:
         return None
 
     def _parse_time(self, text: str) -> Optional[time]:
-        """Parse time from various formats (HH:MM, HHMM, HHhMM)."""
+        """Parse time from various formats (HH:MM, HHMM, HHhMM, HH:MM AM/PM)."""
         if not text:
             return None
         text = text.strip()
-        # Normalize separators
+        from datetime import datetime as _dt
+        # AM/PM format: "10:00 AM" or "2:30PM"
+        ampm_match = re.match(r'^(\d{1,2}:\d{2})\s*(AM|PM)$', text, re.IGNORECASE)
+        if ampm_match:
+            try:
+                return _dt.strptime(f"{ampm_match.group(1)} {ampm_match.group(2).upper()}", "%I:%M %p").time()
+            except ValueError:
+                pass
+        # Normalize separators for 24-hour formats
         normalized = re.sub(r'[h:]', ':', text)
         # 4-digit no separator: 0800 → 08:00
         if re.match(r'^\d{4}$', normalized):
             normalized = f"{normalized[:2]}:{normalized[2:]}"
         try:
-            from datetime import datetime as _dt
             return _dt.strptime(normalized, "%H:%M").time()
         except ValueError:
             pass

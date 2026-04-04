@@ -791,6 +791,26 @@ def _build_sundry_data(form_dict: dict, session) -> dict:
 
     steps_content = "\n".join(steps_lines)
 
+    wbd_formations = []
+    for f in formations:
+        if not isinstance(f, dict):
+            continue
+        name = f.get("formation_name") or f.get("formation") or "Unknown"
+        top = f.get("top_ft")
+        if top is not None:
+            wbd_formations.append({"name": name, "depth_ft": top})
+
+    wbd_casings = []
+    for c in casing_record:
+        if not isinstance(c, dict):
+            continue
+        wbd_casings.append({
+            "type": c.get("string_type") or c.get("casing_type") or c.get("type") or "",
+            "size_inches": c.get("od_in") or c.get("size_inches") or c.get("size") or "",
+            "hole_size_inches": c.get("bit_size_in") or c.get("hole_size_in") or "",
+            "shoe_depth_ft": c.get("shoe_depth_ft") or c.get("bottom_ft") or "",
+        })
+
     return {
         "header": {
             "api_number": header.get("api_number", session.api_number),
@@ -815,6 +835,8 @@ def _build_sundry_data(form_dict: dict, session) -> dict:
             "title": "",
             "date": "",
         },
+        "wbd_formations": wbd_formations,
+        "wbd_casings": wbd_casings,
     }
 
 

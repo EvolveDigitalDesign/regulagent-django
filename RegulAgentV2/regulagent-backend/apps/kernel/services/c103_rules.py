@@ -380,9 +380,9 @@ class C103PluggingRules:
             bottom_ft=cap_bottom,
             cement_class=self._get_cement_class(cap_bottom),
             step_type="cibp_cap",
-            operation_type="spot",
+            operation_type="dumpbail",
             hole_type="cased",
-            sacks_required=NM_MIN_SACKS,  # Will be recalculated in _calculate_volumes
+            sacks_required=3,  # Dumpbail — 3 sacks on tool, exempt from 25-sack minimum
             tag_required=True,
             wait_hours=NM_WOC_HOURS,
             regulatory_basis=self._get_regulatory_basis("cibp_cap", cap_bottom),
@@ -749,6 +749,10 @@ class C103PluggingRules:
             if plug.step_type == "mechanical_plug":
                 continue  # No cement volume for mechanical plugs
 
+            # CIBP caps are dumpbail operations — 3 sacks on tool, exempt from volume calculation
+            if plug.step_type == "cibp_cap":
+                continue
+
             interval_ft = plug.bottom_ft - plug.top_ft
             mid_depth = (plug.top_ft + plug.bottom_ft) / 2.0
 
@@ -881,6 +885,9 @@ class C103PluggingRules:
                 continue
             if plug.step_type == "mechanical_plug":
                 plug.operation_type = "spot"
+                continue
+            if plug.step_type == "cibp_cap":
+                # CIBP caps are dumpbail operations — preserve the dumpbail type, never override
                 continue
             if plug.step_type == "existing_cement":
                 # existing_cement steps are documentation-only — no operation type
