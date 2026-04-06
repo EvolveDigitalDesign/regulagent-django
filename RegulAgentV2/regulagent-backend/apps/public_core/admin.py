@@ -11,6 +11,7 @@ from .models import (
     PublicPerforation,
     PublicWellDepths,
     BulkJob,
+    W3ASourceAudit,
 )
 
 
@@ -270,4 +271,39 @@ class BulkJobAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(W3ASourceAudit)
+class W3ASourceAuditAdmin(admin.ModelAdmin):
+    """Admin interface for W3A source audit records. Read-only — audit trail only."""
+
+    list_display = (
+        'api_number',
+        'jurisdiction',
+        'input_mode',
+        'outcome',
+        'document_count',
+        'source',
+        'created_at',
+    )
+    list_filter = ('outcome', 'jurisdiction', 'input_mode', 'source')
+    search_fields = ('api_number',)
+    readonly_fields = (
+        'api_number',
+        'jurisdiction',
+        'input_mode',
+        'outcome',
+        'outcome_detail',
+        'document_count',
+        'source',
+        'user',
+        'tenant_id',
+        'created_at',
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 

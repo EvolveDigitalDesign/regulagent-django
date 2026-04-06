@@ -1171,9 +1171,14 @@ def generate_wizard_w3(self, session_id: str) -> None:
 
             filename = os.path.basename(pdf_result["temp_path"])
             media_url = django_settings.MEDIA_URL
-            if not media_url.startswith('/'):
-                media_url = f'/{media_url}'
-            pdf_url = f"{media_url}temp_pdfs/{filename}"
+            if media_url.startswith('http'):
+                # S3/absolute URL — use directly, ensure trailing slash
+                pdf_url = f"{media_url.rstrip('/')}/temp_pdfs/{filename}"
+            else:
+                # Local/relative — ensure leading slash
+                if not media_url.startswith('/'):
+                    media_url = f'/{media_url}'
+                pdf_url = f"{media_url}temp_pdfs/{filename}"
             logger.info("generate_wizard_w3: PDF generated (%s): %s", session.form_type, pdf_url)
         except Exception as pdf_err:
             logger.warning(
