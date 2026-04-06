@@ -1,0 +1,609 @@
+# Seed recommendations for the intelligence system cold-start.
+# Source authority: TAC 3.14 (Texas), NMAC 19.15.25 / NMAC 19.15.16 (New Mexico).
+# These patterns represent the most common rejection causes observed across both agencies.
+# scope: cold_start — loaded once at system initialisation; replaced by learned data over time.
+
+# ---------------------------------------------------------------------------
+# Texas W-3 / W-3A — Railroad Commission (RRC) — ~12 entries
+# ---------------------------------------------------------------------------
+
+- form_type: w3a
+  field_name: plug_type
+  issue_category: terminology
+  issue_subcategory: naming_convention
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "RRC requires 'Cement Plug' terminology, not 'CIBP cap'"
+  example_bad_value: "CIBP cap"
+  example_good_value: "Cement Plug"
+  title: "Use 'Cement Plug' instead of 'CIBP cap'"
+  description: >
+    The Texas RRC requires the term 'Cement Plug' on W-3A plugging plans.
+    Using abbreviations or alternative names such as 'CIBP cap', 'CIBP', or 'bridge plug cap'
+    can result in rejection. TAC 3.14 references plug types by their full descriptive name.
+  suggested_value: "Cement Plug"
+  trigger_condition:
+    field_name: plug_type
+    trigger_values: ["CIBP cap", "CIBP", "cibp", "bridge plug cap", "Bridge Plug Cap"]
+    trigger_pattern: "(?i)cibp|bridge.?plug.?cap"
+  priority: high
+  scope: cold_start
+
+- form_type: w3a
+  field_name: plug_top_depth
+  issue_category: precision
+  issue_subcategory: depth_rounding
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "Depth values must be recorded to the nearest 0.5 ft, not rounded to 100 ft increments"
+  example_bad_value: "3100"
+  example_good_value: "3103.5"
+  title: "Provide precise plug depths — do not round to nearest 100 ft"
+  description: >
+    RRC examiners flag plug depths that are rounded to even hundreds (e.g. 3100, 4200).
+    Depths must reflect actual measured values to the nearest foot or 0.5 ft.
+    Rounded values suggest the plan was not based on measured well data and may trigger a
+    completeness review under TAC 3.14.
+  suggested_value: null
+  trigger_condition:
+    field_name: plug_top_depth
+    trigger_values: []
+    trigger_pattern: "^\\d+00$"
+  priority: medium
+  scope: cold_start
+
+- form_type: w3a
+  field_name: plug_description
+  issue_category: documentation
+  issue_subcategory: missing_formation_name
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "Plug descriptions must reference the name of the formation being isolated"
+  example_bad_value: "Cement plug set at 4200 ft"
+  example_good_value: "Cement plug set at 4203 ft to isolate Wolfcamp A formation"
+  title: "Include formation name in plug description"
+  description: >
+    The RRC requires each plug entry to identify the geologic formation being isolated.
+    A plug described only by depth without a formation reference does not satisfy TAC 3.14
+    documentation requirements and will commonly result in a deficiency notice.
+  suggested_value: null
+  trigger_condition:
+    field_name: plug_description
+    trigger_values: []
+    trigger_pattern: "(?i)^cement plug set at [\\d\\.]+ ft\\.?$"
+  priority: high
+  scope: cold_start
+
+- form_type: w3a
+  field_name: cement_volume_unit
+  issue_category: terminology
+  issue_subcategory: unit_convention
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "RRC expects cement volumes in cubic feet (cu ft), not sacks, on the W-3A form"
+  example_bad_value: "50 sacks"
+  example_good_value: "156 cu ft"
+  title: "Report cement volume in cubic feet, not sacks"
+  description: >
+    While sacks are a common field unit, the W-3A form requires cement volumes to be stated
+    in cubic feet so reviewers can verify adequacy against hole size.
+    Include sack count parenthetically if desired, but the primary unit must be cubic feet.
+  suggested_value: null
+  trigger_condition:
+    field_name: cement_volume_unit
+    trigger_values: ["sacks", "sk", "sks", "bags"]
+    trigger_pattern: "(?i)\\b(sacks?|sk|sks|bags?)\\b"
+  priority: medium
+  scope: cold_start
+
+- form_type: w3a
+  field_name: cement_volume
+  issue_category: compliance
+  issue_subcategory: inadequate_cement_volume
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "Cement volume must be sufficient to fill the annular space plus 10% excess per 1000 ft of plug length"
+  example_bad_value: "20 cu ft for 7-inch casing at 3000 ft"
+  example_good_value: "Calculated volume: hole capacity + 30% excess for 3000 ft interval"
+  title: "Cement volume insufficient for hole size and depth"
+  description: >
+    TAC 3.14 requires cement volume to account for hole capacity plus a depth-adjusted excess
+    (10% per 1000 ft of plug length). Plans that specify a flat volume without demonstrating
+    the calculation are frequently rejected. Show the annular capacity formula and the excess
+    percentage on the form or in an attachment.
+  suggested_value: null
+  trigger_condition:
+    field_name: cement_volume
+    trigger_values: []
+    trigger_pattern: null
+  priority: high
+  scope: cold_start
+
+- form_type: w3a
+  field_name: cement_class
+  issue_category: compliance
+  issue_subcategory: missing_specification
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "API cement class must be specified; Class C for shallow (<6500 ft), Class H for deep (>=6500 ft)"
+  example_bad_value: "Portland cement"
+  example_good_value: "API Class H cement"
+  title: "Specify API cement class (C or H)"
+  description: >
+    RRC reviewers require the API cement class to be explicitly stated on the W-3A.
+    Generic terms like 'Portland cement' or 'neat cement' are insufficient.
+    Use Class C for wells shallower than 6500 ft and Class H (or approved equivalent)
+    for deeper wells per TAC 3.14 guidance.
+  suggested_value: "API Class H cement"
+  trigger_condition:
+    field_name: cement_class
+    trigger_values: ["Portland cement", "neat cement", "regular cement", "standard cement"]
+    trigger_pattern: "(?i)portland|neat cement|regular cement|standard cement"
+  priority: medium
+  scope: cold_start
+
+- form_type: w3a
+  field_name: woc_time
+  issue_category: documentation
+  issue_subcategory: missing_woc_time
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "Wait-on-cement (WOC) time must be documented on the W-3A plugging report"
+  example_bad_value: ""
+  example_good_value: "WOC: 8 hours"
+  title: "Document wait-on-cement (WOC) time"
+  description: >
+    The W-3A plugging report must state the wait-on-cement time for each plug.
+    Leaving this field blank or omitting it from the narrative is a common deficiency.
+    Although TAC 3.14 does not specify a mandatory minimum WOC for plugging,
+    the time must be recorded to demonstrate operational integrity.
+  suggested_value: "WOC: 8 hours"
+  trigger_condition:
+    field_name: woc_time
+    trigger_values: ["", "0", "N/A", "n/a", "none"]
+    trigger_pattern: "^$"
+  priority: medium
+  scope: cold_start
+
+- form_type: w3a
+  field_name: perforation_record
+  issue_category: documentation
+  issue_subcategory: missing_pre_squeeze_record
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "A record of perforations must be included before any squeeze cement operation is described"
+  example_bad_value: "Squeeze cement at 4150-4200 ft"
+  example_good_value: "Perforations at 4150-4200 ft (per completion report dated 2019-03-12); squeeze cement job performed"
+  title: "Include perforation record before squeeze cement description"
+  description: >
+    When a W-3A plan includes a squeeze cement job, the plan must reference the existing
+    perforation interval that is being squeezed. Without a perforation record the RRC cannot
+    verify that the squeeze targets a legitimate open interval. Cite the original completion
+    report or well history documentation.
+  suggested_value: null
+  trigger_condition:
+    field_name: plug_description
+    trigger_values: []
+    trigger_pattern: "(?i)squeeze.{0,30}cement(?!.*perforation)"
+  priority: high
+  scope: cold_start
+
+- form_type: w3a
+  field_name: surface_plug_depth
+  issue_category: compliance
+  issue_subcategory: surface_plug_depth_violation
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "Surface plug top must be within 200 ft of the ground surface per TAC 3.14"
+  example_bad_value: "350 ft"
+  example_good_value: "150 ft"
+  title: "Surface plug top must be within 200 ft of surface"
+  description: >
+    TAC 3.14 requires the uppermost cement plug to have its top set within 200 ft of the
+    ground surface. Plans that place the surface plug deeper than 200 ft will be rejected.
+    If the wellbore configuration prevents this, a variance request must accompany the filing.
+  suggested_value: null
+  trigger_condition:
+    field_name: surface_plug_depth
+    trigger_values: []
+    trigger_pattern: null
+  priority: high
+  scope: cold_start
+
+- form_type: w3a
+  field_name: surface_casing_depth
+  issue_category: documentation
+  issue_subcategory: missing_casing_reference
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "Surface casing shoe depth must be referenced in the plugging plan narrative"
+  example_bad_value: "Set cement plug at 500 ft"
+  example_good_value: "Set cement plug at 500 ft; surface casing shoe at 623 ft per original completion record"
+  title: "Reference surface casing shoe depth in plugging plan"
+  description: >
+    RRC examiners use the surface casing shoe depth to confirm that plugs are correctly
+    positioned relative to casing intervals. Omitting this reference forces a manual lookup
+    and often triggers a deficiency request. Always cite the surface casing shoe depth from
+    the original well record.
+  suggested_value: null
+  trigger_condition:
+    field_name: plug_description
+    trigger_values: []
+    trigger_pattern: "(?i)surface.{0,20}plug(?!.*surface casing)"
+  priority: medium
+  scope: cold_start
+
+- form_type: w3a
+  field_name: plug_length
+  issue_category: compliance
+  issue_subcategory: plug_length_below_minimum
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "Each cement plug must be at least 100 ft in length per TAC 3.14"
+  example_bad_value: "75"
+  example_good_value: "100"
+  title: "Cement plug length must be at least 100 ft"
+  description: >
+    TAC 3.14 specifies a minimum plug length of 100 ft for each cement plug in a plugging
+    plan. Plans that specify a plug shorter than 100 ft will be rejected unless a variance
+    is granted. Verify calculated plug length = (cement volume) / (annular capacity per ft).
+  suggested_value: "100"
+  trigger_condition:
+    field_name: plug_length
+    trigger_values: []
+    trigger_pattern: null
+  priority: high
+  scope: cold_start
+
+- form_type: w3
+  field_name: rrc_district
+  issue_category: formatting
+  issue_subcategory: missing_district_designation
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "RRC district number must be populated on the W-3 form header"
+  example_bad_value: ""
+  example_good_value: "7B"
+  title: "RRC district designation is required on W-3 form"
+  description: >
+    The W-3 form header requires the operator to specify the RRC district (1 through 10,
+    with sub-districts 7B and 8A). Leaving this field blank is one of the most frequent
+    administrative rejection causes. The district is determined by the county in which the
+    well is located and can be looked up in the RRC district map.
+  suggested_value: null
+  trigger_condition:
+    field_name: rrc_district
+    trigger_values: ["", "0", "None", "N/A"]
+    trigger_pattern: "^$"
+  priority: high
+  scope: cold_start
+
+# ---------------------------------------------------------------------------
+# New Mexico C-103 — Oil Conservation Division (NMOCD) — ~8 entries
+# ---------------------------------------------------------------------------
+
+- form_type: c103
+  field_name: plug_description
+  issue_category: documentation
+  issue_subcategory: missing_formation_name
+  state: NM
+  district: ""
+  agency: NMOCD
+  pattern_description: "NMOCD requires the formation name to appear in every plug narrative on the C-103"
+  example_bad_value: "Set cement plug at 3250 ft"
+  example_good_value: "Set cement plug at 3247 ft to isolate Brushy Canyon formation"
+  title: "Formation name is mandatory in NM plug narrative"
+  description: >
+    NMOCD is stricter than the RRC on formation identification. Under NMAC 19.15.25,
+    each plug description must name the geologic formation being isolated. Omitting the
+    formation name is one of the top rejection reasons on C-103 filings. The formation name
+    must match the name used in the well's completion report on file with OCD.
+  suggested_value: null
+  trigger_condition:
+    field_name: plug_description
+    trigger_values: []
+    trigger_pattern: "(?i)^set cement plug at [\\d\\.]+ ft\\.?$"
+  priority: high
+  scope: cold_start
+
+- form_type: c103
+  field_name: cibp_cap_cement_length
+  issue_category: compliance
+  issue_subcategory: insufficient_cibp_cap
+  state: NM
+  district: ""
+  agency: NMOCD
+  pattern_description: "NM requires 100 ft of cement above a CIBP; Texas only requires 20 ft — do not apply TX rules in NM"
+  example_bad_value: "20"
+  example_good_value: "100"
+  title: "CIBP cap cement must be 100 ft in New Mexico (not 20 ft)"
+  description: >
+    NMAC 19.15.25 requires a minimum of 100 ft of cement above any cast-iron bridge plug (CIBP).
+    This is five times the Texas requirement of 20 ft. Plans drafted using Texas standards
+    and submitted to NMOCD without this adjustment are routinely rejected. The only exception
+    is a 35 ft cap when the cement is set by bailer (NMAC 19.15.25.14.A.1), but this method
+    must be explicitly justified in the filing.
+  suggested_value: "100"
+  trigger_condition:
+    field_name: cibp_cap_cement_length
+    trigger_values: ["20", "25", "30", "35", "40", "50"]
+    trigger_pattern: "^[1-5]\\d$"
+  priority: high
+  scope: cold_start
+
+- form_type: c103
+  field_name: plug_spacing_cased
+  issue_category: compliance
+  issue_subcategory: plug_spacing_violation
+  state: NM
+  district: ""
+  agency: NMOCD
+  pattern_description: "Maximum distance between plugs in cased hole is 3000 ft per NMAC 19.15.25"
+  example_bad_value: "4200"
+  example_good_value: "2800"
+  title: "Plug spacing in cased hole must not exceed 3000 ft"
+  description: >
+    NMAC 19.15.25 limits the interval between plugs to 3000 ft in cased wellbore sections.
+    Plans that show plug spacing greater than 3000 ft in cased hole will be rejected.
+    Add intermediate plugs to bring all intervals within the 3000 ft maximum.
+  suggested_value: null
+  trigger_condition:
+    field_name: plug_spacing_cased
+    trigger_values: []
+    trigger_pattern: null
+  priority: high
+  scope: cold_start
+
+- form_type: c103
+  field_name: plug_spacing_open
+  issue_category: compliance
+  issue_subcategory: plug_spacing_violation
+  state: NM
+  district: ""
+  agency: NMOCD
+  pattern_description: "Maximum distance between plugs in open hole is 2000 ft per NMAC 19.15.25"
+  example_bad_value: "2500"
+  example_good_value: "1800"
+  title: "Plug spacing in open hole must not exceed 2000 ft"
+  description: >
+    NMAC 19.15.25 imposes a stricter 2000 ft maximum plug spacing for open (uncased) hole
+    sections. Open hole intervals greater than 2000 ft between plugs will trigger a rejection.
+    Verify whether each interval in the plugging plan is cased or open before applying the
+    appropriate spacing limit.
+  suggested_value: null
+  trigger_condition:
+    field_name: plug_spacing_open
+    trigger_values: []
+    trigger_pattern: null
+  priority: high
+  scope: cold_start
+
+- form_type: c103
+  field_name: woc_time
+  issue_category: compliance
+  issue_subcategory: insufficient_woc_time
+  state: NM
+  district: ""
+  agency: NMOCD
+  pattern_description: "NMOCD requires a minimum 4-hour wait-on-cement time per NMAC 19.15.25"
+  example_bad_value: "2 hours"
+  example_good_value: "4 hours"
+  title: "Wait-on-cement time must be at least 4 hours in New Mexico"
+  description: >
+    Unlike Texas, New Mexico explicitly mandates a minimum WOC of 4 hours under NMAC 19.15.25.
+    Filings that state a WOC of less than 4 hours, or that omit WOC entirely, will be rejected.
+    If the cement was allowed to set longer, record the actual time; it must not be less than 4 hours.
+  suggested_value: "4 hours"
+  trigger_condition:
+    field_name: woc_time
+    trigger_values: ["", "0", "1 hour", "2 hours", "3 hours", "1", "2", "3"]
+    trigger_pattern: "(?i)^([0-3]\\s*(hr|hour|hrs|hours)?|)$"
+  priority: high
+  scope: cold_start
+
+- form_type: c103
+  field_name: cement_excess_cased
+  issue_category: compliance
+  issue_subcategory: insufficient_cement_excess
+  state: NM
+  district: ""
+  agency: NMOCD
+  pattern_description: "NM requires 50% cement excess for cased hole intervals (flat rate, not depth-based)"
+  example_bad_value: "10%"
+  example_good_value: "50%"
+  title: "Cased hole cement excess must be 50% in New Mexico"
+  description: >
+    NMAC 19.15.25 uses a flat 50% excess for cased hole sections rather than the Texas
+    depth-based formula (+10% per 1000 ft). Plans that apply the Texas formula or specify
+    less than 50% excess in cased intervals will be rejected. Clearly state the excess
+    percentage and show the calculation in the filing.
+  suggested_value: "50%"
+  trigger_condition:
+    field_name: cement_excess_cased
+    trigger_values: []
+    trigger_pattern: null
+  priority: high
+  scope: cold_start
+
+- form_type: c103
+  field_name: cement_excess_open
+  issue_category: compliance
+  issue_subcategory: insufficient_cement_excess
+  state: NM
+  district: ""
+  agency: NMOCD
+  pattern_description: "NM requires 100% cement excess for open hole intervals per NMAC 19.15.25"
+  example_bad_value: "50%"
+  example_good_value: "100%"
+  title: "Open hole cement excess must be 100% in New Mexico"
+  description: >
+    Open hole sections require 100% cement excess under NMAC 19.15.25, double the cased hole
+    requirement. This is significantly more aggressive than Texas requirements and a common
+    source of rejection for operators familiar only with Texas rules. Verify each plug interval
+    is correctly classified as cased or open before calculating volumes.
+  suggested_value: "100%"
+  trigger_condition:
+    field_name: cement_excess_open
+    trigger_values: []
+    trigger_pattern: null
+  priority: high
+  scope: cold_start
+
+- form_type: c103
+  field_name: min_sacks
+  issue_category: compliance
+  issue_subcategory: minimum_sack_count
+  state: NM
+  district: ""
+  agency: NMOCD
+  pattern_description: "Each plug must use at least 25 sacks of cement per NMAC 19.15.25"
+  example_bad_value: "15 sacks"
+  example_good_value: "25 sacks"
+  title: "Minimum 25 sacks of cement required per plug in New Mexico"
+  description: >
+    NMAC 19.15.25 establishes a minimum plug size of 100 ft OR 25 sacks, whichever is greater.
+    Unlike Texas, which specifies only the 100 ft length requirement, New Mexico adds an
+    independent sack-count minimum. Even if 100 ft of plug length is achieved with fewer sacks
+    (e.g. in large-diameter casing), the filing must demonstrate at least 25 sacks were used.
+  suggested_value: "25 sacks"
+  trigger_condition:
+    field_name: min_sacks
+    trigger_values: []
+    trigger_pattern: null
+  priority: medium
+  scope: cold_start
+
+# ---------------------------------------------------------------------------
+# Cross-state formatting — both TX and NM — ~5 entries
+# ---------------------------------------------------------------------------
+
+- form_type: w3
+  field_name: activity_date
+  issue_category: formatting
+  issue_subcategory: date_format
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "Dates must be entered in MM/DD/YYYY format on RRC forms"
+  example_bad_value: "2024-08-15"
+  example_good_value: "08/15/2024"
+  title: "Use MM/DD/YYYY date format on RRC forms"
+  description: >
+    The RRC requires dates in MM/DD/YYYY format. ISO 8601 dates (YYYY-MM-DD) and other
+    formats are not accepted and will trigger a formatting deficiency. This applies to all
+    date fields including spud date, completion date, and plug date on W-3 and W-3A forms.
+  suggested_value: null
+  trigger_condition:
+    field_name: activity_date
+    trigger_values: []
+    trigger_pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+  priority: low
+  scope: cold_start
+
+- form_type: w3
+  field_name: api_number
+  issue_category: formatting
+  issue_subcategory: api_number_format
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "API number must be the full 14-digit format including check digit and extension"
+  example_bad_value: "42-389-20130"
+  example_good_value: "42-389-20130-00-00"
+  title: "API number must be 14 digits (state + county + unique + extension)"
+  description: >
+    Both RRC and NMOCD require the full 14-digit API number: 2-digit state code, 3-digit
+    county code, 5-digit unique well number, 2-digit sidetrack code, and 2-digit completion
+    code. Shortened formats with only 10 digits (omitting the extension) cause lookup failures
+    in agency databases and result in administrative rejection.
+  suggested_value: null
+  trigger_condition:
+    field_name: api_number
+    trigger_values: []
+    trigger_pattern: "^\\d{2}-\\d{3}-\\d{5}$"
+  priority: medium
+  scope: cold_start
+
+- form_type: w3
+  field_name: operator_name
+  issue_category: compliance
+  issue_subcategory: operator_name_mismatch
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "Operator name on form must exactly match the name registered with the RRC or NMOCD"
+  example_bad_value: "Pioneer Natural Resources"
+  example_good_value: "Pioneer Natural Resources USA, Inc."
+  title: "Operator name must match agency registration exactly"
+  description: >
+    The operator name field must match the legal entity name registered with the RRC
+    (or NMOCD for NM wells) character for character, including punctuation and legal suffixes
+    (Inc., LLC, LP). Shortened trade names or DBA names will cause the filing to fail the
+    operator lookup check and be returned without review.
+  suggested_value: null
+  trigger_condition:
+    field_name: operator_name
+    trigger_values: []
+    trigger_pattern: null
+  priority: medium
+  scope: cold_start
+
+- form_type: w3
+  field_name: lease_name
+  issue_category: documentation
+  issue_subcategory: missing_lease_name
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "Lease name is a required field on all W-3 and W-3A form submissions"
+  example_bad_value: ""
+  example_good_value: "Permian Basin Unit A"
+  title: "Lease name must not be blank"
+  description: >
+    The lease name field is mandatory on both W-3 and W-3A forms. Leaving it blank prevents
+    the RRC from linking the plugging record to the production lease file, which is required
+    for the agency to close out orphan well liability. This is a frequent oversight for
+    operators plugging non-producing wellbores that were never formally completed.
+  suggested_value: null
+  trigger_condition:
+    field_name: lease_name
+    trigger_values: ["", "N/A", "n/a", "None", "Unknown"]
+    trigger_pattern: "^$"
+  priority: medium
+  scope: cold_start
+
+- form_type: w3a
+  field_name: plug_top_depth
+  issue_category: precision
+  issue_subcategory: decimal_precision
+  state: TX
+  district: ""
+  agency: RRC
+  pattern_description: "Depth values with more than one decimal place (e.g. 3100.75) are flagged as data entry errors"
+  example_bad_value: "3100.75"
+  example_good_value: "3100.5"
+  title: "Depth values should use at most one decimal place (nearest 0.5 ft)"
+  description: >
+    RRC and NMOCD database systems accept depths to the nearest 0.5 ft. Values with two or
+    more decimal places (e.g. 3100.75, 4202.33) are treated as data entry errors and may
+    cause form processing failures or manual holds. Round all depths to the nearest 0.5 ft
+    before submission.
+  suggested_value: null
+  trigger_condition:
+    field_name: plug_top_depth
+    trigger_values: []
+    trigger_pattern: "^\\d+\\.\\d{2,}$"
+  priority: low
+  scope: cold_start

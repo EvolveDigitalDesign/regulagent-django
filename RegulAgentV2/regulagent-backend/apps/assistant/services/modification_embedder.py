@@ -13,6 +13,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from apps.public_core.models import DocumentVector
 from apps.assistant.models import PlanModification
+from apps.public_core.services.openai_config import DEFAULT_EMBEDDING_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -421,3 +422,61 @@ def query_similar_modifications(
     
     return []  # Placeholder
 
+
+def embed_modification(modification) -> 'DocumentVector':
+    """
+    Generate embedding for a PlanModification and store in DocumentVector.
+
+    Args:
+        modification: PlanModification instance
+
+    Returns:
+        DocumentVector with embedding stored
+    """
+    from apps.public_core.models import DocumentVector
+    from apps.public_core.services.openai_config import get_openai_client
+
+    # Build text representation
+    text_parts = [
+        f"Operation: {modification.op_type}",
+        f"Description: {modification.description or ''}",
+    ]
+
+    # Add step info from diff if available
+    diff = modification.diff or {}
+    if diff.get('added_steps'):
+        text_parts.append(f"Added steps: {len(diff['added_steps'])}")
+    if diff.get('removed_steps'):
+        text_parts.append(f"Removed steps: {len(diff['removed_steps'])}")
+
+    # Add risk score
+    if modification.risk_score:
+        text_parts.append(f"Risk score: {modification.risk_score}")
+
+    embedding_text = "\n".join(text_parts)
+
+    # Get embedding from OpenAI
+    client = get_openai_client()
+    response = client.embeddings.create(
+        input=embedding_text,
+        model=DEFAULT_EMBEDDING_MODEL
+    )
+    vector = response.data[0].embedding
+
+    # Store in DocumentVector
+    well = modification.source_snapshot.well if modification.source_snapshot else None
+    doc_vector = DocumentVector.objects.create(
+        well=well,
+        file_name=f"modification_{modification.id}",
+        document_type="plan_modification",
+        section_name=f"{modification.op_type}_{modification.id}",
+        section_text=embedding_text,
+        embedding=vector,
+        metadata={
+            "modification_id": str(modification.id),
+            "op_type": modification.op_type,
+            "risk_score": float(modification.risk_score) if modification.risk_score else None,
+        }
+    )
+
+    return doc_vector

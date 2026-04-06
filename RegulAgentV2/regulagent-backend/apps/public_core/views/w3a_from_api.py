@@ -27,10 +27,13 @@ from apps.public_core.serializers.w3a_plan import (
 )
 from apps.public_core.services.rrc_completions_extractor import extract_completions_all_documents
 from apps.public_core.services.openai_extraction import classify_document, extract_json_from_pdf, vectorize_extracted_document
+from apps.public_core.services.api_normalization import normalize_api_14digit
 from apps.public_core.models import ExtractedDocument, WellRegistry, PlanSnapshot
 from apps.public_core.services.well_registry_enrichment import enrich_well_registry_from_documents
 from apps.tenant_overlay.models import TenantArtifact, WellEngagement
 from apps.tenant_overlay.services.engagement_tracker import track_well_interaction
+from apps.tenants.models import UsageRecord
+from apps.tenants.services.usage_tracker import track_usage
 from apps.policy.services.loader import get_effective_policy
 from apps.kernel.services.policy_kernel import plan_from_facts
 
@@ -108,6 +111,13 @@ class W3AFromApiView(APIView):
         plugs_mode: str = req.validated_data.get("plugs_mode", "combined")
         input_mode: str = req.validated_data.get("input_mode", "extractions")
         merge_threshold_ft: float = float(req.validated_data.get("merge_threshold_ft", 500.0) or 500.0)
+        
+        # NEW: Sack-based merge limits (for combine mode)
+        # sack_limit_no_tag: max sacks to combine WITHOUT tag requirement (default 50)
+        # sack_limit_with_tag: max sacks to combine WITH tag requirement (default 150)
+        sack_limit_no_tag: float = float(req.validated_data.get("sack_limit_no_tag", 50.0) or 50.0)
+        sack_limit_with_tag: float = float(req.validated_data.get("sack_limit_with_tag", 150.0) or 150.0)
+        
         confirm_fact_updates: bool = bool(req.validated_data.get("confirm_fact_updates", False))
         allow_precision_upgrades_only: bool = bool(req.validated_data.get("allow_precision_upgrades_only", True))
         use_gau_override_if_invalid: bool = bool(req.validated_data.get("use_gau_override_if_invalid", False))
@@ -116,6 +126,7 @@ class W3AFromApiView(APIView):
         w15_file = req.validated_data.get("w15_file")
         schematic_file = req.validated_data.get("schematic_file")
         formation_tops_file = req.validated_data.get("formation_tops_file")
+        jurisdiction: str = req.validated_data.get("jurisdiction", "TX")
 
         # Normalize 10-digit API into a flexible key; downstream extractor/DB matching uses last 8 digits
         def _normalize_api(val: str) -> str:
@@ -127,6 +138,32 @@ class W3AFromApiView(APIView):
             return s
 
         api_in = _normalize_api(api10)
+
+        logger.info(f"📍 API: {api_in}, Jurisdiction: {jurisdiction}")
+
+        # Route to NM-specific flow if jurisdiction is NM
+        if jurisdiction == "NM":
+            from apps.public_core.services.w3a_orchestrator import _generate_w3a_for_nm_api
+
+            result = _generate_w3a_for_nm_api(
+                api_number=api_in,
+                plugs_mode=plugs_mode,
+                input_mode=input_mode,
+                merge_threshold_ft=merge_threshold_ft,
+                request=request,
+                confirm_fact_updates=confirm_fact_updates,
+                w2_file=w2_file,
+                w15_file=w15_file,
+                schematic_file=schematic_file,
+                formation_tops_file=formation_tops_file,
+            )
+
+            if result.get("success"):
+                return Response(result, status=status.HTTP_200_OK)
+            else:
+                return Response(result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Continue with TX (RRC) flow below...
 
         try:
             # 1) Acquire documents: RRC extractions, user uploads, or hybrid
@@ -180,6 +217,9 @@ class W3AFromApiView(APIView):
                     return None
                 return None
 
+            # Accumulate tokens used across all extraction calls this request
+            total_tokens = 0
+
             # Default to extractions
             dl: Dict[str, Any] = {}
             files: List[str] = []
@@ -188,7 +228,8 @@ class W3AFromApiView(APIView):
                 dl = extract_completions_all_documents(api_in, allowed_kinds=["w2", "w15", "gau"])
                 files = dl.get("files") or []
                 api = dl.get("api") or api_in
-            well = WellRegistry.objects.filter(api14__icontains=str(api)[-8:]).first()
+            api_normalized = normalize_api_14digit(str(api))
+            well = WellRegistry.objects.filter(api14=api_normalized).first() if api_normalized else None
             if input_mode in ("extractions", "hybrid"):
                 for f in files:
                     path = f.get("path")
@@ -197,23 +238,57 @@ class W3AFromApiView(APIView):
                     doc_type = classify_document(Path(path))
                     if doc_type not in ("gau", "w2", "w15", "schematic", "formation_tops"):
                         continue
-                    ext = extract_json_from_pdf(Path(path), doc_type)
-                    with transaction.atomic():
-                        ed = ExtractedDocument.objects.create(
-                            well=well,
-                            api_number=api,
-                            document_type=doc_type,
-                            source_path=str(path),
-                            model_tag=ext.model_tag,
-                            status="success" if not ext.errors else "error",
-                            errors=ext.errors,
-                            json_data=ext.json_data,
+
+                    # --- Check for existing successful extraction (cache hit) ---
+                    existing = ExtractedDocument.objects.filter(
+                        api_number=api,
+                        source_path=str(path),
+                        document_type=doc_type,
+                        status="success",
+                        is_stale=False,
+                    ).order_by("-created_at").first()
+
+                    if existing:
+                        logger.info(
+                            "Reusing existing extraction for %s (ID: %s)",
+                            os.path.basename(str(path)),
+                            existing.id,
                         )
-                        try:
-                            vectorize_extracted_document(ed)
-                        except Exception:
-                            logger.exception("vectorize: failed for RRC doc")
-                    created.append({"document_type": doc_type, "extracted_document_id": str(ed.id)})
+                        ed = existing
+                    else:
+                        ext = extract_json_from_pdf(Path(path), doc_type)
+                        total_tokens += ext.tokens_used
+
+                        # Extract tracking_no for W-2 documents (for revision tracking)
+                        tracking_no = None
+                        if doc_type == "w2" and ext.json_data:
+                            try:
+                                header = ext.json_data.get("header", {})
+                                tracking_no = header.get("tracking_no")
+                                if tracking_no:
+                                    logger.debug(f"W-2 extracted with tracking_no: {tracking_no}")
+                            except Exception as e:
+                                logger.warning(f"Failed to extract tracking_no from W-2: {e}")
+
+                        with transaction.atomic():
+                            ed = ExtractedDocument.objects.create(
+                                well=well,
+                                api_number=api,
+                                document_type=doc_type,
+                                tracking_no=tracking_no,  # Store tracking_no for W-2s
+                                source_path=str(path),
+                                file_hash=_sha256_file(path),
+                                model_tag=ext.model_tag,
+                                status="success" if not ext.errors else "error",
+                                errors=ext.errors,
+                                json_data=ext.json_data,
+                            )
+                            try:
+                                vectorize_extracted_document(ed)
+                            except Exception:
+                                logger.exception("vectorize: failed for RRC doc")
+
+                    created.append({"document_type": doc_type, "extracted_document_id": str(ed.id), "tracking_no": (ed.tracking_no if existing else tracking_no)})
 
             # Ingest user files for user_files or hybrid modes
             if input_mode in ("user_files", "hybrid"):
@@ -229,11 +304,22 @@ class W3AFromApiView(APIView):
                             raw = fobj.read()
                             data = json.loads(raw.decode("utf-8")) if isinstance(raw, (bytes, bytearray)) else json.loads(str(raw))
                             doc_type = _detect_doc_type_from_json(data) or label
+                            
+                            # Extract tracking_no for W-2 documents
+                            tracking_no = None
+                            if doc_type == "w2" and isinstance(data, dict):
+                                try:
+                                    header = data.get("header", {})
+                                    tracking_no = header.get("tracking_no")
+                                except Exception:
+                                    pass
+                            
                             with transaction.atomic():
                                 ed = ExtractedDocument.objects.create(
                                     well=well,
                                     api_number=api,
                                     document_type=doc_type,
+                                    tracking_no=tracking_no,
                                     source_path=f"upload:{filename or 'user.json'}",
                                     model_tag="user_uploaded_json",
                                     status="success",
@@ -268,18 +354,49 @@ class W3AFromApiView(APIView):
                         doc_type = classify_document(Path(saved_path))
                         if doc_type not in ("gau", "w2", "w15", "schematic", "formation_tops"):
                             continue
-                        ext = extract_json_from_pdf(Path(saved_path), doc_type)
-                        with transaction.atomic():
-                            ed = ExtractedDocument.objects.create(
-                                well=well,
-                                api_number=api,
-                                document_type=doc_type,
-                                source_path=saved_path,
-                                model_tag="user_uploaded_pdf",
-                                status="success" if not ext.errors else "error",
-                                errors=ext.errors,
-                                json_data=ext.json_data,
+
+                        # --- Check for existing successful extraction (cache hit) ---
+                        existing = ExtractedDocument.objects.filter(
+                            api_number=api,
+                            source_path=saved_path,
+                            document_type=doc_type,
+                            status="success",
+                            is_stale=False,
+                        ).order_by("-created_at").first()
+
+                        if existing:
+                            logger.info(
+                                "Reusing existing extraction for %s (ID: %s)",
+                                os.path.basename(saved_path),
+                                existing.id,
                             )
+                            ed = existing
+                        else:
+                            ext = extract_json_from_pdf(Path(saved_path), doc_type)
+                            total_tokens += ext.tokens_used
+
+                            # Extract tracking_no for W-2 documents
+                            tracking_no = None
+                            if doc_type == "w2" and ext.json_data:
+                                try:
+                                    header = ext.json_data.get("header", {})
+                                    tracking_no = header.get("tracking_no")
+                                except Exception:
+                                    pass
+
+                            with transaction.atomic():
+                                ed = ExtractedDocument.objects.create(
+                                    well=well,
+                                    api_number=api,
+                                    document_type=doc_type,
+                                    tracking_no=tracking_no,
+                                    source_path=saved_path,
+                                    file_hash=_sha256_file(saved_path),
+                                    model_tag="user_uploaded_pdf",
+                                    status="success" if not ext.errors else "error",
+                                    errors=ext.errors,
+                                    json_data=ext.json_data,
+                                )
                         try:
                             vectorize_extracted_document(ed)
                         except Exception:
@@ -470,6 +587,7 @@ class W3AFromApiView(APIView):
                     tmp_path = self._persist_upload_to_tmp_pdf(gau_file)
                     try:
                         ext = extract_json_from_pdf(Path(tmp_path), "gau")
+                        total_tokens += ext.tokens_used
                         with transaction.atomic():
                             ExtractedDocument.objects.create(
                                 well=well,
@@ -507,12 +625,14 @@ class W3AFromApiView(APIView):
             if uploaded_refs:
                 extraction_info["user_files"] = uploaded_refs
             if plugs_mode == "both":
-                combined = self._build_plan(api, merge_enabled=True, merge_threshold_ft=merge_threshold_ft)
-                isolated = self._build_plan(api, merge_enabled=False, merge_threshold_ft=merge_threshold_ft)
+                combined = self._build_plan(api, merge_enabled=True, merge_threshold_ft=merge_threshold_ft, sack_limit_no_tag=sack_limit_no_tag, sack_limit_with_tag=sack_limit_with_tag)
+                isolated = self._build_plan(api, merge_enabled=False, merge_threshold_ft=merge_threshold_ft, sack_limit_no_tag=sack_limit_no_tag, sack_limit_with_tag=sack_limit_with_tag)
                 out = {"variants": {"combined": combined, "isolated": isolated}, "extraction": extraction_info}
                 # Persist baseline snapshot (variants payload) if well available
+                plan_id = f"{api}:combined"  # Default to combined variant for navigation
                 try:
-                    well_for_snapshot = well or WellRegistry.objects.filter(api14__icontains=str(api)[-8:]).first()
+                    api_norm = normalize_api_14digit(str(api))
+                    well_for_snapshot = well or (WellRegistry.objects.filter(api14=api_norm).first() if api_norm else None)
                     if well_for_snapshot is not None:
                         snapshot = PlanSnapshot.objects.create(
                             well=well_for_snapshot,
@@ -528,6 +648,8 @@ class W3AFromApiView(APIView):
                             tenant_id=request.user.tenants.first().id if (request.user.is_authenticated and request.user.tenants.exists()) else None,
                             status=PlanSnapshot.STATUS_DRAFT,  # Initial plan starts as draft
                         )
+                        # Use combined variant plan_id for frontend navigation
+                        plan_id = f"{api}:combined"
                         try:
                             # Link any artifacts created during this request to the snapshot
                             ed_ids = [c.get("extracted_document_id") for c in created if c.get("extracted_document_id")]
@@ -560,23 +682,27 @@ class W3AFromApiView(APIView):
                 ser.is_valid(raise_exception=False)
                 if proposed_changes and not confirm_fact_updates:
                     out["facts_update_preview"] = proposed_changes
+                # Add plan_id to response for frontend navigation
+                out["plan_id"] = plan_id
                 return Response(out, status=status.HTTP_200_OK)
             else:
                 merge_enabled = (plugs_mode == "combined")
-                plan = self._build_plan(api, merge_enabled=merge_enabled, merge_threshold_ft=merge_threshold_ft)
+                plan = self._build_plan(api, merge_enabled=merge_enabled, merge_threshold_ft=merge_threshold_ft, sack_limit_no_tag=sack_limit_no_tag, sack_limit_with_tag=sack_limit_with_tag)
                 ser = W3APlanSerializer(data=plan)
                 ser.is_valid(raise_exception=False)
                 response_payload = {**plan, "extraction": extraction_info}
                 if proposed_changes and not confirm_fact_updates:
                     response_payload["facts_update_preview"] = proposed_changes
                 # Persist baseline snapshot (single variant) if well available
+                variant_label = "combined" if merge_enabled else "isolated"
+                plan_id = f"{api}:{variant_label}"
                 try:
-                    well_for_snapshot = well or WellRegistry.objects.filter(api14__icontains=str(api)[-8:]).first()
+                    api_norm = normalize_api_14digit(str(api))
+                    well_for_snapshot = well or (WellRegistry.objects.filter(api14=api_norm).first() if api_norm else None)
                     if well_for_snapshot is not None:
-                        variant_label = "combined" if merge_enabled else "isolated"
                         snapshot = PlanSnapshot.objects.create(
                             well=well_for_snapshot,
-                            plan_id=f"{api}:{variant_label}",
+                            plan_id=plan_id,
                             kind=PlanSnapshot.KIND_BASELINE,
                             payload=response_payload,
                             kernel_version=str((plan or {}).get("kernel_version") or ""),
@@ -612,10 +738,32 @@ class W3AFromApiView(APIView):
                                             'plugs_mode': plugs_mode
                                         }
                                     )
+
+                                    # Track usage for billing and analytics
+                                    try:
+                                        track_usage(
+                                            tenant=user_tenant,
+                                            event_type=UsageRecord.EVENT_PLAN_GENERATED,
+                                            resource_type='well',
+                                            resource_id=well_for_snapshot.api14,
+                                            user=request.user,
+                                            tokens_used=total_tokens,
+                                            metadata={
+                                                'plan_id': snapshot.plan_id,
+                                                'snapshot_id': str(snapshot.id),
+                                                'plan_type': 'W3A',
+                                                'plugs_mode': plugs_mode,
+                                                'kernel_version': snapshot.kernel_version,
+                                            }
+                                        )
+                                    except Exception:
+                                        logger.exception("Failed to track usage for plan generation")
                         except Exception:
                             logger.exception("Failed to track well engagement (single)")
                 except Exception:
                     logger.exception("W3AFromApiView: failed to persist baseline snapshot (single)")
+                # Add plan_id to response for frontend navigation
+                response_payload["plan_id"] = plan_id
                 return Response(response_payload, status=status.HTTP_200_OK)
 
         except ValueError as ve:
@@ -666,7 +814,15 @@ class W3AFromApiView(APIView):
         except Exception:
             return False
 
-    def _build_plan(self, api: str, *, merge_enabled: bool, merge_threshold_ft: float) -> Dict[str, Any]:
+    def _build_plan(
+        self,
+        api: str,
+        *,
+        merge_enabled: bool,
+        merge_threshold_ft: float,
+        sack_limit_no_tag: float = 50.0,
+        sack_limit_with_tag: float = 150.0,
+    ) -> Dict[str, Any]:
         # Mirror management command: assemble facts from latest W-2/W-15/GAU extractions, then run kernel
         def latest(doc_type: str) -> Optional[ExtractedDocument]:
             return (
@@ -675,9 +831,59 @@ class W3AFromApiView(APIView):
                 .order_by("-created_at")
                 .first()
             )
+        
+        def get_consolidated_w2() -> Dict[str, Any]:
+            """
+            Retrieve and consolidate all W-2 extractions, applying revisions.
+            
+            Returns the consolidated W-2 JSON with revisions applied.
+            """
+            logger.info("\n🔀 CONSOLIDATING W-2 EXTRACTIONS")
+            try:
+                from apps.public_core.services.w2_revision_consolidator import consolidate_w2_extractions
+                
+                # Get all W-2 extractions for this API (not just latest)
+                w2_docs = ExtractedDocument.objects.filter(
+                    api_number=api,
+                    document_type="w2"
+                ).order_by("created_at")
+                
+                if not w2_docs.exists():
+                    logger.info("   ℹ️  No W-2 documents found")
+                    return {}
+                
+                logger.info(f"   Found {w2_docs.count()} W-2 extraction(s)")
+                
+                # Build input for consolidator
+                w2_extractions = []
+                for w2_doc in w2_docs:
+                    w2_extractions.append({
+                        "json_data": w2_doc.json_data,
+                        "revisions": w2_doc.json_data.get("revisions")
+                    })
+                
+                # Run consolidation
+                consolidation_result = consolidate_w2_extractions(w2_extractions)
+                
+                # Extract the final consolidated W-2 (use the last one after all revisions applied)
+                consolidated_list = consolidation_result.get("consolidated_w2s", [])
+                if consolidated_list:
+                    # Use the last consolidated W-2 (most recent chronologically)
+                    final_w2 = consolidated_list[-1]["json_data"]
+                    logger.info(f"   ✅ Using consolidated W-2 (tracking_no: {consolidated_list[-1].get('tracking_no')})")
+                    return final_w2
+                else:
+                    logger.warning(f"   ⚠️  Consolidation returned empty list")
+                    return (w2_docs.last().json_data) if w2_docs.exists() else {}
+                
+            except Exception as e:
+                logger.warning(f"   ⚠️  Consolidation failed (non-fatal), falling back to latest W-2: {e}")
+                # Fallback to latest W-2
+                w2_doc = latest("w2")
+                return (w2_doc and w2_doc.json_data) or {}
 
-        w2_doc = latest("w2"); gau_doc = latest("gau"); w15_doc = latest("w15"); schematic_doc = latest("schematic")
-        w2 = (w2_doc and w2_doc.json_data) or {}
+        w2 = get_consolidated_w2()
+        gau_doc = latest("gau"); w15_doc = latest("w15"); schematic_doc = latest("schematic")
         gau = (gau_doc and gau_doc.json_data) or {}
         w15 = (w15_doc and w15_doc.json_data) or {}
         schematic = (schematic_doc and schematic_doc.json_data) or {}
@@ -690,6 +896,19 @@ class W3AFromApiView(APIView):
         well_no = wi.get("well_no") or ""
         rrc = (wi.get("district") or wi.get("rrc_district") or "").strip()
         district = "08A" if (rrc in ("08", "8") and ("andrews" in str(county).lower())) else (rrc or "08A")
+        
+        # Extract lat/lon from W-2 well_info location (for geographic zone evaluation)
+        loc = wi.get("location") or {}
+        lat_from_w2 = loc.get("lat") or loc.get("latitude") or None
+        lon_from_w2 = loc.get("lon") or loc.get("longitude") or None
+        
+        # Fallback to GAU coordinates if W-2 missing/empty
+        if (lat_from_w2 is None or lon_from_w2 is None) and gau:
+            gau_loc = (gau.get("well_info") or {}).get("location") or {}
+            if lat_from_w2 is None:
+                lat_from_w2 = gau_loc.get("lat") or gau_loc.get("latitude") or None
+            if lon_from_w2 is None:
+                lon_from_w2 = gau_loc.get("lon") or gau_loc.get("longitude") or None
 
         # GAU base depth if not older than 5 years
         uqw_depth = None
@@ -755,6 +974,40 @@ class W3AFromApiView(APIView):
                         deepest_shoe_any_ft = cval
             except Exception:
                 pass
+        
+        # Extract TOC (Top of Cement) from casing record for plug type determination
+        production_casing_toc_ft = None
+        intermediate_casing_toc_ft = None
+        surface_casing_toc_ft = None
+        
+        logger.info(f"🔍 TOC EXTRACTION: Processing {len(w2.get('casing_record', []))} casing records")
+        for idx, row in enumerate(w2.get("casing_record") or []):
+            kind = (row.get("string") or row.get("type_of_casing") or "").lower()
+            cement_top = row.get("cement_top_ft")
+            shoe_depth = row.get("shoe_depth_ft") or row.get("setting_depth_ft") or row.get("bottom_ft")
+            logger.info(f"🔍 TOC EXTRACTION [{idx}]: kind='{kind}', cement_top_ft={cement_top}, shoe_depth_ft={shoe_depth}")
+            
+            if cement_top is not None:
+                try:
+                    cement_top_val = float(cement_top)
+                    
+                    if kind.startswith("production") and production_casing_toc_ft is None:
+                        production_casing_toc_ft = cement_top_val
+                        logger.info(f"📍✅ Production casing TOC extracted: {production_casing_toc_ft} ft")
+                    
+                    elif kind.startswith("intermediate") and intermediate_casing_toc_ft is None:
+                        intermediate_casing_toc_ft = cement_top_val
+                        logger.info(f"📍✅ Intermediate casing TOC extracted: {intermediate_casing_toc_ft} ft")
+                    
+                    elif kind.startswith("surface") and surface_casing_toc_ft is None:
+                        surface_casing_toc_ft = cement_top_val
+                        logger.info(f"📍✅ Surface casing TOC extracted: {surface_casing_toc_ft} ft")
+                except (ValueError, TypeError):
+                    logger.warning(f"⚠️ TOC EXTRACTION [{idx}]: Failed to parse cement_top_ft={cement_top}")
+                    pass
+        
+        logger.info(f"🎯 TOC EXTRACTION COMPLETE: production={production_casing_toc_ft}, intermediate={intermediate_casing_toc_ft}, surface={surface_casing_toc_ft}")
+        
         sizes = []
         for row in (w2.get("casing_record") or []):
             s = row.get("size_in") or row.get("casing_size_in")
@@ -792,17 +1045,62 @@ class W3AFromApiView(APIView):
 
         # Producing interval from W-2 if present
         prod_iv = None
+        perforations_from_w2: List[Dict[str, Any]] = []
         try:
             piv = w2.get("producing_injection_disposal_interval") or {}
-            if isinstance(piv, dict) and piv.get("from_ft") and piv.get("to_ft"):
-                f = float(piv["from_ft"]) if piv["from_ft"] is not None else None
-                t = float(piv["to_ft"]) if piv["to_ft"] is not None else None
-                if f is not None and t is not None:
-                    prod_iv = [f, t]
-        except Exception:
+            
+            # Check if it's a single interval (dict) or multiple intervals (list)
+            if isinstance(piv, dict):
+                # Single interval
+                if piv.get("from_ft") and piv.get("to_ft"):
+                    f = float(piv["from_ft"]) if piv["from_ft"] is not None else None
+                    t = float(piv["to_ft"]) if piv["to_ft"] is not None else None
+                    if f is not None and t is not None:
+                        prod_iv = [f, t]
+                        # Add as perforation interval
+                        perf_interval = {
+                            "interval_top_ft": min(f, t),
+                            "interval_bottom_ft": max(f, t),
+                            "status": "perforated" if piv.get("open_hole") != "Yes" else "open_hole"
+                        }
+                        perforations_from_w2.append(perf_interval)
+                        logger.info(f"📍 Extracted W-2 producing interval: {perf_interval}")
+            
+            elif isinstance(piv, list):
+                # Multiple intervals (as shown in the user's image - Ro 1, 2, 3, etc.)
+                logger.info(f"📍 Found {len(piv)} producing/injection/disposal intervals in W-2")
+                for idx, interval in enumerate(piv):
+                    if isinstance(interval, dict):
+                        f = interval.get("from_ft") or interval.get("From (ft.)")
+                        t = interval.get("to_ft") or interval.get("To (ft.)")
+                        open_hole = interval.get("open_hole") or interval.get("Open hole?")
+                        
+                        if f is not None and t is not None:
+                            try:
+                                f_val = float(f)
+                                t_val = float(t)
+                                
+                                # Use the first interval as overall producing_iv
+                                if prod_iv is None:
+                                    prod_iv = [min(f_val, t_val), max(f_val, t_val)]
+                                
+                                # Add all intervals as perforations
+                                perf_interval = {
+                                    "interval_top_ft": min(f_val, t_val),
+                                    "interval_bottom_ft": max(f_val, t_val),
+                                    "status": "open_hole" if (open_hole and str(open_hole).upper() == "YES") else "perforated"
+                                }
+                                perforations_from_w2.append(perf_interval)
+                                logger.info(f"   [{idx+1}] Interval {min(f_val, t_val)}-{max(f_val, t_val)} ft ({perf_interval['status']})")
+                            except (ValueError, TypeError):
+                                pass
+        
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to extract producing intervals from W-2: {e}")
             prod_iv = None
 
         # Extract historic cement jobs from W-15 cementing data
+        # Store all cement jobs without filtering to preserve complete historical data
         historic_cement_jobs: List[Dict[str, Any]] = []
         try:
             cementing_data = w15.get("cementing_data") or []
@@ -810,6 +1108,7 @@ class W3AFromApiView(APIView):
                 for cement_job in cementing_data:
                     if isinstance(cement_job, dict):
                         try:
+                            # Include all available fields from the cement job
                             job_entry: Dict[str, Any] = {
                                 "job_type": cement_job.get("job"),  # surface|intermediate|production|plug|squeeze
                                 "interval_top_ft": cement_job.get("interval_top_ft"),
@@ -817,12 +1116,11 @@ class W3AFromApiView(APIView):
                                 "cement_top_ft": cement_job.get("cement_top_ft"),
                                 "sacks": cement_job.get("sacks"),
                                 "slurry_density_ppg": cement_job.get("slurry_density_ppg"),
+                                "additives": cement_job.get("additives"),
+                                "yield_ft3_per_sk": cement_job.get("yield_ft3_per_sk"),
                             }
-                            # Only add if we have meaningful data
-                            if job_entry.get("job_type") or job_entry.get("sacks"):
-                                # Filter out None values to keep output clean
-                                job_entry = {k: v for k, v in job_entry.items() if v is not None}
-                                historic_cement_jobs.append(job_entry)
+                            # Store all cement jobs as-is, preserving complete historical data
+                            historic_cement_jobs.append(job_entry)
                         except Exception:
                             pass
             logger.info(f"Extracted {len(historic_cement_jobs)} historic cement jobs from W-15")
@@ -1028,6 +1326,8 @@ class W3AFromApiView(APIView):
             "uqw_base_ft": wrap(uqw_depth),
             "use_cibp": wrap(False),
             "surface_shoe_ft": wrap(surface_shoe_ft),
+            "lat": float(lat_from_w2) if lat_from_w2 else None,
+            "lon": float(lon_from_w2) if lon_from_w2 else None,
         }
         
         # Add existing mechanical barriers if found
@@ -1092,6 +1392,18 @@ class W3AFromApiView(APIView):
                 pass
         if prod_iv is not None:
             facts["producing_interval_ft"] = wrap(prod_iv)
+        
+        # Add perforations from W-2 producing intervals to facts for CIBP placement logic
+        if perforations_from_w2:
+            facts["perforations"] = perforations_from_w2
+            logger.info(f"🔫 Added {len(perforations_from_w2)} perforation intervals to facts for kernel CIBP placement")
+            
+            # Calculate shallowest perforation for CIBP placement (50 ft shallower than shallowest perf)
+            shallowest_perf_top = min(p.get("interval_top_ft", float('inf')) for p in perforations_from_w2 if p.get("interval_top_ft"))
+            if shallowest_perf_top != float('inf'):
+                logger.info(f"   Shallowest perforation top: {shallowest_perf_top} ft")
+                logger.info(f"   CIBP should be placed 50 ft shallower: {shallowest_perf_top - 50.0} ft")
+        
         if formation_tops_map:
             facts["formation_tops_map"] = formation_tops_map
         if production_shoe_ft is None and deepest_shoe_any_ft is not None:
@@ -1101,26 +1413,86 @@ class W3AFromApiView(APIView):
                 facts["production_shoe_ft"] = wrap(float(production_shoe_ft))
             except Exception:
                 pass
+        
+        # Add TOC (Top of Cement) for all strings for plug type determination
+        if production_casing_toc_ft is not None:
+            facts["production_casing_toc_ft"] = wrap(float(production_casing_toc_ft))
+            logger.info(f"🎯 Added production_casing_toc_ft to facts: {production_casing_toc_ft} ft")
+        
+        if intermediate_casing_toc_ft is not None:
+            facts["intermediate_casing_toc_ft"] = wrap(float(intermediate_casing_toc_ft))
+            logger.info(f"🎯 Added intermediate_casing_toc_ft to facts: {intermediate_casing_toc_ft} ft")
+        
+        if surface_casing_toc_ft is not None:
+            facts["surface_casing_toc_ft"] = wrap(float(surface_casing_toc_ft))
+            logger.info(f"🎯 Added surface_casing_toc_ft to facts: {surface_casing_toc_ft} ft")
+        
+        # Add full casing_record for cement-aware annuli calculations
+        if w2.get("casing_record"):
+            facts["casing_record"] = w2.get("casing_record")
+            logger.info(f"📊 Added casing_record to facts for cement-aware calculations: {len(w2.get('casing_record', []))} casings")
 
-        policy = get_effective_policy(district=facts["district"]["value"], county=facts["county"]["value"] or None, field=facts["field"]["value"] or None)
+        field_name = facts["field"]["value"] or None
+        district_val = facts["district"]["value"]
+        county_val = facts["county"]["value"] or None
+        
+        print(f"🔍 GETTING POLICY: district={district_val}, county={county_val}, field={field_name}", flush=True)
+        logger.critical(f"🔍 GETTING POLICY: district={district_val}, county={county_val}, field={field_name}")
+        
+        # get_effective_policy returns a structure with BOTH top-level keys AND "effective" nested key
+        # Just like the management command, we modify it directly (don't double-wrap!)
+        try:
+            policy = get_effective_policy(district=district_val, county=county_val, field=field_name)
+            logger.info(f"✅ get_effective_policy returned successfully")
+        except Exception as e:
+            logger.exception(f"Failed to load policy: {e}")
+            # Return minimal policy structure on error
+            policy = {
+                "policy_id": "tx.w3a",
+                "complete": False,
+                "effective": {},
+                "preferences": {},
+            }
+        
+        # DEBUG: Verify formation_tops are loaded (they're under policy["effective"]["district_overrides"])
+        effective = policy.get("effective") or {}
+        dist_overrides = effective.get("district_overrides") or {}
+        formation_tops = dist_overrides.get("formation_tops") or []
+        
+        if formation_tops:
+            logger.info(f"✅ POLICY: Found {len(formation_tops)} formation tops: {[ft.get('formation') for ft in formation_tops]}")
+        else:
+            logger.warning(f"⚠️ POLICY: No formation_tops found for {county_val} / {field_name}")
+        
+        # Override policy metadata (same as management command)
         policy["policy_id"] = "tx.w3a"
         policy["complete"] = True
+        
+        # Override/augment preferences
         prefs = policy.setdefault("preferences", {})
         prefs["rounding_policy"] = "nearest"
         prefs.setdefault("default_recipe", {
-            "id": "class_h_neat_15_8",
-            "class": "H",
-            "density_ppg": 15.8,
-            "yield_ft3_per_sk": 1.18,
+            "id": "class_c_neat_15_6",
+            "class": "C",
+            "density_ppg": 15.6,
+            "yield_ft3_per_sk": 1.32,
             "water_gal_per_sk": 5.2,
             "additives": [],
         })
         # Long-plug merge preference based on request
+        # NEW: Sack-based merging with tag-aware limits
         prefs.setdefault("long_plug_merge", {})
         prefs["long_plug_merge"]["enabled"] = bool(merge_enabled)
-        prefs["long_plug_merge"]["threshold_ft"] = float(merge_threshold_ft)
+        prefs["long_plug_merge"]["threshold_ft"] = float(merge_threshold_ft)  # Deprecated, kept for compat
+        prefs["long_plug_merge"]["sack_limit_no_tag"] = float(sack_limit_no_tag)  # Max sacks WITHOUT tag (default 50)
+        prefs["long_plug_merge"]["sack_limit_with_tag"] = float(sack_limit_with_tag)  # Max sacks WITH tag (default 150)
         prefs["long_plug_merge"].setdefault("types", ["formation_top_plug", "cement_plug", "uqw_isolation_plug"])
         prefs["long_plug_merge"].setdefault("preserve_tagging", True)
+        
+        logger.info(
+            f"🎯 Merge config: enabled={merge_enabled}, "
+            f"sack_limit_no_tag={sack_limit_no_tag}, sack_limit_with_tag={sack_limit_with_tag}"
+        )
 
         # Map OD to nominal ID for common casing sizes (inches)
         NOMINAL_ID = {
@@ -1242,8 +1614,9 @@ class W3AFromApiView(APIView):
         # Summarize output similar to management command
         def _step_summary(s: Dict[str, Any]) -> Dict[str, Any]:
             # Normalize depth field names for consistency
-            top = s.get("top_ft") or s.get("top") or s.get("depth_ft")
-            bottom = s.get("bottom_ft") or s.get("base_ft") or s.get("base") or s.get("depth_ft")
+            # CRITICAL: Use 'is not None' checks because 0.0 is falsy and would be skipped by 'or' chain
+            top = s.get("top_ft") if s.get("top_ft") is not None else (s.get("top") if s.get("top") is not None else s.get("depth_ft"))
+            bottom = s.get("bottom_ft") if s.get("bottom_ft") is not None else (s.get("base_ft") if s.get("base_ft") is not None else (s.get("base") if s.get("base") is not None else s.get("depth_ft")))
             
             # For merged plugs, extract min/max from merged_steps if top-level depths are missing
             details = s.get("details") or {}
@@ -1265,15 +1638,64 @@ class W3AFromApiView(APIView):
             
             out_s = {
                 "type": s.get("type"),
+                "plug_type": s.get("plug_type"),  # Mechanical type (spot, perf & squeeze, etc.)
+                "plug_purpose": s.get("plug_purpose"),  # NEW: Original purpose (formation_top_plug, bridge_plug, etc.)
                 "top": top,  # Consistent field name for AI tools
                 "base": bottom,  # Consistent field name for AI tools
                 "top_ft": top,  # Keep legacy field for backward compat
                 "bottom_ft": bottom,  # Keep legacy field for backward compat
                 "sacks": ((s.get("materials") or {}).get("slurry") or {}).get("sacks") or s.get("sacks"),
+                "tag_required": s.get("tag_required"),  # Whether TAG (WOC) is required
                 "regulatory_basis": s.get("regulatory_basis"),
                 "special_instructions": s.get("special_instructions"),
                 "details": details,
             }
+            
+            # Build display_name with TAG suffix if required
+            step_type = s.get("type")
+            formation = s.get("formation", "")
+            purpose_name = step_type
+            
+            # Map step type to display name
+            if step_type == "formation_top_plug":
+                purpose_name = f"Formation isolation ({formation})" if formation else "Formation top isolation"
+            elif step_type == "uqw_isolation_plug":
+                purpose_name = "UQW isolation"
+            elif step_type == "intermediate_casing_shoe_plug":
+                purpose_name = "Intermediate shoe isolation"
+            elif step_type == "surface_casing_shoe_plug":
+                purpose_name = "Surface shoe isolation"
+            elif step_type == "perf_and_circulate_to_surface":
+                purpose_name = "Annulus circulation to surface"
+            elif step_type == "productive_horizon_isolation_plug":
+                purpose_name = "Productive horizon isolation"
+            elif step_type == "cibp_cap":
+                purpose_name = "CIBP cap"
+            elif step_type == "top_plug":
+                purpose_name = "Surface safety plug"
+            
+            # Get plug type for display
+            plug_type = s.get("plug_type")
+            plug_type_display = ""
+            if plug_type == "spot_plug":
+                plug_type_display = "Spot plug"
+            elif plug_type == "perf_and_squeeze_plug":
+                plug_type_display = "Perf & squeeze"
+            elif plug_type == "perf_and_circulate_plug":
+                plug_type_display = "Perf & circulate"
+            elif plug_type == "dumpbail_plug":
+                plug_type_display = "Dumpbail"
+            
+            # Build display name: "PlugType - Purpose" with TAG suffix if required
+            display_name = f"{plug_type_display} - {purpose_name}" if plug_type_display else purpose_name
+            
+            if s.get("tag_required") is True:
+                # Add WOC (Wait On Cement) and Tag requirement
+                woc_hours = ((s.get("details") or {}).get("verification") or {}).get("required_wait_hr", 4)
+                display_name += f" - WOC {int(woc_hours)} Hours and Tag"
+            
+            out_s["display_name"] = display_name
+            
             if s.get("type") == "cement_plug":
                 out_s["cement_class"] = s.get("cement_class")
                 out_s["depth_mid_ft"] = s.get("depth_mid_ft")
@@ -1382,9 +1804,17 @@ class W3AFromApiView(APIView):
                         "step_id": idx + 1,  # Match the step_id from steps array
                         "type": (
                             "CIBP" if (s.get("type") == "bridge_plug") else (
-                                "CIBP cap" if (s.get("type") in ("bridge_plug_cap", "cibp_cap")) else s.get("type")
+                                "Dumpbail (CIBP cap)" if (s.get("plug_type") == "dumpbail_plug") else (
+                                    "Spot plug" if (s.get("plug_type") == "spot_plug") else (
+                                        "Perf & squeeze" if (s.get("plug_type") == "perf_and_squeeze_plug") else (
+                                            "Perf & circulate" if (s.get("plug_type") == "perf_and_circulate_plug") else s.get("type")
+                                        )
+                                    )
+                                )
                             )
                         ),
+                        "mechanical_type": s.get("plug_type"),  # Include mechanical type for reference
+                        "regulatory_purpose": s.get("plug_purpose") or s.get("type"),  # Original regulatory purpose (formation_top_plug, bridge_plug, etc.)
                         "from_ft": (s.get("bottom_ft") if s.get("bottom_ft") is not None else s.get("depth_ft")),
                         "to_ft": (s.get("top_ft") if s.get("top_ft") is not None else s.get("depth_ft")),
                         "sacks": ((s.get("materials") or {}).get("slurry") or {}).get("sacks"),

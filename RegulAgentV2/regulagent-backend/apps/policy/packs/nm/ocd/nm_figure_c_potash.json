@@ -1,0 +1,365 @@
+{
+  "metadata": {
+    "title": "NM COA Figure C - Potash Region Plugging Book",
+    "jurisdiction": "NM",
+    "region": "potash",
+    "coa_figure": "Figure C",
+    "effective_date": "2018-06-26",
+    "authority": "NMOCD - Oil Conservation Division",
+    "citation": "NMAC 19.15.25",
+    "summary": {
+      "totalProcedures": 14,
+      "totalSubAreas": 2,
+      "totalFormations": 13
+    }
+  },
+  "generalProcedures": [
+    {
+      "number": 1,
+      "text": "The OCD district office must be given a minimum of 24 hours notice prior to setting any plugs. Contact the Carlsbad OCD office at (575) 234-7200."
+    },
+    {
+      "number": 2,
+      "text": "The operator of a well must have a representative on location during the setting of all plugs. The operator's representative cannot be an employee of the plugging contractor unless the contractor and the operator are the same entity."
+    },
+    {
+      "number": 3,
+      "text": "CRITICAL - POTASH AREA CEMENT REQUIREMENT: All cement used within the potash enclave must be mixed with saturated salt water. Calcium chloride (CaCl2) is limited to a maximum of 3% by weight of dry cement. Failure to comply may result in dissolution of potash ore beds and subsurface damage to mining operations."
+    },
+    {
+      "number": 4,
+      "text": "All cement plugs shall be placed by circulation or squeeze method through tubing or drill pipe. Casing alone may not be used as a conduit for cement."
+    },
+    {
+      "number": 5,
+      "text": "All cement for plugging shall be conventional hard-setting cement mixed with saturated salt water (per Procedure 3). Class C cement shall be used above 6,500 ft; Class H cement shall be used at or below 6,500 ft. Slurry weight: Class C = 14.8 lbs/gal, Class H = 16.4 lbs/gal."
+    },
+    {
+      "number": 6,
+      "text": "Minimum plug length shall be 100 feet OR 25 sacks of cement, whichever is greater."
+    },
+    {
+      "number": 7,
+      "text": "All cement plugs shall have sufficient slurry volume to fill the calculated height plus cement excess: 50% for cased hole, 100% for open hole."
+    },
+    {
+      "number": 8,
+      "text": "Maximum spacing between plugs shall not exceed 3,000 feet in cased hole or 2,000 feet in open hole."
+    },
+    {
+      "number": 9,
+      "text": "All cement plugs shall be tagged and tested to verify placement. Plugs across usable quality water, surface casing shoe, potash protection zones, and productive formations must be tagged."
+    },
+    {
+      "number": 10,
+      "text": "A cast iron bridge plug (CIBP) used as a plug base shall have a minimum of 100 feet of cement on top of the plug. If set with a bailer, 35 feet of cement on top is acceptable."
+    },
+    {
+      "number": 11,
+      "text": "A cement plug shall extend at least 50 feet above and 50 feet below each zone requiring isolation (usable quality water base, surface casing shoe, productive horizons, Salado and Castile potash protection zones)."
+    },
+    {
+      "number": 12,
+      "text": "Cement shall stand for a minimum wait-on-cement (WOC) time of 4 hours before disturbing. A minimum of 8 hours WOC is recommended before testing or drilling out cement."
+    },
+    {
+      "number": 13,
+      "text": "The Salado formation (potash ore zone) must be isolated with a cement plug mixed with saturated salt water. No fresh water or standard cement mix may contact the Salado. A separate plug must be placed across or immediately above the Salado."
+    },
+    {
+      "number": 14,
+      "text": "Formation isolation is mandatory for every NM well. In the potash area, the Salado, Castile, and all Delaware Basin formations must be isolated by separate cement plugs where penetrated."
+    }
+  ],
+  "regionDetection": {
+    "method": "county_township_range",
+    "counties": [
+      "Eddy",
+      "Lea"
+    ],
+    "township_range_boundaries": {
+      "note": "Figure C covers the potash mining enclave within Eddy and Lea Counties. This is a geographic overlay - wells within the potash enclave boundary use Figure C regardless of other criteria. The potash enclave is defined by NMOCD and Bureau of Land Management (BLM) potash area boundaries.",
+      "potash_enclave": {
+        "description": "Approximate potash enclave: centered around Carlsbad Potash District, roughly bounded by townships T18S-T26S and ranges R29E-R37E in Eddy and Lea Counties",
+        "reference": "Consult current NMOCD potash enclave map for precise boundaries. BLM Potash Area boundary map (Carlsbad Field Office) is authoritative.",
+        "key_areas": [
+          "Carlsbad Potash District",
+          "Southeast Eddy County (east of Delaware Basin proper)",
+          "West Lea County (west of Hobbs district)"
+        ]
+      }
+    }
+  },
+  "subAreas": [
+    {
+      "name": "Potash Protection Zone - Salado / Castile",
+      "description": "Primary potash ore zone. Wells penetrating or near the Salado formation require special cement mixing with saturated salt water to prevent dissolution of potash ore beds. These formations must be strictly isolated.",
+      "formations": [
+        {
+          "name": "Salado",
+          "isolationOrder": 1,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 800, "max_ft": 3000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0,
+            "notes": "CRITICAL: Mixed with saturated salt water only. CaCl2 max 3%. Potash ore zone - fresh water contact prohibited."
+          }
+        },
+        {
+          "name": "Castile",
+          "isolationOrder": 2,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 2500, "max_ft": 5000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0,
+            "notes": "Mixed with saturated salt water. Evaporite sequence below Salado."
+          }
+        },
+        {
+          "name": "Rustler",
+          "isolationOrder": 3,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 500, "max_ft": 2000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0,
+            "notes": "Overlies Salado; includes Culebra Dolomite water zone. Mixed with saturated salt water."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Potash Area - Guadalupian and Delaware Formations",
+      "description": "Guadalupian carbonate and Delaware Basin clastic formations within the potash enclave. Same cement mixing requirements apply throughout the potash area.",
+      "formations": [
+        {
+          "name": "San Andres",
+          "isolationOrder": 1,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3000, "max_ft": 6000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0
+          }
+        },
+        {
+          "name": "Grayburg",
+          "isolationOrder": 2,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 2500, "max_ft": 5500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0
+          }
+        },
+        {
+          "name": "Queen",
+          "isolationOrder": 3,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 2800, "max_ft": 5500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0
+          }
+        },
+        {
+          "name": "Seven Rivers",
+          "isolationOrder": 4,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3000, "max_ft": 5800 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0
+          }
+        },
+        {
+          "name": "Tansill",
+          "isolationOrder": 5,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3200, "max_ft": 6000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0
+          }
+        },
+        {
+          "name": "Bell Canyon (Delaware Mountain Group)",
+          "isolationOrder": 6,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 8000, "max_ft": 12000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0
+          }
+        },
+        {
+          "name": "Cherry Canyon (Delaware Mountain Group)",
+          "isolationOrder": 7,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 9000, "max_ft": 13000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0
+          }
+        },
+        {
+          "name": "Brushy Canyon (Delaware Mountain Group)",
+          "isolationOrder": 8,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 9500, "max_ft": 14000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0
+          }
+        },
+        {
+          "name": "Bone Spring",
+          "isolationOrder": 9,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 7000, "max_ft": 11000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0
+          }
+        },
+        {
+          "name": "Wolfcamp",
+          "isolationOrder": 10,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 10000, "max_ft": 15000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50,
+            "cement_mixing": "saturated_salt_water",
+            "cacl_limit_pct": 3.0
+          }
+        }
+      ]
+    }
+  ],
+  "pluggingChart": {
+    "casing": {
+      "description": "NM cement sack requirements for cased hole - 50% excess factor. NOTE: All cement in potash area must be mixed with saturated salt water.",
+      "excess_factor": 0.50,
+      "min_sacks": 25,
+      "diameters": ["4.5", "5.5", "7", "8.625", "9.625", "10.75", "13.375"],
+      "data": [
+        { "depth_ft": 1000,  "values": [25, 25, 30, 35, 40, 45, 55] },
+        { "depth_ft": 2000,  "values": [25, 30, 40, 50, 55, 65, 80] },
+        { "depth_ft": 3000,  "values": [25, 35, 45, 55, 65, 75, 95] },
+        { "depth_ft": 4000,  "values": [25, 40, 50, 65, 75, 85, 110] },
+        { "depth_ft": 5000,  "values": [30, 45, 55, 70, 85, 95, 130] },
+        { "depth_ft": 6000,  "values": [30, 50, 60, 80, 90, 105, null] },
+        { "depth_ft": 7000,  "values": [35, 55, 65, 85, 100, 115, null] },
+        { "depth_ft": 8000,  "values": [35, 60, 70, 90, 110, 125, null] },
+        { "depth_ft": 9000,  "values": [40, 60, 75, 100, 115, 130, null] },
+        { "depth_ft": 10000, "values": [40, 65, 80, 105, 125, null, null] },
+        { "depth_ft": 12000, "values": [45, 70, 90, 115, null, null, null] },
+        { "depth_ft": 14000, "values": [50, 75, 95, null, null, null, null] }
+      ]
+    },
+    "openHole": {
+      "description": "NM cement sack requirements for open hole - 100% excess factor. NOTE: All cement in potash area must be mixed with saturated salt water.",
+      "excess_factor": 1.00,
+      "min_sacks": 25,
+      "diameters": ["6.75", "7.875", "8.75", "11", "12.25"],
+      "data": [
+        { "depth_ft": 1000,  "values": [40, 50, 55, 70, 80] },
+        { "depth_ft": 2000,  "values": [40, 50, 60, 75, 90] },
+        { "depth_ft": 3000,  "values": [40, 55, 65, 80, 100] },
+        { "depth_ft": 4000,  "values": [45, 55, 65, 90, 110] },
+        { "depth_ft": 5000,  "values": [45, 60, 70, 95, 115] },
+        { "depth_ft": 6000,  "values": [45, 60, 75, 100, null] },
+        { "depth_ft": 7000,  "values": [50, 65, 80, null, null] },
+        { "depth_ft": 8000,  "values": [50, 70, 85, null, null] },
+        { "depth_ft": 9000,  "values": [55, 70, 90, null, null] },
+        { "depth_ft": 10000, "values": [60, 75, 95, null, null] },
+        { "depth_ft": 12000, "values": [65, 85, 105, null, null] },
+        { "depth_ft": 14000, "values": [70, 90, null, null, null] }
+      ]
+    }
+  },
+  "specialRequirements": {
+    "potash_protection": {
+      "required": true,
+      "cement_mixing": "saturated_salt_water",
+      "cacl_limit_pct": 3.0,
+      "description": "All cement used in the potash area must be mixed with saturated salt water. Calcium chloride limited to 3% by weight of dry cement. This applies to ALL plugs in the potash enclave, not just those across the Salado.",
+      "citation": "NMAC 19.15.25, Potash Area Requirements"
+    },
+    "woc_time": {
+      "minimum_hours": 4,
+      "recommended_hours": 8,
+      "description": "Minimum 4 hours wait-on-cement before any disturbance. Recommend 8 hours or until 500 psi compressive strength achieved. Salt-saturated cement may have longer set times - verify with cementing contractor."
+    },
+    "max_plug_spacing": {
+      "cased_hole_ft": 3000,
+      "open_hole_ft": 2000,
+      "description": "Plugs must be set at intervals not exceeding 3000 ft (cased) or 2000 ft (open hole) per NMAC 19.15.25."
+    },
+    "formation_isolation": {
+      "required": true,
+      "description": "Formation isolation is mandatory for every NM well. In the potash area, the Salado, Castile, Rustler, and all Delaware Basin formations must be isolated by separate cement plugs where penetrated."
+    },
+    "surface_casing": {
+      "required": true,
+      "pull_allowed": false,
+      "description": "Surface casing may not be removed from a well at abandonment per NMAC 19.15.25."
+    },
+    "potash_enclave_verification": {
+      "description": "Before beginning plugging operations, confirm well location is within the potash enclave using current NMOCD and BLM potash area maps. Wells on the boundary should contact the Carlsbad OCD office for clarification."
+    }
+  }
+}

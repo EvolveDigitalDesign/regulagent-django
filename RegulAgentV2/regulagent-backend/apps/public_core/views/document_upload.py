@@ -138,40 +138,42 @@ class DocumentUploadView(APIView):
                 "detail": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        # ========== Step 2: Validate File (Security + API) ==========
+        # ========== Step 2: Security Scan (lightweight, no full extraction) ==========
         try:
-            logger.info(f"document_upload: validating {document_type} for API {api_number}")
-            
-            validation_result = validate_uploaded_file(
+            logger.info(f"document_upload: running security scan for {document_type}")
+
+            security_result = validate_uploaded_file(
                 file_path=tmp_path,
                 document_type=document_type,
                 expected_api=api_number,
-                skip_security_scan=skip_security_scan
+                skip_security_scan=skip_security_scan,
+                # No json_data yet — only runs the security scan step
+                json_data=None,
             )
-            
-            if not validation_result.is_valid:
-                logger.warning(f"document_upload: validation FAILED - {validation_result.errors}")
+
+            if not security_result.is_valid:
+                logger.warning(f"document_upload: security scan FAILED - {security_result.errors}")
                 return Response({
                     "error": "Validation failed",
-                    "reasons": validation_result.errors,
-                    "warnings": validation_result.warnings
+                    "reasons": security_result.errors,
+                    "warnings": security_result.warnings
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
-            logger.info(f"document_upload: validation PASSED for {api_number}")
-        
+
+            logger.info(f"document_upload: security scan PASSED for {api_number}")
+
         except Exception as e:
-            logger.exception("document_upload: validation error")
+            logger.exception("document_upload: security scan error")
             return Response({
                 "error": "Validation system error",
                 "detail": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        # ========== Step 3: Extract Document ==========
+
+        # ========== Step 3: Extract Document (single OpenAI call) ==========
         try:
             logger.info(f"document_upload: extracting {document_type}")
-            
+
             extraction_result = extract_json_from_pdf(tmp_path, document_type)
-            
+
             if extraction_result.errors:
                 logger.error(f"document_upload: extraction FAILED - {extraction_result.errors}")
                 return Response({
@@ -179,13 +181,42 @@ class DocumentUploadView(APIView):
                     "reasons": extraction_result.errors,
                     "detail": "Unable to extract structured data from PDF"
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             logger.info(f"document_upload: extraction successful for {api_number}")
-        
+
         except Exception as e:
             logger.exception("document_upload: extraction error")
             return Response({
                 "error": "Extraction system error",
+                "detail": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # ========== Step 3.5: Verify API from extracted JSON ==========
+        try:
+            logger.info(f"document_upload: verifying API number for {api_number}")
+
+            validation_result = validate_uploaded_file(
+                file_path=tmp_path,
+                document_type=document_type,
+                expected_api=api_number,
+                skip_security_scan=True,  # Already done in Step 2
+                json_data=extraction_result.json_data,
+            )
+
+            if not validation_result.is_valid:
+                logger.warning(f"document_upload: API verification FAILED - {validation_result.errors}")
+                return Response({
+                    "error": "Validation failed",
+                    "reasons": validation_result.errors,
+                    "warnings": validation_result.warnings
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            logger.info(f"document_upload: API verification PASSED for {api_number}")
+
+        except Exception as e:
+            logger.exception("document_upload: API verification error")
+            return Response({
+                "error": "Validation system error",
                 "detail": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
@@ -312,7 +343,7 @@ class DocumentUploadView(APIView):
             "is_public": is_public,
             "vectors_created": vectors_created,
             "storage_path": saved_path,
-            "warnings": validation_result.warnings,
+            "warnings": (security_result.warnings or []) + (validation_result.warnings or []),
             "message": f"Document uploaded, validated, and processed successfully. {visibility_msg}"
         }, status=status.HTTP_201_CREATED)
 

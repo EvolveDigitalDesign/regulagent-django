@@ -4,9 +4,18 @@ from typing import Any, Dict
 
 from rest_framework import serializers
 
+from apps.kernel.services.jurisdiction_registry import detect_jurisdiction
+
 
 class W3AFromApiRequestSerializer(serializers.Serializer):
     api10 = serializers.CharField(help_text="10-digit API number")
+    jurisdiction = serializers.ChoiceField(
+        choices=[("TX", "Texas"), ("NM", "New Mexico")],
+        required=False,
+        default=None,
+        allow_null=True,
+        help_text="Jurisdiction for the well (TX or NM). Auto-detected from API prefix if not specified."
+    )
     use_gau_override_if_invalid = serializers.BooleanField(required=False, default=False)
     confirm_fact_updates = serializers.BooleanField(required=False, default=False)
     allow_precision_upgrades_only = serializers.BooleanField(required=False, default=True)
@@ -16,7 +25,20 @@ class W3AFromApiRequestSerializer(serializers.Serializer):
     plugs_mode = serializers.ChoiceField(
         choices=("combined", "isolated", "both"), required=False, default="combined"
     )
-    merge_threshold_ft = serializers.FloatField(required=False, default=500.0)
+    merge_threshold_ft = serializers.FloatField(required=False, default=500.0, help_text="[DEPRECATED] Use sack_limit_* instead")
+    
+    # NEW: Sack-based merge limits (combine mode configuration)
+    sack_limit_no_tag = serializers.FloatField(
+        required=False,
+        default=50.0,
+        help_text="Max sacks to combine when NO tag is required (default 50)"
+    )
+    sack_limit_with_tag = serializers.FloatField(
+        required=False,
+        default=150.0,
+        help_text="Max sacks to combine when TAG (WOC) is required (default 150)"
+    )
+    
     gau_file = serializers.FileField(required=False, allow_null=True)
     w2_file = serializers.FileField(required=False, allow_null=True)
     w15_file = serializers.FileField(required=False, allow_null=True)
@@ -32,6 +54,14 @@ class W3AFromApiRequestSerializer(serializers.Serializer):
         return digits
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        import re
+
+        # Auto-detect jurisdiction from API prefix if not explicitly provided
+        api10 = attrs.get("api10", "")
+        jurisdiction = attrs.get("jurisdiction")
+        if not jurisdiction:
+            attrs["jurisdiction"] = detect_jurisdiction(api10)
+
         # If user opted to provide a GAU override, require the file in the same request
         if attrs.get("use_gau_override_if_invalid"):
             if not attrs.get("gau_file"):
@@ -44,17 +74,30 @@ class W3AFromApiRequestSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     {"input_mode": "user_files requires at least one file (W-2/W-15/GAU/Schematic/Formation Tops)"}
                 )
-        # Ensure merge threshold is non-negative
+        # Ensure merge threshold is non-negative (deprecated field)
         mt = attrs.get("merge_threshold_ft")
         try:
             if mt is not None and float(mt) < 0:
                 raise serializers.ValidationError({"merge_threshold_ft": "Must be >= 0"})
         except (TypeError, ValueError):
             raise serializers.ValidationError({"merge_threshold_ft": "Must be a number"})
+        
+        # NEW: Validate sack limits are positive
+        sack_no_tag = attrs.get("sack_limit_no_tag")
+        sack_with_tag = attrs.get("sack_limit_with_tag")
+        try:
+            if sack_no_tag is not None and float(sack_no_tag) <= 0:
+                raise serializers.ValidationError({"sack_limit_no_tag": "Must be > 0"})
+            if sack_with_tag is not None and float(sack_with_tag) <= 0:
+                raise serializers.ValidationError({"sack_limit_with_tag": "Must be > 0"})
+        except (TypeError, ValueError):
+            raise serializers.ValidationError({"sack_limit_*": "Sack limits must be numbers"})
+        
         return attrs
 
 
 class W3APlanSerializer(serializers.Serializer):
+    plan_id = serializers.CharField(required=False, allow_null=True, help_text="Plan identifier for frontend navigation (e.g., '4230132998:combined')")
     api = serializers.CharField()
     jurisdiction = serializers.CharField(required=False, allow_null=True)
     district = serializers.CharField(required=False, allow_null=True)

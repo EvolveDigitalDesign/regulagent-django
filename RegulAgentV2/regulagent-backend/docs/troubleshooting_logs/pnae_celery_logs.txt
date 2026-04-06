@@ -1,0 +1,36 @@
+[INFO] 2026-01-20 18:57:06,142 apps.integrations.regulagent.services.auth (59): 📦 Token response keys: ['refresh', 'access']
+[INFO] 2026-01-20 18:57:06,142 apps.integrations.regulagent.services.auth (67): ✅ Successfully obtained JWT token from RegulAgent
+[INFO] 2026-01-20 18:57:06,142 apps.integrations.regulagent.services.auth (68):    Token (first 50 chars): eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90e...
+[INFO] 2026-01-20 18:57:06,143 apps.integrations.regulagent.tasks (150): ✅ JWT Token received: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90e...
+[INFO] 2026-01-20 18:57:06,143 apps.integrations.regulagent.tasks (152): ✅ Successfully authenticated with RegulAgent using JWT
+[INFO] 2026-01-20 18:57:06,143 apps.integrations.regulagent.tasks (168): 📤 Sending request to RegulAgent API...
+[INFO] 2026-01-20 18:57:06,143 apps.integrations.regulagent.tasks (169):    URL: https://api.regulagent.app/api/w3/build-from-pna/
+[INFO] 2026-01-20 18:57:06,143 apps.integrations.regulagent.tasks (170):    Content-Type: application/json
+[INFO] 2026-01-20 18:57:06,143 apps.integrations.regulagent.tasks (171):    API Number: 42-317-31973
+[INFO] 2026-01-20 18:57:06,143 apps.integrations.regulagent.tasks (172):    SubProject ID: 570
+[INFO] 2026-01-20 18:57:06,143 apps.integrations.regulagent.tasks (173):    Well Name: YATER - 1
+[INFO] 2026-01-20 18:57:06,143 apps.integrations.regulagent.tasks (174):    Events: 13
+[INFO] 2026-01-20 18:57:06,144 apps.integrations.regulagent.tasks (175):    Headers: ['Content-Type', 'Authorization']
+[INFO] 2026-01-20 18:57:06,144 apps.integrations.regulagent.tasks (176):    Payload keys: ['api_number', 'subproject_id', 'well_name', 'pna_events', 'w3a_reference', 'tenant_id']
+[INFO] 2026-01-20 18:57:06,144 apps.integrations.regulagent.tasks (179):    w3a_reference type: pdf
+[INFO] 2026-01-20 18:57:06,144 apps.integrations.regulagent.tasks (180):    w3a_reference has base64: True
+[INFO] 2026-01-20 18:57:06,144 apps.integrations.regulagent.tasks (181):    w3a_reference keys: ['type', 'w3a_file_base64', 'w3a_filename']
+[INFO] 2026-01-20 18:57:06,147 apps.integrations.regulagent.tasks (182):    Payload size: 644847 bytes
+[INFO] 2026-01-20 18:57:06,147 apps.integrations.regulagent.tasks (187):    First event: {'event_id': 8, 'event_type': 'Tag TOC', 'display_text': 'Tagged top of cement at 7158’', 'input_values': {'1': '223', '2': '7158’'}, 'transformation_rules': {'required_inputs': 1}, 'date': '2026-01-14', 'start_time': '12:30:00', 'end_time': '13:00:00', 'duration_hours': 0.5, 'work_assignment_id': 29174, 'subproject_id': 2289}
+[INFO] 2026-01-20 18:57:06,147 apps.integrations.regulagent.tasks (191): 🔵 Making HTTP POST request (JSON)...
+[INFO] 2026-01-20 18:57:58,304 apps.integrations.regulagent.tasks (199): 🟢 HTTP request completed
+[INFO] 2026-01-20 18:57:58,304 apps.integrations.regulagent.tasks (201): 📥 RegulAgent response received (status 500)
+[INFO] 2026-01-20 18:57:58,304 apps.integrations.regulagent.tasks (202):    Response headers: {'Server': 'nginx/1.24.0 (Ubuntu)', 'Date': 'Tue, 20 Jan 2026 18:57:58 GMT', 'Content-Type': 'application/json', 'Content-Length': '173', 'Connection': 'keep-alive', 'Vary': 'Accept, origin', 'Allow': 'POST, OPTIONS', 'X-Frame-Options': 'DENY', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin', 'Cross-Origin-Opener-Policy': 'same-origin'}
+[INFO] 2026-01-20 18:57:58,304 apps.integrations.regulagent.tasks (203):    Response length: 173
+[INFO] 2026-01-20 18:57:58,304 apps.integrations.regulagent.tasks (204):    Response text: {"success":false,"error":"Internal error: response validation failed","validation_errors":{"w3_form":{"perforations":[{"interval_top_ft":["This field may not be null."]}]}}}
+[ERROR] 2026-01-20 18:57:58,304 apps.integrations.regulagent.tasks (244): ❌ RegulAgent API request failed: 500 Server Error: Internal Server Error for url: https://api.regulagent.app/api/w3/build-from-pna/
+[ERROR] 2026-01-20 18:57:58,321 apps.integrations.regulagent.tasks (256): ❌ All submission attempts exhausted
+[INFO] 2026-01-20 18:57:58,325 apps.integrations.regulagent.tasks (261): ================================================================================
+[2026-01-20 18:57:58,327: INFO/ForkPoolWorker-1] Task apps.integrations.regulagent.tasks.submit_w3_to_regulagent[07dee0f6-42ea-429d-b57a-57e27322a199] succeeded in 52.589397583156824s: {'success': False, 'error': 'RegulAgent API failed', 'details': '500 Server Error: Internal Server Error for url: https://api.regulagent.app/api/w3/build-from-pna/', 'attempts': 2}
+[2026-01-20 19:00:00,003: INFO/MainProcess] Task apps.integrations.openai.tasks.cleanup_csv_exports_on_schedule[86c5b706-c46b-4fae-ae9c-22929f588fed] received
+[INFO] 2026-01-20 19:00:00,004 apps.integrations.openai.tasks (39): Scheduled CSV cleanup completed
+[2026-01-20 19:00:00,004: INFO/ForkPoolWorker-1] Task apps.integrations.openai.tasks.cleanup_csv_exports_on_schedule[86c5b706-c46b-4fae-ae9c-22929f588fed] succeeded in 0.000940568745136261s: 'Scheduled cleanup completed'
+[2026-01-20 19:15:00,003: INFO/MainProcess] Task apps.integrations.openai.tasks.cleanup_csv_exports_on_schedule[0a643b7e-5dcd-4af5-bbd6-fd7521930ad2] received
+[INFO] 2026-01-20 19:15:00,004 apps.integrations.openai.tasks (39): Scheduled CSV cleanup completed
+[2026-01-20 19:15:00,005: INFO/ForkPoolWorker-1] Task apps.integrations.openai.tasks.cleanup_csv_exports_on_schedule[0a643b7e-5dcd-4af5-bbd6-fd7521930ad2] succeeded in 0.0008481591939926147s: 'Scheduled cleanup completed'
+ubuntu@ip-172-31-16-17:~$ 

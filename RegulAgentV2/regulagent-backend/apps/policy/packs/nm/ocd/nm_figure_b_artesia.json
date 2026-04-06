@@ -1,0 +1,309 @@
+{
+  "metadata": {
+    "title": "NM COA Figure B - South Artesia Region Plugging Book",
+    "jurisdiction": "NM",
+    "region": "south_artesia",
+    "coa_figure": "Figure B",
+    "effective_date": "2018-06-26",
+    "authority": "NMOCD - Oil Conservation Division",
+    "citation": "NMAC 19.15.25",
+    "summary": {
+      "totalProcedures": 12,
+      "totalSubAreas": 2,
+      "totalFormations": 12
+    }
+  },
+  "generalProcedures": [
+    {
+      "number": 1,
+      "text": "The OCD district office must be given a minimum of 24 hours notice prior to setting any plugs. Contact the Artesia OCD office at (575) 748-1283."
+    },
+    {
+      "number": 2,
+      "text": "The operator of a well must have a representative on location during the setting of all plugs. The operator's representative cannot be an employee of the plugging contractor unless the contractor and the operator are the same entity."
+    },
+    {
+      "number": 3,
+      "text": "All cement plugs shall be placed by circulation or squeeze method through tubing or drill pipe. Casing alone may not be used as a conduit for cement."
+    },
+    {
+      "number": 4,
+      "text": "All cement for plugging shall be conventional hard-setting cement mixed in accordance with API standards. Class C cement shall be used above 6,500 ft; Class H cement shall be used at or below 6,500 ft. Slurry weight: Class C = 14.8 lbs/gal, Class H = 16.4 lbs/gal."
+    },
+    {
+      "number": 5,
+      "text": "Minimum plug length shall be 100 feet OR 25 sacks of cement, whichever is greater."
+    },
+    {
+      "number": 6,
+      "text": "All cement plugs shall have sufficient slurry volume to fill the calculated height plus cement excess: 50% for cased hole, 100% for open hole."
+    },
+    {
+      "number": 7,
+      "text": "Maximum spacing between plugs shall not exceed 3,000 feet in cased hole or 2,000 feet in open hole."
+    },
+    {
+      "number": 8,
+      "text": "All cement plugs shall be tagged and tested to verify placement. Plugs across usable quality water, surface casing shoe, and productive formations must be tagged."
+    },
+    {
+      "number": 9,
+      "text": "A cast iron bridge plug (CIBP) used as a plug base shall have a minimum of 100 feet of cement on top of the plug. If set with a bailer, 35 feet of cement on top is acceptable."
+    },
+    {
+      "number": 10,
+      "text": "A cement plug shall extend at least 50 feet above and 50 feet below each zone requiring isolation (usable quality water base, surface casing shoe, productive horizons)."
+    },
+    {
+      "number": 11,
+      "text": "Cement shall stand for a minimum wait-on-cement (WOC) time of 4 hours before disturbing. A minimum of 8 hours WOC is recommended before testing or drilling out cement."
+    },
+    {
+      "number": 12,
+      "text": "Formation isolation is mandatory for every NM well. In this region, San Andres, Grayburg, Queen, and all Delaware Basin formations must be isolated by separate cement plugs where penetrated."
+    }
+  ],
+  "regionDetection": {
+    "method": "county_township_range",
+    "counties": [
+      "Chaves",
+      "Eddy"
+    ],
+    "township_range_boundaries": {
+      "note": "Figure B covers southern Chaves County and north/west Eddy County (Artesia OCD district area, Delaware Basin). Does NOT include potash enclave (Figure C) or east Eddy/Lea Hobbs district (Figure D).",
+      "chaves": {
+        "description": "South Chaves County portions below approximately Township 10S",
+        "approximate_boundary": "South of Roswell city limits; north of Eddy County line"
+      },
+      "eddy_north_west": {
+        "description": "North and west Eddy County portions outside potash enclave",
+        "approximate_boundary": "West of potash mining area; north of Carlsbad city limits"
+      }
+    }
+  },
+  "subAreas": [
+    {
+      "name": "Artesia District - Northwest Shelf / San Andres Trend",
+      "description": "Northwest Shelf carbonate oil plays in Chaves and north Eddy County. San Andres and Grayburg primary targets. Classic Permian Basin carbonate stratigraphy.",
+      "formations": [
+        {
+          "name": "San Andres",
+          "isolationOrder": 1,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 2000, "max_ft": 5500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Grayburg",
+          "isolationOrder": 2,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 2500, "max_ft": 5000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Queen",
+          "isolationOrder": 3,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 2800, "max_ft": 5500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Seven Rivers",
+          "isolationOrder": 4,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3000, "max_ft": 5800 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Tansill",
+          "isolationOrder": 5,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3200, "max_ft": 6000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Carlsbad Group (undifferentiated)",
+          "isolationOrder": 6,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3500, "max_ft": 6500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50,
+            "notes": "Inclusive of Yates, Tansill, Seven Rivers, Queen when undifferentiated"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delaware Basin Trend",
+      "description": "Delaware Basin proper in south/central Eddy County. Deep Delaware formations plus overlying Guadalupian carbonates. Deepest wells in this region.",
+      "formations": [
+        {
+          "name": "San Andres",
+          "isolationOrder": 1,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3000, "max_ft": 6000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Carlsbad Group",
+          "isolationOrder": 2,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 3500, "max_ft": 6500 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "C",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Bell Canyon (Delaware Mountain Group)",
+          "isolationOrder": 3,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 8000, "max_ft": 12000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Cherry Canyon (Delaware Mountain Group)",
+          "isolationOrder": 4,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 9000, "max_ft": 13000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Brushy Canyon (Delaware Mountain Group)",
+          "isolationOrder": 5,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 9500, "max_ft": 14000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        },
+        {
+          "name": "Bone Spring",
+          "isolationOrder": 6,
+          "tagRequired": true,
+          "typicalDepthRange": { "min_ft": 7000, "max_ft": 11000 },
+          "plugSpecification": {
+            "min_length_ft": 100,
+            "coverage_ft": 50,
+            "cement_class": "H",
+            "excess_factor": 0.50
+          }
+        }
+      ]
+    }
+  ],
+  "pluggingChart": {
+    "casing": {
+      "description": "NM cement sack requirements for cased hole - 50% excess factor (flat, not depth-based)",
+      "excess_factor": 0.50,
+      "min_sacks": 25,
+      "diameters": ["4.5", "5.5", "7", "8.625", "9.625", "10.75", "13.375"],
+      "data": [
+        { "depth_ft": 1000,  "values": [25, 25, 30, 35, 40, 45, 55] },
+        { "depth_ft": 2000,  "values": [25, 30, 40, 50, 55, 65, 80] },
+        { "depth_ft": 3000,  "values": [25, 35, 45, 55, 65, 75, 95] },
+        { "depth_ft": 4000,  "values": [25, 40, 50, 65, 75, 85, 110] },
+        { "depth_ft": 5000,  "values": [30, 45, 55, 70, 85, 95, 130] },
+        { "depth_ft": 6000,  "values": [30, 50, 60, 80, 90, 105, null] },
+        { "depth_ft": 7000,  "values": [35, 55, 65, 85, 100, 115, null] },
+        { "depth_ft": 8000,  "values": [35, 60, 70, 90, 110, 125, null] },
+        { "depth_ft": 9000,  "values": [40, 60, 75, 100, 115, 130, null] },
+        { "depth_ft": 10000, "values": [40, 65, 80, 105, 125, null, null] },
+        { "depth_ft": 12000, "values": [45, 70, 90, 115, null, null, null] },
+        { "depth_ft": 14000, "values": [50, 75, 95, null, null, null, null] }
+      ]
+    },
+    "openHole": {
+      "description": "NM cement sack requirements for open hole - 100% excess factor (flat, not depth-based)",
+      "excess_factor": 1.00,
+      "min_sacks": 25,
+      "diameters": ["6.75", "7.875", "8.75", "11", "12.25"],
+      "data": [
+        { "depth_ft": 1000,  "values": [40, 50, 55, 70, 80] },
+        { "depth_ft": 2000,  "values": [40, 50, 60, 75, 90] },
+        { "depth_ft": 3000,  "values": [40, 55, 65, 80, 100] },
+        { "depth_ft": 4000,  "values": [45, 55, 65, 90, 110] },
+        { "depth_ft": 5000,  "values": [45, 60, 70, 95, 115] },
+        { "depth_ft": 6000,  "values": [45, 60, 75, 100, null] },
+        { "depth_ft": 7000,  "values": [50, 65, 80, null, null] },
+        { "depth_ft": 8000,  "values": [50, 70, 85, null, null] },
+        { "depth_ft": 9000,  "values": [55, 70, 90, null, null] },
+        { "depth_ft": 10000, "values": [60, 75, 95, null, null] },
+        { "depth_ft": 12000, "values": [65, 85, 105, null, null] },
+        { "depth_ft": 14000, "values": [70, 90, null, null, null] }
+      ]
+    }
+  },
+  "specialRequirements": {
+    "woc_time": {
+      "minimum_hours": 4,
+      "recommended_hours": 8,
+      "description": "Minimum 4 hours wait-on-cement before any disturbance. Recommend 8 hours or until 500 psi compressive strength achieved."
+    },
+    "max_plug_spacing": {
+      "cased_hole_ft": 3000,
+      "open_hole_ft": 2000,
+      "description": "Plugs must be set at intervals not exceeding 3000 ft (cased) or 2000 ft (open hole) per NMAC 19.15.25."
+    },
+    "formation_isolation": {
+      "required": true,
+      "description": "Formation isolation is mandatory for every NM well. All productive horizons and usable quality water zones must be isolated."
+    },
+    "surface_casing": {
+      "required": true,
+      "pull_allowed": false,
+      "description": "Surface casing may not be removed from a well at abandonment per NMAC 19.15.25."
+    },
+    "deep_well_notes": {
+      "description": "Delaware Basin wells frequently exceed 10,000 ft. Class H cement required at and below 6,500 ft. Verify additional sack requirements for extra-deep Delaware formations (14,000+ ft)."
+    }
+  }
+}

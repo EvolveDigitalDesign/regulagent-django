@@ -16,6 +16,7 @@ This is the main entry point that pnaexchange will call.
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
 import logging
+import os
 
 from apps.public_core.models.w3_event import CasingStringState, W3Form
 from apps.public_core.services.w3_extraction import extract_w3a_from_pdf, load_w3a_form
@@ -23,13 +24,15 @@ from apps.public_core.services.w3_casing_engine import initialize_casing_state
 from apps.public_core.services.w3_mapper import map_pna_events_to_w3events, validate_event_inputs
 from apps.public_core.services.w3_formatter import build_w3_form
 from apps.public_core.services.w3_utils import normalize_api_number
+from apps.public_core.services.w3_pdf_generator import generate_w3_pdf
 
 logger = logging.getLogger(__name__)
 
 
 def build_w3_from_pna_payload(
     pna_payload: Dict[str, Any],
-    request=None
+    request=None,
+    generate_pdf: bool = True
 ) -> Dict[str, Any]:
     """
     Main entry point: Build W-3 form from pnaexchange payload.
@@ -199,6 +202,29 @@ def build_w3_from_pna_payload(
             logger.error(f"❌ Form building failed: {e}", exc_info=True)
             raise ValueError(f"Cannot build W-3 form: {e}")
         
+        # ============================================================
+        # STEP 5b: Generate PDF (optional)
+        # ============================================================
+        if generate_pdf:
+            logger.info("\n🖨️ STEP 5b: Generating W-3 PDF...")
+            try:
+                w3_form_dict = {
+                    "header": w3_form.header,
+                    "plugs": w3_form.plugs,
+                    "casing_record": w3_form.casing_record,
+                    "perforations": w3_form.perforations,
+                    "duqw": w3_form.duqw,
+                    "remarks": w3_form.remarks,
+                }
+                pdf_result = generate_w3_pdf(w3_form_dict)
+                filename = os.path.basename(pdf_result["temp_path"])
+                w3_form.pdf_url = f"/media/temp_pdfs/{filename}"
+                logger.info(f"✅ PDF generated: {w3_form.pdf_url}")
+            except Exception as pdf_err:
+                msg = f"PDF generation failed (non-fatal): {pdf_err}"
+                logger.warning(msg)
+                warnings.append(msg)
+
         # ============================================================
         # STEP 6: Build response
         # ============================================================

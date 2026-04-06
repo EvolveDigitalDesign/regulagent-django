@@ -125,9 +125,9 @@ class W3AReference(serializers.Serializer):
     """Reference to W-3A form (either database or PDF upload)."""
     
     type = serializers.ChoiceField(
-        choices=["regulagent", "pdf"],
+        choices=["regulagent", "pdf", "auto"],
         required=True,
-        help_text="'regulagent' to load from database, 'pdf' to upload/base64"
+        help_text="'regulagent' to load from database, 'pdf' to upload/base64, 'auto' to auto-generate from RRC data"
     )
     
     w3a_id = serializers.IntegerField(
@@ -177,53 +177,60 @@ class W3AReference(serializers.Serializer):
                     f"Either 'w3a_file' (multipart) or 'w3a_file_base64' (JSON) is required when type='pdf'. Got keys: {available_keys}"
                 )
         
+        if ref_type == "auto":
+            # Auto mode doesn't require any additional fields
+            # The system will automatically generate W-3A from RRC data
+            pass
+        
         return data
 
 
 class BuildW3FromPNARequestSerializer(serializers.Serializer):
     """Request payload for POST /api/w3/build-from-pna/"""
-    
+
     subproject_id = serializers.IntegerField(
         required=False,
         allow_null=True,
         help_text="Subproject ID (RegulAgent identifier for this W-3 run)"
     )
-    
+
     dwr_id = serializers.IntegerField(
         required=False,
         allow_null=True,
         help_text="Deprecated (was previously subproject ID). Provided for backwards compatibility."
     )
-    
+
     api_number = serializers.CharField(
         required=True,
         max_length=20,
         help_text="RRC API number (10-digit format, e.g., '42-501-70575' - will be normalized to 8-digit and attached to all events)"
     )
-    
+
     well_name = serializers.CharField(
         required=False,
         allow_blank=True,
         max_length=500,
         help_text="Well name/lease name"
     )
-    
+
     w3a_reference = W3AReference(
         required=True,
         help_text="Reference to W-3A form"
     )
-    
+
     pna_events = PNAEventSerializer(
         many=True,
         required=True,
         help_text="List of operational events from pnaexchange"
     )
-    
+
     tenant_id = serializers.IntegerField(
         required=False,
         allow_null=True,
         help_text="Multi-tenant support: tenant ID"
     )
+
+    workspace_id = serializers.IntegerField(required=False, allow_null=True)
     
     def validate(self, data):
         """
@@ -279,8 +286,8 @@ class CasingRowSerializer(serializers.Serializer):
 class PerforationRowSerializer(serializers.Serializer):
     """Single perforation/open hole interval in output."""
     
-    interval_top_ft = serializers.FloatField()
-    interval_bottom_ft = serializers.FloatField()
+    interval_top_ft = serializers.FloatField(allow_null=True)
+    interval_bottom_ft = serializers.FloatField(allow_null=True)
     formation = serializers.CharField(allow_null=True, allow_blank=True)
     status = serializers.CharField(max_length=50)
     perforation_date = serializers.DateField(allow_null=True)

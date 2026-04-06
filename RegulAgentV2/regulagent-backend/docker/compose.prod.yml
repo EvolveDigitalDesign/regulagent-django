@@ -41,7 +41,7 @@ services:
       -b 0.0.0.0:8000
       --workers ${WEB_WORKERS:-2}
       --threads ${WEB_THREADS:-4}
-      --timeout 60
+      --timeout 300
     # For local staging, expose 8000; in AWS, use ALB target group instead.
     ports:
       - "8000:8000"
@@ -57,6 +57,8 @@ services:
       redis:
         condition: service_healthy
     restart: always
+    volumes:
+      - media_data:/app/ra_config/mediafiles
 
   celery:
     build:
@@ -80,6 +82,8 @@ services:
       redis:
         condition: service_healthy
     restart: always
+    volumes:
+      - media_data:/app/ra_config/mediafiles
 
   beat:
     build:
@@ -104,6 +108,7 @@ services:
 
 volumes:
   redis_data:
+  media_data:
 
 # Cost notes:
 # - Start with t4g.medium (or similar) for ECS tasks and scale via CPU/Memory utilization. Keep WEB_WORKERS low.

@@ -172,6 +172,131 @@ def _extract_coordinates_with_fallback(
                     return {'lat': lat_float, 'lon': lon_float}
             except (ValueError, TypeError):
                 continue
-    
+
     return None
 
+
+def enrich_from_structured_scrapers(well: WellRegistry) -> bool:
+    """
+    Enrich WellRegistry from structured RRC web scrapers.
+    Calls wellbore query and lease detail scrapers, merges results.
+    Does NOT overwrite fields that already have values.
+
+    Returns:
+        True if any fields were updated, False otherwise.
+    """
+    merged: Dict[str, Any] = {}
+
+    # Wellbore Query scraper
+    try:
+        from apps.public_core.services.rrc_wellbore_scraper import scrape_wellbore_data
+        wb_data = scrape_wellbore_data(well.api14)
+        if wb_data:
+            merged.update(wb_data)
+            logger.info(f"[StructuredEnrich] Wellbore data for {well.api14}: {list(wb_data.keys())}")
+    except Exception as e:
+        logger.warning(f"[StructuredEnrich] Wellbore scraper failed for {well.api14}: {e}")
+
+    # Lease Detail scraper
+    try:
+        from apps.public_core.services.rrc_lease_scraper import scrape_lease_data
+        lease_data = scrape_lease_data(well.api14)
+        if lease_data:
+            # Don't overwrite wellbore data with lease data
+            for k, v in lease_data.items():
+                if k not in merged or not merged[k]:
+                    merged[k] = v
+            logger.info(f"[StructuredEnrich] Lease data for {well.api14}: {list(lease_data.keys())}")
+    except Exception as e:
+        logger.warning(f"[StructuredEnrich] Lease scraper failed for {well.api14}: {e}")
+
+    if not merged:
+        return False
+
+    updated = False
+
+    # Apply to WellRegistry — only fill empty fields
+    if not well.operator_name and merged.get("operator_name"):
+        well.operator_name = merged["operator_name"][:128]
+        updated = True
+
+    if not well.field_name and merged.get("field_name"):
+        well.field_name = merged["field_name"][:128]
+        updated = True
+
+    if not well.lease_name and merged.get("lease_name"):
+        well.lease_name = merged["lease_name"][:128]
+        updated = True
+
+    if not well.county and merged.get("county"):
+        well.county = merged["county"][:64]
+        updated = True
+
+    if not well.district and merged.get("district"):
+        well.district = merged["district"][:32]
+        updated = True
+
+    if updated:
+        well.save()
+        logger.info(f"[StructuredEnrich] Saved enriched WellRegistry for {well.api14}")
+
+    return updated
+
+
+def build_lease_well_map(lease_id: str, state: str = "TX") -> dict:
+    """
+    Build a {well_number: api14} mapping for all wells on a lease.
+
+    Sources (in order):
+    1. WellRegistry records with this lease_id (already populated by triage/enrichment)
+    2. RRC Lease Detail scraper (fills gaps for wells not yet in registry)
+
+    Args:
+        lease_id: The lease identifier (e.g., RRC lease number)
+        state: State code (TX, NM)
+
+    Returns:
+        Dict mapping normalized well_number (stripped leading zeros) to api14.
+        Example: {"1": "42003356630000", "2": "42003356640000"}
+    """
+    from apps.public_core.models import WellRegistry
+
+    well_map = {}
+
+    # 1. Pull from existing WellRegistry records
+    registry_wells = WellRegistry.objects.filter(lease_id=lease_id).exclude(
+        well_number__isnull=True
+    ).exclude(well_number="")
+
+    for w in registry_wells:
+        normalized = w.well_number.strip().lstrip("0")
+        if normalized and w.api14:
+            well_map[normalized] = w.api14
+
+    # 2. Cross-reference with NeubusDocument metadata
+    # Neubus stores well_number per document from its own metadata — often more
+    # complete than WellRegistry. Group by (well_number, api_number on linked EDs)
+    # to discover mappings.
+    if lease_id:
+        try:
+            from apps.public_core.models.neubus_lease import NeubusLease, NeubusDocument
+            neubus_lease = NeubusLease.objects.filter(lease_id=lease_id).first()
+            if neubus_lease:
+                neubus_docs = neubus_lease.documents.exclude(
+                    well_number=""
+                ).values_list("well_number", flat=True).distinct()
+                for wn in neubus_docs:
+                    normalized = str(wn).strip().lstrip("0")
+                    if normalized and normalized not in well_map:
+                        # Try to find a WellRegistry match for this well_number on the lease
+                        match = WellRegistry.objects.filter(
+                            lease_id=lease_id,
+                            well_number__iexact=normalized,
+                        ).first()
+                        if match and match.api14:
+                            well_map[normalized] = match.api14
+        except Exception as e:
+            logger.warning(f"Neubus cross-reference failed for lease {lease_id}: {e}")
+
+    logger.info(f"Built lease-well map for lease {lease_id}: {len(well_map)} wells")
+    return well_map

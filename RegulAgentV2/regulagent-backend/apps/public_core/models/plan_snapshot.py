@@ -64,7 +64,14 @@ class PlanSnapshot(models.Model):
         (STATUS_WITHDRAWN, 'Withdrawn - Filing withdrawn'),
     ]
 
-    well = models.ForeignKey(WellRegistry, on_delete=models.CASCADE, related_name="plan_snapshots")
+    well = models.ForeignKey(
+        WellRegistry,
+        on_delete=models.CASCADE,
+        related_name="plan_snapshots",
+        null=True,
+        blank=True,
+        help_text="Well this plan belongs to. Null when the well record cannot be matched at import time.",
+    )
     plan_id = models.CharField(max_length=64, db_index=True)
     kind = models.CharField(max_length=16, choices=KIND_CHOICES, db_index=True)
 
@@ -83,7 +90,16 @@ class PlanSnapshot(models.Model):
         db_index=True,
         help_text="Tenant who created this snapshot (null for RRC-baseline plans)"
     )
-    
+
+    workspace = models.ForeignKey(
+        'tenants.ClientWorkspace',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='plan_snapshots',
+        db_index=True,
+        help_text="Workspace this plan belongs to (null = visible in all workspaces)"
+    )
+
     visibility = models.CharField(
         max_length=10,
         choices=VISIBILITY_CHOICES,
@@ -113,6 +129,8 @@ class PlanSnapshot(models.Model):
             models.Index(fields=["created_at"]),
             models.Index(fields=["tenant_id", "visibility"]),
             models.Index(fields=["visibility", "kind"]),
+            models.Index(fields=["workspace"]),
+            models.Index(fields=["tenant_id", "workspace"]),
         ]
 
     def __str__(self) -> str:  # pragma: no cover

@@ -1,0 +1,74 @@
+{
+  "header": "RAILROAD COMMISSION OF TEXAS Form W-15 Cementing Report Rev. 4/1/83",
+  "operator_info": {
+    "name": "Royalty Land & Dev Co.",
+    "address": "P.O. Box 87, Wolfforth, TX 79382",
+    "operator_number": null
+  },
+  "well_info": {
+    "api": "42-173-34916",
+    "district": "7C",
+    "county": "Glasscock",
+    "field": "Spraberry (Trend Area)",
+    "lease": "Doralee",
+    "well_no": null,
+    "location": {
+      "lat": null,
+      "lon": null
+    }
+  },
+  "cementing_data": [
+    {
+      "job": "surface",
+      "interval_top_ft": null,
+      "interval_bottom_ft": 8064,
+      "cement_top_ft": 0,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": 900,
+      "additives": [
+        "10% Gel",
+        "5% Salt",
+        "1/4#/Sk Celloflake"
+      ]
+    },
+    {
+      "job": "surface",
+      "interval_top_ft": null,
+      "interval_bottom_ft": 8064,
+      "cement_top_ft": 0,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": 200,
+      "additives": [
+        "1% CaCI2"
+      ]
+    }
+  ],
+  "mechanical_equipment": [],
+  "cement_tops_per_string": [
+    {
+      "string": "surface",
+      "cement_top_ft": 0,
+      "cement_returns": "full"
+    }
+  ],
+  "cementing_to_squeeze": [],
+  "certifications": {
+    "cementer": {
+      "name": "Ron Gundy",
+      "company": "O-TEX PUMPING SERVICES",
+      "address": "2611 East I-20, Midland, Texas 79706",
+      "phone": "432-686-8559",
+      "date": "6/15/2012"
+    },
+    "operator": {
+      "name": "Michael B. Doe",
+      "title": "President",
+      "address": "P.O. Box 87, Wolfforth, TX 79382",
+      "phone": "806-789-7727",
+      "date": "6/15/2012"
+    }
+  },
+  "instructions_section": "Operators and cementing companies must comply with the requirements of the Commission's Statewide rules 8 (Water Protection), 13 (Casing, Cementing, Drilling, and Completion, and 14 (Well Plugging)."
+}

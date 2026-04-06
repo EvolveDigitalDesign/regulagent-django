@@ -10,6 +10,9 @@ from celery import shared_task
 from django.utils import timezone
 from typing import Dict, Any
 
+from apps.tenants.context import set_current_tenant
+from apps.tenants.models import Tenant
+
 logger = logging.getLogger(__name__)
 
 
@@ -60,7 +63,10 @@ def process_chat_message_async(
         ).get(id=thread_id)
         
         user_message = ChatMessage.objects.get(id=user_message_id)
-        
+
+        tenant = Tenant.objects.get(id=thread.tenant_id)
+        set_current_tenant(tenant)
+
         logger.info(
             f"[Task] Processing chat message {user_message_id} in thread {thread_id}"
         )

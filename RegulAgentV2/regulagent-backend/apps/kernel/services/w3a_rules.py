@@ -1,9 +1,518 @@
 from typing import Any, Dict, List, Tuple, Optional
 import logging
+import os
+import sys
 
 logger = logging.getLogger(__name__)
 
+# Import formula engine for jurisdiction-specific calculations
+from apps.policy.services.formula_engine import RegulatoryFormulas
+
 from .violations import VCodes, MAJOR, make_violation
+
+# Import Redbook pipe spec lookup for accurate ID resolution
+# Add materials directory to path for import
+MATERIALS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "materials", "services")
+if MATERIALS_DIR not in sys.path:
+    sys.path.insert(0, MATERIALS_DIR)
+
+try:
+    from capacity_calculator import get_pipe_spec
+except ImportError:
+    # Fallback if import fails (should not happen in production)
+    logger.warning("⚠️  Could not import get_pipe_spec from capacity_calculator - using fallback ID lookup")
+    def get_pipe_spec(od_inch, weight_lbft=None):
+        """Fallback function if capacity_calculator import fails"""
+        raise ImportError("capacity_calculator not available")
+
+
+def casing_capacity_bbl_per_ft(casing_id_in: float) -> float:
+    """
+    Calculate casing capacity (full bore) in barrels per foot.
+    Used when tubing is removed and cement fills the entire casing bore.
+    
+    Formula: (casing_id^2 / 1029.4)
+    where 1029.4 is a conversion constant (contains π and unit conversions)
+    """
+    if casing_id_in is None:
+        return 0.0
+    try:
+        casing_id = float(casing_id_in)
+        if casing_id <= 0:
+            return 0.0
+        return (casing_id ** 2) / 1029.4
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def annulus_capacity_bbl_per_ft(outer_id_in: float, inner_id_in: float) -> float:
+    """
+    Calculate annular capacity in barrels per foot.
+    
+    Formula: ((outer_id^2 - inner_id^2) / 1029.4)
+    where 1029.4 is a conversion constant (contains π and unit conversions)
+    """
+    if outer_id_in is None or inner_id_in is None:
+        return 0.0
+    try:
+        outer = float(outer_id_in)
+        inner = float(inner_id_in)
+        if outer <= inner:
+            return 0.0
+        return ((outer ** 2) - (inner ** 2)) / 1029.4
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def _get_active_casing_stack(facts: Dict[str, Any], target_depth_ft: float) -> List[Dict[str, Any]]:
+    """
+    Get all casing strings active (present) at target_depth_ft, ordered innermost to outermost.
+    
+    Active = casing whose bottom_ft > target_depth_ft (casing extends to or past target depth).
+    
+    For each active casing, determine cement status:
+    - cement_top_ft == 0: "fully_cemented" (cemented from bottom to surface)
+    - cement_top_ft is None: "uncmented" (no cement placed)
+    - cement_top_ft > target_depth_ft: "uncmented" (cement above target depth)
+    - 0 < cement_top_ft <= target_depth_ft: "cemented" (cement at/below target depth)
+    
+    Returns: List of casing dicts ordered innermost to outermost, with cement_status added
+    """
+    try:
+        casing_record = facts.get("casing_record", [])
+        if not isinstance(casing_record, list):
+            logger.warning(f"⚠️  casing_record is not a list")
+            return []
+        
+        # Filter to active casings (those that extend to target depth)
+        active = []
+        for casing in casing_record:
+            if not isinstance(casing, dict):
+                continue
+            
+            try:
+                bottom = float(casing.get("bottom_ft") or casing.get("shoe_depth_ft") or casing.get("setting_depth_ft") or 0)
+            except (ValueError, TypeError):
+                continue
+            
+            # Only include casings that extend to target depth
+            if bottom <= target_depth_ft:
+                continue
+            
+            # Determine cement status
+            cement_top = casing.get("cement_top_ft")
+            if cement_top == 0:
+                cement_status = "fully_cemented"
+            elif cement_top is None or cement_top == "":
+                cement_status = "uncmented"
+            else:
+                try:
+                    cement_top_val = float(cement_top)
+                    if cement_top_val > target_depth_ft:
+                        cement_status = "uncmented"  # Cement above target
+                    else:
+                        cement_status = "cemented"  # Cement at/below target
+                except (ValueError, TypeError):
+                    cement_status = "unknown"
+            
+            # Extract sizes, IDs, and weight
+            size_od = casing.get("size_in")
+            hole_size = casing.get("hole_size_in")
+            weight_per_ft = casing.get("weight_per_ft")
+            
+            try:
+                size_od = float(size_od) if size_od is not None else None
+                hole_size = float(hole_size) if hole_size is not None else None
+                weight_per_ft = float(weight_per_ft) if weight_per_ft is not None else None
+            except (ValueError, TypeError):
+                size_od = None
+                hole_size = None
+                weight_per_ft = None
+            
+            # Map OD to accurate ID using Redbook (with weight if available)
+            id_in = _get_nominal_id_from_od(size_od, weight_per_ft)
+            
+            # Determine casing name from size or string field
+            string_name = str(casing.get("string", "") or "").lower().strip()
+            if "production" in string_name:
+                name = "production"
+            elif "intermediate" in string_name:
+                name = "intermediate"
+            elif "surface" in string_name:
+                name = "surface"
+            elif "liner" in string_name:
+                name = "liner"
+            else:
+                name = f"casing_{size_od}"
+            
+            active.append({
+                "name": name,
+                "size_od_in": size_od,
+                "id_in": id_in,
+                "bottom_ft": bottom,
+                "hole_size_in": hole_size,
+                "cement_top_ft": cement_top,
+                "cement_status": cement_status,
+            })
+        
+        # Sort by size (production < intermediate < surface) or by bottom depth
+        # Smallest OD first = innermost casing
+        active.sort(key=lambda c: (c.get("size_od_in") or 0))
+        
+        logger.info(f"🔧 Active casing stack at {target_depth_ft} ft: {[c['name'] for c in active]}, statuses: {[c['cement_status'] for c in active]}")
+        return active
+    
+    except Exception as e:
+        logger.exception(f"Failed to get active casing stack: {e}")
+        return []
+
+
+def _get_nominal_id_from_od(od_in: Optional[float], weight_lbft: Optional[float] = None) -> Optional[float]:
+    """
+    Get accurate casing ID from Redbook database based on OD and optional weight.
+    
+    Args:
+        od_in: Outer diameter in inches
+        weight_lbft: Linear weight in lb/ft (optional - defaults to lightest if not provided)
+    
+    Returns:
+        Inner diameter in inches from Redbook, or None if not found
+    """
+    if od_in is None:
+        return None
+    
+    try:
+        od = float(od_in)
+        weight = float(weight_lbft) if weight_lbft is not None else None
+        
+        # Try Redbook lookup first (most accurate)
+        try:
+            pipe_spec = get_pipe_spec(od, weight)
+            id_in = pipe_spec.get("in_dia")
+            logger.debug(f"✅ Redbook lookup: {od}\" OD @ {weight or 'lightest'} lb/ft → {id_in}\" ID")
+            return id_in
+        except Exception as e:
+            logger.warning(f"⚠️  Redbook lookup failed for OD={od}\", weight={weight}: {e}")
+            
+            # Fallback: hardcoded lookup table (less accurate, but prevents failures)
+            NOMINAL_ID = {
+                13.375: 12.515,  # 13 3/8" surface
+                11.75: 10.965,   # 11 3/4" intermediate
+                9.625: 8.681,    # 9 5/8" intermediate (47 lb/ft)
+                8.625: 7.921,    # 8 5/8" production
+                7.0: 6.094,      # 7" production
+                5.5: 4.778,      # 5 1/2" production (17 lb/ft)
+            }
+            
+            if od in NOMINAL_ID:
+                logger.info(f"⚠️  Using fallback ID for {od}\" → {NOMINAL_ID[od]}\"")
+                return NOMINAL_ID[od]
+            
+            # Check for close matches
+            for key in NOMINAL_ID.keys():
+                if abs(od - key) < 0.05:
+                    logger.info(f"⚠️  Using fallback ID for {od}\" (matched {key}\") → {NOMINAL_ID[key]}\"")
+                    return NOMINAL_ID[key]
+            
+            return None
+    except (ValueError, TypeError) as e:
+        logger.warning(f"⚠️  Invalid OD or weight: od={od_in}, weight={weight_lbft}: {e}")
+        return None
+
+
+def _get_uncmented_annuli(facts: Dict[str, Any], target_depth_ft: float) -> List[Dict[str, Any]]:
+    """
+    Get all uncmented annuli at target_depth_ft.
+    
+    An annulus between two casings is "uncmented" if:
+    - The inner casing has uncmented status at target depth, OR
+    - The outer casing (or openhole) has uncmented status at target depth
+    
+    Returns: List of annuli dicts with inner/outer casing info and cement status
+    """
+    try:
+        active_stack = _get_active_casing_stack(facts, target_depth_ft)
+        if not active_stack:
+            logger.warning(f"⚠️  No active casings at {target_depth_ft} ft")
+            return []
+        
+        uncmented_annuli = []
+        
+        # Build annuli from innermost outward
+        for i in range(len(active_stack)):
+            inner_casing = active_stack[i]
+            
+            # Determine outer casing or openhole
+            if i + 1 < len(active_stack):
+                outer_casing = active_stack[i + 1]
+            else:
+                # Last casing: outer boundary is openhole
+                outer_casing = None
+            
+            # CRITICAL: Annulus cement status is determined by the INNER casing only
+            # Cement is pumped down the casing and up the annulus during cementing
+            # If the inner casing is cemented, the annulus is cemented (cement can't flow through cemented annuli)
+            inner_status = inner_casing.get("cement_status")
+            annulus_is_cemented = inner_status in ("cemented", "fully_cemented")
+            
+            # Only include UNcemented annuli (where cement can flow)
+            if not annulus_is_cemented:
+                if outer_casing:
+                    annulus = {
+                        "inner_casing": inner_casing.get("name"),
+                        "inner_od_in": inner_casing.get("size_od_in"),  # Use OD for annulus calculation
+                        "inner_id_in": inner_casing.get("id_in"),        # Keep ID for reference
+                        "outer_casing": outer_casing.get("name"),
+                        "outer_id_in": outer_casing.get("id_in"),        # Outer casing ID is correct
+                        "inner_cement_status": inner_status,
+                        "outer_cement_status": outer_casing.get("cement_status"),
+                    }
+                else:
+                    # Openhole case
+                    hole_size_in = inner_casing.get("hole_size_in")
+                    annulus = {
+                        "inner_casing": inner_casing.get("name"),
+                        "inner_od_in": inner_casing.get("size_od_in"),  # Use OD for annulus calculation
+                        "inner_id_in": inner_casing.get("id_in"),        # Keep ID for reference
+                        "outer_casing": "openhole",
+                        "outer_id_in": hole_size_in,                     # Hole size is correct
+                        "inner_cement_status": inner_status,
+                        "outer_cement_status": "none",
+                    }
+                
+                uncmented_annuli.append(annulus)
+                logger.info(f"   Uncmented annulus: {annulus['inner_casing']} ({annulus['inner_od_in']}\" OD) to {annulus['outer_casing']} ({annulus['outer_id_in']}\" ID/Hole)")
+            else:
+                # Skip cemented annuli (cement cannot flow through existing cement)
+                outer_name = outer_casing.get('name') if outer_casing else 'openhole'
+                logger.info(f"   Skipping cemented annulus: {inner_casing.get('name')} to {outer_name} (inner casing is {inner_status})")
+        
+        logger.info(f"🔧 Found {len(uncmented_annuli)} uncmented annuli at {target_depth_ft} ft")
+        return uncmented_annuli
+    
+    except Exception as e:
+        logger.exception(f"Failed to get uncmented annuli: {e}")
+        return []
+
+
+def _calculate_perf_squeeze_volume(
+    facts: Dict[str, Any],
+    target_depth_ft: float,
+    interval_length_ft: float,
+    formula_engine: RegulatoryFormulas
+) -> Tuple[float, List[Dict[str, Any]]]:
+    """
+    Calculate total volume needed to fill all uncmented annuli via perf & squeeze.
+    
+    Process:
+    1. Get uncmented annuli at target depth
+    2. For each annulus: volume = interval_length × annulus_capacity_bbl_per_ft
+    3. Add INSIDE casing volume (the cement plug column itself)
+    4. Sum all volumes
+    5. Apply Texas depth excess: 1.0 + (0.10 × depth_in_kft)
+    
+    Returns: (total_bbl, annuli_breakdown)
+    """
+    try:
+        print("="*80)
+        print(f"🔧 PERF & SQUEEZE CALCULATION")
+        print(f"   Target depth: {target_depth_ft} ft")
+        print(f"   Interval length: {interval_length_ft} ft")
+        print("="*80)
+        
+        uncmented_annuli = _get_uncmented_annuli(facts, target_depth_ft)
+        if not uncmented_annuli:
+            print(f"⚠️  No uncmented annuli at {target_depth_ft} ft; returning 0 volume")
+            return (0.0, [])
+        
+        # Get the innermost casing (usually production) to calculate inside volume
+        active_stack = _get_active_casing_stack(facts, target_depth_ft)
+        innermost_casing = active_stack[0] if active_stack else None
+        
+        print(f"📋 SPACES TO FILL:")
+        print(f"   • {len(uncmented_annuli)} annuli (all uncmented)")
+        if innermost_casing:
+            print(f"   • Inside {innermost_casing['name']} casing (plug column)")
+        
+        total_bbl = 0.0
+        annuli_breakdown = []
+        
+        # Calculate volume for each annulus
+        for idx, annulus in enumerate(uncmented_annuli, 1):
+            inner_od = annulus.get("inner_od_in")  # Use OD for annulus calculation
+            outer_id = annulus.get("outer_id_in")
+            
+            if inner_od is None or outer_id is None:
+                print(f"⚠️  Missing dimensions for annulus {annulus['inner_casing']}-{annulus['outer_casing']}")
+                continue
+            
+            try:
+                inner_od = float(inner_od)
+                outer_id = float(outer_id)
+            except (ValueError, TypeError):
+                continue
+            
+            # Skip invalid annuli (outer <= inner)
+            if outer_id <= inner_od:
+                print(f"⚠️  Invalid annulus: outer_id={outer_id} <= inner_od={inner_od}")
+                continue
+            
+            # Calculate base volume (annulus between inner casing OD and outer casing ID/hole)
+            cap_bbl_per_ft = annulus_capacity_bbl_per_ft(outer_id, inner_od)
+            base_bbl = interval_length_ft * cap_bbl_per_ft
+            
+            annuli_breakdown.append({
+                "inner": annulus["inner_casing"],
+                "outer": annulus["outer_casing"],
+                "inner_od_in": inner_od,
+                "outer_id_in": outer_id,
+                "capacity_bbl_per_ft": cap_bbl_per_ft,
+                "interval_length_ft": interval_length_ft,
+                "base_volume_bbl": base_bbl,
+            })
+            
+            total_bbl += base_bbl
+            print(f"")
+            print(f"   ANNULUS {idx}: {annulus['inner_casing']} TO {annulus['outer_casing']}")
+            print(f"      Inner OD: {inner_od:.3f}\" | Outer ID/Hole: {outer_id:.3f}\"")
+            print(f"      Capacity: {cap_bbl_per_ft:.6f} bbl/ft")
+            print(f"      Length: {interval_length_ft} ft")
+            print(f"      Base volume: {base_bbl:.2f} bbl")
+        
+        # Add INSIDE casing volume (the cement plug column)
+        inside_bbl = 0.0
+        if innermost_casing:
+            innermost_id = innermost_casing.get("id_in")
+            if innermost_id:
+                try:
+                    innermost_id = float(innermost_id)
+                    # Inside capacity: area of circle with diameter = ID
+                    # Convert: in² → ft² (÷144) → ft³/ft (×1) → bbl/ft (÷5.614)
+                    # Combined constant: 144 × 5.614 = 808.416
+                    inside_cap_bbl_per_ft = (3.14159 * (innermost_id ** 2) / 4) / 808.416  # Convert in² to bbl/ft
+                    inside_bbl = interval_length_ft * inside_cap_bbl_per_ft
+                    total_bbl += inside_bbl
+                    
+                    print(f"")
+                    print(f"   INSIDE CASING: {innermost_casing['name']}")
+                    print(f"      Casing ID: {innermost_id:.3f}\"")
+                    print(f"      Capacity: {inside_cap_bbl_per_ft:.6f} bbl/ft")
+                    print(f"      Length: {interval_length_ft} ft")
+                    print(f"      Base volume: {inside_bbl:.2f} bbl")
+                except (ValueError, TypeError):
+                    print(f"⚠️  Could not calculate inside volume: invalid ID")
+        
+        print(f"")
+        print(f"   ─────────────────────────────────────────────────")
+        print(f"   Subtotal (annuli): {total_bbl - inside_bbl:.2f} bbl")
+        print(f"   Subtotal (inside): {inside_bbl:.2f} bbl")
+        print(f"   Subtotal (total):  {total_bbl:.2f} bbl")
+
+        # Apply jurisdiction-specific depth excess multiplier
+        # NOTE: NO squeeze factor for perf & squeeze - only depth excess
+        depth_excess_multiplier = formula_engine.cement_depth_excess(target_depth_ft)
+        total_bbl = total_bbl * depth_excess_multiplier
+
+        depth_kft = target_depth_ft / 1000.0  # Keep for display
+        print(f"   × Depth excess ({formula_engine.jurisdiction}): {depth_excess_multiplier:.4f}x (+{(depth_excess_multiplier-1)*100:.1f}% @ {depth_kft:.2f} kft) → {total_bbl:.2f} bbl")
+        print(f"   ═════════════════════════════════════════════════")
+        print(f"   ✓ TOTAL VOLUME: {total_bbl:.2f} bbl")
+        print("="*80)
+        
+        return (total_bbl, annuli_breakdown)
+    
+    except Exception as e:
+        logger.exception(f"Failed to calculate perf & squeeze volume: {e}")
+        return (0.0, [])
+
+
+def _get_perforation_casings(facts: Dict[str, Any], target_depth_ft: float) -> List[str]:
+    """
+    Determine which casings must be perforated to reach all uncmented annuli.
+    
+    Strategy: Perforate all active casings that have uncmented status.
+    
+    Returns: List of casing names to perforate, innermost to outermost
+    """
+    try:
+        active_stack = _get_active_casing_stack(facts, target_depth_ft)
+        perf_casings = []
+        
+        for casing in active_stack:
+            if casing.get("cement_status") == "uncmented":
+                perf_casings.append(casing.get("name"))
+                logger.info(f"   Will perforate: {casing['name']} casing")
+        
+        logger.info(f"🔧 Perforation casings: {perf_casings}")
+        return perf_casings
+    
+    except Exception as e:
+        logger.exception(f"Failed to get perforation casings: {e}")
+        return []
+
+
+def _determine_plug_type(
+    step: Dict[str, Any],
+    production_toc_ft: Optional[float],
+    is_perf_and_circ: bool = False
+) -> str:
+    """
+    Determine the mechanical plug TYPE based on step depth vs production TOC.
+    
+    PLUG TYPES (4 types only):
+    - "spot_plug" - cement INSIDE casing ONLY (used when BELOW production TOC)
+    - "perf_and_squeeze_plug" - perforate & squeeze behind pipe (used when ABOVE production TOC)
+    - "perf_and_circulate_plug" - perf & squeeze to surface (TAKES PRECEDENCE over perf & squeeze)
+    - "dumpbail_plug" - 3 sacks of cement on top of CIBP/retainer (special case)
+    
+    CONSTRAINT: Spot plugs and perf & squeeze plugs CANNOT be combined/merged.
+    
+    Args:
+        step: Step dict with 'top_ft', 'bottom_ft', 'type' (purpose), etc.
+        production_toc_ft: Production casing TOC depth (ft). If None, assumes perf & squeeze (conservative).
+        is_perf_and_circ: Force perf_and_circulate type (reaches surface)
+    
+    Returns:
+        Plug type string ("spot_plug", "perf_and_squeeze_plug", "perf_and_circulate_plug", "dumpbail_plug")
+    """
+    # Perf and circulate takes absolute precedence (reaches surface, special operation)
+    if is_perf_and_circ or step.get("type") == "perf_and_circulate_to_surface":
+        logger.debug(f"Plug type: PERF_AND_CIRCULATE (reaches surface)")
+        return "perf_and_circulate_plug"
+    
+    # Dumpbail plug is special (mechanical cap on CIBP/retainer, not independent)
+    if step.get("type") in ("cibp_cap", "bridge_plug_cap"):
+        logger.debug(f"Plug type: DUMBELL (mechanical cap on tool)")
+        return "dumpbail_plug"
+    
+    # Spot plug at surface (top plug)
+    if step.get("type") == "top_plug":
+        logger.debug(f"Plug type: SPOT (surface safety plug)")
+        return "spot_plug"
+    
+    # If no production TOC available, assume perf & squeeze (conservative/safe)
+    if production_toc_ft is None:
+        logger.warning(f"⚠️  No production TOC available; assuming perf_and_squeeze for safety")
+        return "perf_and_squeeze_plug"
+    
+    # Determine by depth comparison to production TOC
+    step_depth = step.get("bottom_ft") or step.get("top_ft") or 0
+    try:
+        step_depth_ft = float(step_depth)
+        production_toc = float(production_toc_ft)
+        
+        # ABOVE TOC (shallower) = must perforate & squeeze behind pipe
+        # BELOW TOC (deeper) = spot plug (cement inside casing only)
+        if step_depth_ft < production_toc:
+            logger.debug(f"Plug at {step_depth_ft:.1f} ft is ABOVE TOC ({production_toc:.1f} ft) → perf_and_squeeze_plug")
+            return "perf_and_squeeze_plug"
+        else:
+            logger.debug(f"Plug at {step_depth_ft:.1f} ft is BELOW TOC ({production_toc:.1f} ft) → spot_plug")
+            return "spot_plug"
+    
+    except (ValueError, TypeError):
+        logger.warning(f"Could not parse depths for plug type determination; defaulting to perf_and_squeeze")
+        return "perf_and_squeeze_plug"  # Conservative fallback
 
 
 def _get_casing_strings_at_depth(facts: Dict[str, Any], target_depth_ft: float) -> Dict[str, Any]:
@@ -33,29 +542,6 @@ def _get_casing_strings_at_depth(facts: Dict[str, Any], target_depth_ft: float) 
         "context": "open_hole"  # Default: no casing
     }
     
-    # Map OD to nominal ID for common casing sizes
-    NOMINAL_ID = {
-        13.375: 12.515,  # 13 3/8" intermediate
-        11.75: 10.965,   # 11 3/4" intermediate
-        9.625: 8.681,    # 9 5/8" intermediate (47 lb/ft)
-        8.625: 7.921,    # 8 5/8" production
-        7.0: 6.094,      # 7" production
-        5.5: 4.778       # 5 1/2" production
-    }
-    
-    def _get_id(od: float) -> Optional[float]:
-        """Get nominal ID from OD using lookup table with tolerance."""
-        if od in NOMINAL_ID:
-            return NOMINAL_ID[od]
-        for k, v in NOMINAL_ID.items():
-            if abs(od - k) < 0.02:
-                return v
-        # Fallback estimate: ID ≈ OD - 0.875" for intermediate, OD - 0.72" for production
-        if od >= 9.0:
-            return od - 0.875
-        else:
-            return od - 0.72
-    
     # Get casing strings from facts
     casing_strings = facts.get("casing_strings", [])
     if not isinstance(casing_strings, list):
@@ -75,9 +561,14 @@ def _get_casing_strings_at_depth(facts: Dict[str, Any], target_depth_ft: float) 
             # String extends to or below target depth
             if bottom >= target_depth_ft:
                 size_in = casing.get("size_in")
+                weight_per_ft = casing.get("weight_per_ft")
                 if size_in:
                     od = float(size_in)
-                    id_in = _get_id(od)
+                    weight = float(weight_per_ft) if weight_per_ft is not None else None
+                    
+                    # Get accurate ID from Redbook
+                    id_in = _get_nominal_id_from_od(od, weight)
+                    
                     strings_at_depth.append({
                         "name": string_type,
                         "size_in": od,
@@ -256,8 +747,8 @@ def _requires_perforation_at_depth(
             if not isinstance(perf, dict):
                 continue
             
-            perf_from = perf.get('from_ft')
-            perf_to = perf.get('to_ft')
+            perf_from = perf.get('from_ft') or perf.get('top_ft')
+            perf_to = perf.get('to_ft') or perf.get('bottom_ft')
             
             try:
                 perf_from = float(perf_from) if perf_from not in (None, '') else None
@@ -301,10 +792,21 @@ def _requires_perforation_at_depth(
     return True, reason, casing_context
 
 
-def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> Dict[str, Any]:
+def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any], formula_engine: RegulatoryFormulas) -> Dict[str, Any]:
     logger.critical(f"🚨🚨🚨 KERNEL GENERATE_STEPS CALLED - facts has annular_gaps: {bool(facts.get('annular_gaps'))}, count: {len(facts.get('annular_gaps', []))}")
+    logger.info(f"Using formula engine: {formula_engine.jurisdiction} ({formula_engine.__class__.__name__})")
     violations: List[Dict[str, Any]] = []
     steps: List[Dict[str, Any]] = []
+
+    # Extract production TOC for plug type determination (spot vs perf & squeeze)
+    prod_toc_val = facts.get('production_casing_toc_ft') or {}
+    production_toc_ft = prod_toc_val.get('value') if isinstance(prod_toc_val, dict) else prod_toc_val
+    try:
+        production_toc_ft = float(production_toc_ft) if production_toc_ft not in (None, "") else None
+    except (ValueError, TypeError):
+        production_toc_ft = None
+    
+    logger.info(f"🎯 GENERATE_STEPS: production_casing_toc_ft = {production_toc_ft} ft")
 
     req = (policy_effective or {}).get('requirements') or {}
 
@@ -321,16 +823,20 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
             "min_length_ft": float(shoe_min),
             "regulatory_basis": shoe_cites or ["tx.tac.16.3.14(e)(2)"],
             "geometry_context": "cased_production",
-            "placement_basis": "Surface casing shoe coverage ±50 ft",
+            "placement_basis": "Surface casing shoe coverage +50 ft shallower",
         }
         surf_shoe_val = (facts.get('surface_shoe_ft') or {})
         surf_shoe = surf_shoe_val.get('value') if isinstance(surf_shoe_val, dict) else surf_shoe_val
         try:
             if surf_shoe not in (None, ""):
                 c = float(surf_shoe)
-                half = float(shoe_min) / 2.0
-                shoe_step["top_ft"] = c + half
-                shoe_step["bottom_ft"] = c - half
+                plug_length = float(shoe_min)
+                # Placement: AT shoe (bottom_ft) and 50 ft shallower (top_ft)
+                shoe_step["bottom_ft"] = c  # At shoe depth
+                shoe_step["top_ft"] = c - plug_length  # Shallower (shoe - 50)
+                
+                # Determine plug type (spot vs perf & squeeze based on TOC)
+                shoe_step["plug_type"] = _determine_plug_type(shoe_step, production_toc_ft)
             else:
                 violations.append(make_violation(VCodes.SURFACE_SHOE_DEPTH_UNKNOWN, MAJOR, "surface_shoe_ft is required to place shoe plug"))
         except Exception:
@@ -388,13 +894,15 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
             # If present but short, top up only the remaining footage; else plan full requirement
             remaining = max(required_cap - (existing_cap_len_f if cap_present else 0.0), 0.0)
             if remaining > 0.0:
-                steps.append({
+                cibp_cap_step = {
                     "type": "cibp_cap",
                     "cap_length_ft": remaining,
                     "geometry_context": "cased_production",
                     "regulatory_basis": cibp_cites or ["tx.tac.16.3.14(g)(3)"],
-                })
-                logger.info("w3a: emit cibp_cap length=%s present=%s existing_len=%s", remaining, cap_present, existing_cap_len_f)
+                    "plug_type": "dumpbail_plug",  # Dumpbail is always 3 sacks on CIBP/retainer
+                }
+                steps.append(cibp_cap_step)
+                logger.info("w3a: emit cibp_cap (dumpbail_plug) length=%s present=%s existing_len=%s", remaining, cap_present, existing_cap_len_f)
 
     # UQW isolation plug (from §3.14(g)(1))
     has_uqw = facts.get('has_uqw') or (facts.get('has_uqw') or {}).get('value') if isinstance(facts.get('has_uqw'), dict) else facts.get('has_uqw')
@@ -469,7 +977,7 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                                     top_ft, bottom_ft, uqw_base_ft, uqw_above, uqw_below
                                 )
                         
-                        steps.append({
+                        gau_step = {
                             "type": "cement_plug",
                             "geometry_context": "cased_production",
                             "top_ft": top_ft,
@@ -477,7 +985,9 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                             "annular_excess": 0.4,
                             "regulatory_basis": regulatory_basis,
                             "placement_basis": placement_basis,
-                        })
+                        }
+                        gau_step["plug_type"] = _determine_plug_type(gau_step, production_toc_ft)
+                        steps.append(gau_step)
                 except Exception:
                     continue
     except Exception:
@@ -500,6 +1010,8 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                 step["bottom_ft"] = b - float(uqw_below)
         except Exception:
             pass
+        # Determine plug type (spot vs perf & squeeze based on TOC)
+        step["plug_type"] = _determine_plug_type(step, production_toc_ft)
         steps.append(step)
         logger.info("w3a: emit uqw base=%s above=%s below=%s top=%s bottom=%s", uqw_base_ft, uqw_above, uqw_below, step.get("top_ft"), step.get("bottom_ft"))
     
@@ -555,13 +1067,16 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
         top_len = top_knob.get('value') if isinstance(top_knob, dict) else top_knob
         top_cites = top_knob.get('citation_keys') if isinstance(top_knob, dict) else []
         if top_len not in (None, ""):
-            steps.append({
+            top_plug_step = {
                 "type": "top_plug",
                 "length_ft": float(top_len),
-                "top_ft": 10.0,
-                "bottom_ft": 0.0,
+                "top_ft": 0.0,  # At surface (shallowest)
+                "bottom_ft": float(top_len),  # N ft below surface (deepest)
                 "regulatory_basis": top_cites or ["tx.tac.16.3.14(d)(8)"],
-            })
+                "plug_type": "spot_plug",  # Surface safety plug at surface
+                "geometry_context": "cased_production",  # Triggers cement calculation in kernel
+            }
+            steps.append(top_plug_step)
         cut_knob = req.get('casing_cut_below_surface_ft')
         cut_val = cut_knob.get('value') if isinstance(cut_knob, dict) else cut_knob
         cut_cites = cut_knob.get('citation_keys') if isinstance(cut_knob, dict) else []
@@ -615,9 +1130,13 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                 }
                 if "tx.tac.16.3.14(g)(2)" not in step_dict["regulatory_basis"]:
                     step_dict["regulatory_basis"].append("tx.tac.16.3.14(g)(2)")
+                step_dict["plug_type"] = "perf_and_squeeze_plug"
                 logger.info(
                     f"Intermediate casing shoe plug at {inter_shoe} ft requires perforation: {perf_reason}"
                 )
+            else:
+                # No perforation required - determine plug type (spot vs perf & squeeze by TOC)
+                step_dict["plug_type"] = _determine_plug_type(step_dict, production_toc_ft)
             
             steps.append(step_dict)
     except Exception:
@@ -676,7 +1195,7 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                     # This fills the surface-to-intermediate annulus from surface down
                     perforation_depth_ft = surface_shoe_ft + 50.0  # 50 ft below surface shoe
                     
-                    steps.append({
+                    perf_circ_step = {
                         "type": "perf_and_circulate_to_surface",
                         "name": "Cement Surface Plug (Perforate and Circulate)",
                         "perforation_depth_ft": perforation_depth_ft,
@@ -692,8 +1211,10 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                             "target_annulus": "surface_to_intermediate",
                             "perforation_location": f"Below surface shoe at {surface_shoe_ft} ft",
                             "circulation_target": "Returns to surface",
-                        }
-                    })
+                        },
+                        "plug_type": "perf_and_circulate_plug",  # Reaches surface
+                    }
+                    steps.append(perf_circ_step)
                     logger.info(
                         f"Generated perf_and_circulate_to_surface: {perforation_depth_ft}→3 ft (perf below surface shoe at {surface_shoe_ft} ft, {reason})"
                     )
@@ -776,6 +1297,7 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                     "regulatory_basis": ["tx.tac.16.3.14(k)", "tx.tac.16.3.14(g)(2)"],
                     "placement_basis": f"Perforate & squeeze above producing interval ({from_ft:.0f}-{to_ft:.0f} ft)",
                     "requires_perforation": True,
+                    "plug_type": "perf_and_squeeze_plug",
                     "details": {
                         "perforation_reason": perf_reason,
                         "perforation_interval": {
@@ -816,11 +1338,13 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                     "regulatory_basis": ["tx.tac.16.3.14(k)"],
                     "placement_basis": f"Above producing interval ({from_ft:.0f}-{to_ft:.0f} ft)",
                 }
+                # Determine plug type (spot vs perf & squeeze by TOC)
+                plug_step["plug_type"] = _determine_plug_type(plug_step, production_toc_ft)
                 
                 logger.info(
                     "w3a: standard productive horizon plug placed at %.1f-%.1f ft "
-                    "(50 ft above producing interval top at %.1f ft)",
-                    plug_top, plug_bottom, top_of_interval
+                    "(50 ft above producing interval top at %.1f ft) - type: %s",
+                    plug_top, plug_bottom, top_of_interval, plug_step.get("plug_type")
                 )
             
             steps.append(plug_step)
@@ -916,6 +1440,7 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                         "placement_basis": f"Annular gap between {outer_string} and {inner_string} (schematic)",
                         "requires_perforation": True,
                         "requires_perforation_reason": perf_reason,
+                        "plug_type": "perf_and_squeeze_plug",
                         "details": {
                             "perforation_interval": {
                                 "top_ft": perf_interval_top,
@@ -956,9 +1481,11 @@ def generate_steps(facts: Dict[str, Any], policy_effective: Dict[str, Any]) -> D
                             }
                         }
                     }
+                    # Determine plug type (spot vs perf & squeeze by TOC)
+                    step["plug_type"] = _determine_plug_type(step, production_toc_ft)
                     steps.append(step)
                     logger.critical(
-                        f"🚨 KERNEL: Gap #{idx} - ADDED CEMENT PLUG to steps! "
+                        f"🚨 KERNEL: Gap #{idx} - ADDED CEMENT PLUG ({step.get('plug_type')}) to steps! "
                         f"{outer_string}/{inner_string} gap ({gap_top}-{gap_bottom} ft)"
                     )
     except Exception:

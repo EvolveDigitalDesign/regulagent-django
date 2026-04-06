@@ -1,0 +1,56 @@
+{
+  "header": "RAILROAD COMMISSION OF TEXAS Form W-15 Cementing Report",
+  "operator_info": {
+    "name": "ROYALTY LAND & DEV. INC.",
+    "address": null,
+    "operator_number": null
+  },
+  "well_info": {
+    "api": "42-178-34896",
+    "district": "8",
+    "county": "GLASSCOCK",
+    "field": "STRAWBERRY (TANNEHILL AREA)",
+    "lease": "DORALEE",
+    "well_no": "1",
+    "location": {
+      "lat": null,
+      "lon": null
+    }
+  },
+  "cementing_data": [
+    {
+      "job": "production",
+      "interval_top_ft": null,
+      "interval_bottom_ft": 10701,
+      "cement_top_ft": null,
+      "slurry_density_ppg": null,
+      "yield_ft3_per_sk": null,
+      "sacks": 1075,
+      "additives": [
+        "10% Gel + 3/10% C-20 + 3#/Sk Koiseal + 1/8#/Sk Celloflake",
+        "22% Gel + 2% Salt + 8/10% C-16A + 2/10% C-35 + 0.15% C-20"
+      ]
+    }
+  ],
+  "mechanical_equipment": [],
+  "cement_tops_per_string": [
+    {
+      "string": "production",
+      "cement_top_ft": null,
+      "cement_returns": "none"
+    }
+  ],
+  "cementing_to_squeeze": [],
+  "certifications": {
+    "cementer": {
+      "name": "JOSE L. REYNOSO",
+      "company": "O-TEX PUMPING SERVICES",
+      "date": "7/2/2012"
+    },
+    "operator": {
+      "name": "MICHAEL D. DEAN",
+      "date": "7/4/2012"
+    }
+  },
+  "instructions_section": "Operators and cementing companies must comply with the requirements of the Commission's Statewide rules 8 (Water Protection), 13 (Casing, Cementing, Drilling, and Completion, and 14 (Well Plugging)."
+}

@@ -1,9 +1,10 @@
+name: regulagent
+
 services:
   db:
     build:
       context: ..
       dockerfile: docker/Dockerfile.db
-    platform: linux/amd64
     container_name: regulagent_db
     environment:
       - POSTGRES_DB=${DB_NAME:-regulagent}
@@ -63,7 +64,7 @@ services:
       dockerfile: docker/Dockerfile
     container_name: regulagent_celery
     entrypoint: ["/app/docker/entrypoint.sh"]
-    command: celery -A ra_config worker -l INFO
+    command: celery -A ra_config worker -l INFO --concurrency=4
     volumes:
       - ..:/app
     env_file:

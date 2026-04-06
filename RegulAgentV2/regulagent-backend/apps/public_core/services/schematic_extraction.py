@@ -50,8 +50,8 @@ def extract_schematic_from_image(
     # Build extraction prompt
     prompt = _build_extraction_prompt()
     
-    client = get_openai_client()
-    
+    client = get_openai_client(operation="schematic_extraction")
+
     try:
         logger.info(f'Extracting schematic data from {image_path.name} using Vision API')
         

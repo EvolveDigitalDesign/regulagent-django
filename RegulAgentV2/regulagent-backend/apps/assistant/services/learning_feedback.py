@@ -14,6 +14,7 @@ from typing import List, Optional
 from django.db.models import Avg, Count, Q
 from apps.assistant.models import PlanModification
 from apps.public_core.models import DocumentVector
+from apps.public_core.services.openai_config import DEFAULT_EMBEDDING_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -25,123 +26,73 @@ def update_modification_confidence(
 ) -> float:
     """
     Update confidence score for a modification based on regulator outcome.
-    
+
     Confidence formula:
     - Start: 0.5 (neutral)
     - Approved: +0.2 per approval
     - Rejected: -0.2 per rejection
     - Multiple outcomes: weighted average
-    
+
     Args:
         modification: PlanModification instance
         outcome_approved: True if RRC approved, False if rejected
         outcome_instance: RegulatorOutcome instance
-    
+
     Returns:
         Updated confidence score
     """
     # Get all outcomes that used this modification
     outcomes = modification.influenced_outcomes.all()
-    
+
     approved_count = outcomes.filter(status='approved').count()
     rejected_count = outcomes.filter(status='rejected').count()
     total_count = approved_count + rejected_count
-    
+
     if total_count == 0:
         # No outcomes yet, return neutral
         confidence = 0.5
     else:
         # Calculate approval rate
         approval_rate = approved_count / total_count
-        
+
         # Scale to 0.0-1.0, weighted toward extremes
         # 100% approved → 1.0
         # 50% approved → 0.5
         # 0% approved → 0.0
         confidence = approval_rate
-        
+
         # Boost confidence if multiple approvals (proven pattern)
         if approved_count >= 3:
             confidence = min(confidence + 0.1, 1.0)
-        
+
         # Lower confidence if any rejections
         if rejected_count > 0:
             confidence = max(confidence - 0.1, 0.0)
-    
+
     logger.info(
         f"Updated modification {modification.id} confidence: {confidence:.2f} "
         f"({approved_count} approved, {rejected_count} rejected)"
     )
-    
-    # TODO: Update DocumentVector metadata with new confidence
-    # vectors = DocumentVector.objects.filter(
-    #     metadata__modification_id=modification.id
-    # )
-    # for vector in vectors:
-    #     vector.metadata['outcome']['confidence'] = confidence
-    #     vector.save()
-    
-    return confidence
 
-
-def find_similar_modifications(
-    modification: PlanModification,
-    similarity_threshold: float = 0.85
-) -> List[PlanModification]:
-    """
-    Find modifications similar to the given one by context.
-    
-    Similarity factors:
-    - Same operation type (combine_plugs, replace_cibp)
-    - Same district
-    - Same regulatory sections
-    - Similar depth ranges
-    - Same formations
-    
-    Args:
-        modification: Reference modification
-        similarity_threshold: Cosine similarity threshold
-    
-    Returns:
-        List of similar PlanModification instances
-    """
-    source_payload = modification.source_snapshot.payload
-    result_payload = modification.result_snapshot.payload if modification.result_snapshot else {}
-    well = modification.source_snapshot.well
-    
-    # Extract context
-    operation_type = modification.op_type
-    district = result_payload.get('district')
-    formations = result_payload.get('formations_targeted', [])
-    
-    # Start with same operation type
-    similar = PlanModification.objects.filter(
-        op_type=operation_type
-    ).exclude(id=modification.id)
-    
-    # Filter by district if available
-    if district:
-        similar = similar.filter(
-            source_snapshot__payload__district=district
-        )
-    
-    # TODO: Use vector similarity for semantic matching
-    # query_vector = get_modification_embedding(modification)
-    # similar_vectors = DocumentVector.objects.annotate(
-    #     similarity=CosineDistance('vector', query_vector)
-    # ).filter(
-    #     similarity__lte=(1 - similarity_threshold),
-    #     metadata__type='plan_modification'
-    # )
-    # similar_mod_ids = [v.metadata['modification_id'] for v in similar_vectors]
-    # similar = PlanModification.objects.filter(id__in=similar_mod_ids)
-    
-    logger.info(
-        f"Found {similar.count()} similar modifications to {modification.id} "
-        f"(type={operation_type}, district={district})"
+    # Update DocumentVector metadata with new confidence
+    vectors = DocumentVector.objects.filter(
+        document_type="plan_modification",
+        metadata__modification_id=str(modification.id)
     )
-    
-    return list(similar[:50])  # Limit to top 50
+    for vector in vectors:
+        # Update metadata with outcome info
+        metadata = vector.metadata.copy()
+        if 'outcome' not in metadata:
+            metadata['outcome'] = {}
+        metadata['outcome']['confidence'] = confidence
+        metadata['outcome']['approved_count'] = approved_count
+        metadata['outcome']['rejected_count'] = rejected_count
+        metadata['outcome']['regulator_status'] = outcome_instance.status if outcome_instance else None
+        vector.metadata = metadata
+        vector.save(update_fields=['metadata'])
+        logger.debug(f"Updated DocumentVector {vector.id} confidence to {confidence:.2f}")
+
+    return confidence
 
 
 def propagate_confidence_to_similar(
@@ -151,36 +102,52 @@ def propagate_confidence_to_similar(
 ):
     """
     Propagate confidence update to similar modifications.
-    
+
     When a modification is approved/rejected, we update confidence for
     similar modifications to bias future suggestions.
-    
+
     Args:
         source_modification: Modification with new outcome
         outcome_approved: True if approved, False if rejected
         propagation_factor: How much to propagate (0.0-1.0)
     """
-    similar_mods = find_similar_modifications(source_modification)
-    
+    # Use vector similarity to find similar modifications
+    similar_results = find_similar_modifications(source_modification, top_k=20)
+
     delta = 0.1 * propagation_factor if outcome_approved else -0.1 * propagation_factor
-    
-    for mod in similar_mods:
-        # TODO: Update confidence in DocumentVector
-        # vectors = DocumentVector.objects.filter(
-        #     metadata__modification_id=mod.id
-        # )
-        # for vector in vectors:
-        #     current_confidence = vector.metadata.get('outcome', {}).get('confidence', 0.5)
-        #     new_confidence = max(0.0, min(1.0, current_confidence + delta))
-        #     vector.metadata['outcome']['confidence'] = new_confidence
-        #     vector.save()
-        
-        logger.debug(
-            f"Propagated confidence delta {delta:+.2f} to modification {mod.id}"
+    updated_count = 0
+
+    for mod, similarity in similar_results:
+        # Scale delta by similarity score - more similar = more impact
+        scaled_delta = delta * similarity
+
+        # Update confidence in DocumentVector
+        vectors = DocumentVector.objects.filter(
+            document_type="plan_modification",
+            metadata__modification_id=str(mod.id)
         )
-    
+        for vector in vectors:
+            metadata = vector.metadata.copy()
+            current_confidence = metadata.get('outcome', {}).get('confidence', 0.5)
+            new_confidence = max(0.0, min(1.0, current_confidence + scaled_delta))
+
+            if 'outcome' not in metadata:
+                metadata['outcome'] = {}
+            metadata['outcome']['confidence'] = new_confidence
+            metadata['outcome']['propagated_from'] = str(source_modification.id)
+            metadata['outcome']['propagation_similarity'] = similarity
+            vector.metadata = metadata
+            vector.save(update_fields=['metadata'])
+            updated_count += 1
+
+        logger.debug(
+            f"Propagated confidence delta {scaled_delta:+.3f} to modification {mod.id} "
+            f"(similarity={similarity:.2f})"
+        )
+
     logger.info(
-        f"Propagated confidence to {len(similar_mods)} similar modifications"
+        f"Propagated confidence to {len(similar_results)} similar modifications "
+        f"({updated_count} vectors updated)"
     )
 
 
@@ -191,40 +158,107 @@ def get_confidence_weighted_suggestions(
 ) -> List[dict]:
     """
     Get modification suggestions weighted by regulator approval confidence.
-    
+
     This is how we bias toward regulator-approved patterns:
     - Query for similar context
     - Filter by min confidence (default 0.5)
     - Sort by confidence * similarity
     - Return top suggestions
-    
+
     Args:
-        query_context: Query parameters (district, formations, etc.)
+        query_context: Query parameters (district, formations, op_type, etc.)
         min_confidence: Minimum confidence threshold
         limit: Max results
-    
+
     Returns:
         List of suggestions with confidence scores
     """
-    # TODO: Implement vector search with confidence weighting
-    # query_embedding = generate_embedding(query_context)
-    # 
-    # suggestions = DocumentVector.objects.filter(
-    #     metadata__type='plan_modification',
-    #     metadata__outcome__confidence__gte=min_confidence,
-    #     metadata__district=query_context.get('district'),
-    #     ...
-    # ).annotate(
-    #     similarity=CosineDistance('vector', query_embedding),
-    #     weighted_score=F('similarity') * F('metadata__outcome__confidence')
-    # ).order_by('-weighted_score')[:limit]
-    
+    from pgvector.django import CosineDistance
+    from apps.public_core.services.openai_config import get_openai_client
+
+    # Build query text from context
+    text_parts = []
+    if query_context.get('op_type'):
+        text_parts.append(f"Operation: {query_context['op_type']}")
+    if query_context.get('district'):
+        text_parts.append(f"District: {query_context['district']}")
+    if query_context.get('formations'):
+        text_parts.append(f"Formations: {', '.join(query_context['formations'])}")
+    if query_context.get('description'):
+        text_parts.append(f"Description: {query_context['description']}")
+
+    if not text_parts:
+        logger.warning("Empty query context for confidence-weighted suggestions")
+        return []
+
+    query_text = "\n".join(text_parts)
+
+    # Generate embedding for query
+    try:
+        client = get_openai_client()
+        response = client.embeddings.create(
+            input=query_text,
+            model=DEFAULT_EMBEDDING_MODEL
+        )
+        query_embedding = response.data[0].embedding
+    except Exception as e:
+        logger.exception(f"Error generating embedding for query: {e}")
+        return []
+
+    # Query for similar modifications with confidence weighting
+    similar_docs = DocumentVector.objects.filter(
+        document_type="plan_modification"
+    ).annotate(
+        distance=CosineDistance('embedding', query_embedding)
+    ).order_by('distance')[:limit * 3]  # Get more candidates for filtering
+
+    # Filter and weight by confidence
+    suggestions = []
+    for doc in similar_docs:
+        outcome = doc.metadata.get('outcome', {})
+        confidence = outcome.get('confidence', 0.5)
+
+        # Skip low confidence modifications
+        if confidence < min_confidence:
+            continue
+
+        similarity = 1.0 - float(doc.distance)
+        weighted_score = similarity * confidence
+
+        # Get the modification details
+        mod_id = doc.metadata.get('modification_id')
+        if not mod_id:
+            continue
+
+        try:
+            modification = PlanModification.objects.select_related(
+                'source_snapshot', 'result_snapshot'
+            ).get(id=mod_id)
+
+            suggestions.append({
+                'modification_id': mod_id,
+                'op_type': modification.op_type,
+                'description': modification.description,
+                'similarity': round(similarity, 3),
+                'confidence': round(confidence, 3),
+                'weighted_score': round(weighted_score, 3),
+                'approved_count': outcome.get('approved_count', 0),
+                'rejected_count': outcome.get('rejected_count', 0),
+                'risk_score': modification.risk_score,
+            })
+        except PlanModification.DoesNotExist:
+            continue
+
+    # Sort by weighted score (confidence * similarity)
+    suggestions.sort(key=lambda x: x['weighted_score'], reverse=True)
+    suggestions = suggestions[:limit]
+
     logger.info(
-        f"Querying confidence-weighted suggestions: "
-        f"min_confidence={min_confidence}, limit={limit}"
+        f"Found {len(suggestions)} confidence-weighted suggestions "
+        f"(min_confidence={min_confidence}, limit={limit})"
     )
-    
-    return []
+
+    return suggestions
 
 
 def calculate_confidence_statistics(district: str = None) -> dict:
@@ -287,3 +321,53 @@ def calculate_confidence_statistics(district: str = None) -> dict:
         "by_operation_type": by_op_type
     }
 
+
+def find_similar_modifications(modification, top_k: int = 5):
+    """
+    Find similar past modifications using pgvector cosine similarity.
+
+    Args:
+        modification: PlanModification to find similar to
+        top_k: Number of results to return
+
+    Returns:
+        List of (PlanModification, similarity_score) tuples
+    """
+    from pgvector.django import CosineDistance
+    from apps.public_core.models import DocumentVector
+    from apps.assistant.models import PlanModification
+    from apps.assistant.services.modification_embedder import embed_modification
+
+    # Get or create embedding for query modification
+    query_doc = DocumentVector.objects.filter(
+        document_type="plan_modification",
+        metadata__modification_id=str(modification.id)
+    ).first()
+
+    if not query_doc:
+        query_doc = embed_modification(modification)
+
+    query_embedding = query_doc.embedding
+
+    # Find similar modifications using cosine distance
+    similar_docs = DocumentVector.objects.filter(
+        document_type="plan_modification"
+    ).exclude(
+        metadata__modification_id=str(modification.id)
+    ).annotate(
+        distance=CosineDistance('embedding', query_embedding)
+    ).order_by('distance')[:top_k]
+
+    # Convert to PlanModification objects with similarity scores
+    results = []
+    for doc in similar_docs:
+        mod_id = doc.metadata.get('modification_id')
+        if mod_id:
+            try:
+                plan_mod = PlanModification.objects.get(id=mod_id)
+                similarity = 1.0 - float(doc.distance)
+                results.append((plan_mod, similarity))
+            except PlanModification.DoesNotExist:
+                continue
+
+    return results

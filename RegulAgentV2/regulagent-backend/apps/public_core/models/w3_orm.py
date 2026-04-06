@@ -15,6 +15,7 @@ from __future__ import annotations
 from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
+from simple_history.models import HistoricalRecords
 
 from .well_registry import WellRegistry
 
@@ -271,7 +272,17 @@ class W3FormORM(models.Model):
         default='draft',
         db_index=True
     )
-    
+
+    # Tenant and workspace isolation
+    tenant_id = models.UUIDField(null=True, blank=True, db_index=True)
+    workspace = models.ForeignKey(
+        'tenants.ClientWorkspace',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='w3_forms',
+        db_index=True,
+    )
+
     # Plugs in this form
     plugs = models.ManyToManyField(W3PlugORM, related_name="w3_forms")
     
@@ -316,11 +327,17 @@ class W3FormORM(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Django simple-history for audit trail (tracks who/when for all status changes)
+    history = HistoricalRecords()
+    
     class Meta:
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['api_number', 'status']),
             models.Index(fields=['well', '-created_at']),
+            models.Index(fields=['tenant_id']),
+            models.Index(fields=['workspace']),
+            models.Index(fields=['tenant_id', 'workspace']),
         ]
     
     def __str__(self):

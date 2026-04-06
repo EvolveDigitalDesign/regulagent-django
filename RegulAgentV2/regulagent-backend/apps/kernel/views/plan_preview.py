@@ -8,8 +8,7 @@ from apps.kernel.services.policy_kernel import plan_from_facts
 
 
 class PlanPreviewView(APIView):
-    authentication_classes = []  # TODO: wire real auth
-    permission_classes = []
+    """Generate a plan preview from resolved facts and policy."""
 
     def post(self, request):
         engagement_id = request.data.get('engagement_id')

@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import math
-import re
 from typing import Any, Dict, List, Optional, Tuple
 
+from django.http import Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
 from apps.public_core.models import WellRegistry
+from apps.public_core.services.api_normalization import get_well_by_api
 from apps.public_core.models.document_vector import DocumentVector
 from apps.public_core.models import ExtractedDocument, PlanSnapshot
+from apps.kernel.services.jurisdiction_registry import detect_jurisdiction
 
 
 def haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -25,8 +27,7 @@ def haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float
 
 
 class SimilarWellsView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    """Find similar wells based on location, architecture, and plan patterns."""
 
     def get(self, request):
         api = request.query_params.get('api')
@@ -45,7 +46,8 @@ class SimilarWellsView(APIView):
         w_context = float(request.query_params.get('w_context', 0.10))
         w_quality = float(request.query_params.get('w_quality', 0.05))
         alpha_geo = float(request.query_params.get('alpha_geo', 0.5))
-        state = request.query_params.get('state') or 'TX'
+        api_number = request.query_params.get('api_number')
+        state = request.query_params.get('state') or (detect_jurisdiction(api_number) if api_number else 'TX')
         county = request.query_params.get('county')
         field = request.query_params.get('field')
         require_county = str(request.query_params.get('require_county', 'auto')).lower()
@@ -53,10 +55,12 @@ class SimilarWellsView(APIView):
         operator = request.query_params.get('operator')
         k = int(request.query_params.get('k', 20))
 
-        api_digits = re.sub(r"\D+", "", str(api))
-        src = WellRegistry.objects.filter(api14__icontains=api_digits[-8:]).first()
-        if not src or src.lat is None or src.lon is None:
-            return Response({"detail": "source well missing or has no lat/lon"}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            src = get_well_by_api(api)
+        except Http404 as e:
+            return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        if src.lat is None or src.lon is None:
+            return Response({"detail": "source well has no lat/lon"}, status=status.HTTP_404_NOT_FOUND)
 
         # Coarse bbox prefilter (~1 degree ~ 69 miles)
         deg = radius_mi / 69.0
