@@ -61,6 +61,7 @@ from apps.public_core.services.pdf_combiner import (
     PDFCombinerError,
 )
 from apps.public_core.services.rrc_completions_extractor import extract_completions_all_documents
+from apps.public_core.models.w3a_source_audit import W3ASourceAudit
 from apps.public_core.services.openai_extraction import (
     classify_document,
     extract_json_from_pdf,
@@ -162,6 +163,7 @@ class W3AInitialView(APIView):
             source_file_metadata = []
 
             # RRC extractions
+            dl = {}  # Will be populated if input_mode uses RRC extractions
             if input_mode in ("extractions", "hybrid"):
                 logger.info(f"📥 Sourcing RRC extractions for API {api_normalized}")
                 dl = extract_completions_all_documents(api_normalized, allowed_kinds=["w2", "w15", "gau"])
@@ -209,9 +211,38 @@ class W3AInitialView(APIView):
                             })
             
             if not pdf_paths:
+                try:
+                    W3ASourceAudit.objects.create(
+                        api_number=api_normalized,
+                        jurisdiction=jurisdiction,
+                        input_mode=input_mode,
+                        outcome=dl.get("status", "no_documents"),
+                        outcome_detail=dl.get("message", "No PDF documents found to combine"),
+                        document_count=0,
+                        source=dl.get("source", ""),
+                        user=request.user if request.user.is_authenticated else None,
+                        tenant_id=getattr(request.user.tenants.first(), 'id', None) if request.user.is_authenticated else None,
+                    )
+                except Exception as audit_exc:
+                    logger.warning(f"W3ASourceAudit (failure) could not be saved: {audit_exc}")
                 return Response(
-                    {"detail": "No PDF documents found to combine"},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {
+                        "error": "no_documents_found",
+                        "detail": (
+                            "No completion documents (W-2, W-15, GAU) were found for this well on "
+                            "the RRC database. This may mean the well has no filed completion "
+                            "records, or the records are not yet digitized."
+                        ),
+                        "suggestion": (
+                            "Try switching to 'User Files' or 'Hybrid Mode' to upload your own "
+                            "W-2 and completion documents."
+                        ),
+                        "rrc_status": {
+                            "status": dl.get("status", ""),
+                            "message": dl.get("message", ""),
+                        },
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             
             # 2. Combine PDFs
@@ -270,6 +301,20 @@ class W3AInitialView(APIView):
             )
             
             logger.info(f"✅ Created temp plan {temp_plan_id}")
+            try:
+                W3ASourceAudit.objects.create(
+                    api_number=api_normalized,
+                    jurisdiction=jurisdiction,
+                    input_mode=input_mode,
+                    outcome="success",
+                    outcome_detail=f"Combined {len(pdf_paths)} PDFs",
+                    document_count=len(pdf_paths),
+                    source=dl.get("source", ""),
+                    user=request.user if request.user.is_authenticated else None,
+                    tenant_id=getattr(request.user.tenants.first(), 'id', None) if request.user.is_authenticated else None,
+                )
+            except Exception as audit_exc:
+                logger.warning(f"W3ASourceAudit (success) could not be saved: {audit_exc}")
             
             # 4. Return response
             response_data = {
