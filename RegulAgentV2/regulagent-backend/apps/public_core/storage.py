@@ -73,7 +73,6 @@ try:
             # Get S3 settings from Django settings
             kwargs['bucket_name'] = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
             kwargs['region_name'] = getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1')
-            kwargs['custom_domain'] = getattr(settings, 'AWS_S3_CUSTOM_DOMAIN', None)
             kwargs['default_acl'] = getattr(settings, 'AWS_DEFAULT_ACL', None)
             kwargs['object_parameters'] = getattr(settings, 'AWS_S3_OBJECT_PARAMETERS', {})
             

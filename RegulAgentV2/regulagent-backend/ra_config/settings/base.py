@@ -170,7 +170,7 @@ CORS_ALLOW_CREDENTIALS = True
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=4),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -198,19 +198,25 @@ if USE_S3:
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', 'regulagent-uploads')
     AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
-    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
-    
+
+    # NOTE: Do NOT set AWS_S3_CUSTOM_DOMAIN — django-storages auto-reads it
+    # and returns plain (non-presigned) URLs which fail on private buckets.
+    _s3_domain = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+
+    # Explicitly enable presigned URLs for private bucket
+    AWS_QUERYSTRING_AUTH = True
+
     # Security and permissions
     AWS_DEFAULT_ACL = None  # Inherit bucket ACL (recommended)
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',  # 24 hours
     }
-    
+
     # Use S3 for file uploads
     DEFAULT_FILE_STORAGE = 'apps.public_core.storage.TenantS3Storage'
-    
-    # Media URLs will point to S3
-    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+
+    # Media URL fallback (presigned URLs from default_storage.url() are preferred)
+    MEDIA_URL = f'https://{_s3_domain}/'
     
 else:
     # ========== LOCAL FILESYSTEM STORAGE ==========

@@ -1170,15 +1170,22 @@ def generate_wizard_w3(self, session_id: str) -> None:
                 pdf_result = generate_w3_pdf(form_dict, wbd_image_path=wbd_path)
 
             filename = os.path.basename(pdf_result["temp_path"])
-            media_url = django_settings.MEDIA_URL
-            if media_url.startswith('http'):
-                # S3/absolute URL — use directly, ensure trailing slash
-                pdf_url = f"{media_url.rstrip('/')}/temp_pdfs/{filename}"
-            else:
-                # Local/relative — ensure leading slash
-                if not media_url.startswith('/'):
-                    media_url = f'/{media_url}'
-                pdf_url = f"{media_url}temp_pdfs/{filename}"
+            storage_key = f"temp_pdfs/{filename}"
+
+            # Upload the locally-generated PDF to Django's storage backend (S3 or local)
+            with open(pdf_result["temp_path"], "rb") as f:
+                from django.core.files.base import ContentFile
+                default_storage.save(storage_key, ContentFile(f.read()))
+
+            # Clean up local temp file when using remote storage (S3)
+            if not hasattr(default_storage, 'path'):
+                try:
+                    os.unlink(pdf_result["temp_path"])
+                except OSError:
+                    pass
+
+            # Build URL from storage backend — works for both S3 and local
+            pdf_url = default_storage.url(storage_key)
             logger.info("generate_wizard_w3: PDF generated (%s): %s", session.form_type, pdf_url)
         except Exception as pdf_err:
             logger.warning(

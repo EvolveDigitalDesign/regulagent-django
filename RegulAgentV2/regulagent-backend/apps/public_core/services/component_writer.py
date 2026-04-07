@@ -93,6 +93,18 @@ def write_execution_components(session, form_dict: Dict[str, Any]):
         logger.info("write_execution_components: already exist for session %s", session.id)
         return
 
+    # Resolve well — session.well may be null for NM/sundry flows
+    well = session.well
+    if well is None:
+        from apps.public_core.models import WellRegistry
+        well = WellRegistry.objects.filter(api14=session.api_number).first()
+        if well is None:
+            logger.warning(
+                "write_execution_components: no WellRegistry found for api_number=%s, skipping",
+                session.api_number,
+            )
+            return
+
     components = []
     plugs = form_dict.get("plugs", [])
 
@@ -106,7 +118,7 @@ def write_execution_components(session, form_dict: Dict[str, Any]):
             component_type = "bridge_plug"
 
         components.append(WellComponent(
-            well=session.well,
+            well=well,
             component_type=component_type,
             layer=WellComponent.Layer.EXECUTION_ACTUAL,
             lifecycle_state=WellComponent.LifecycleState.INSTALLED,
