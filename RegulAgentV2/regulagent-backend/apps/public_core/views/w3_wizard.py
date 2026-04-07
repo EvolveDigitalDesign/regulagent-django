@@ -378,6 +378,53 @@ class W3WizardUploadView(APIView):
         )
 
 
+class W3WizardDocumentToggleExclusionView(APIView):
+    """
+    PATCH /api/w3-wizard/{id}/documents/toggle-exclusion/
+    Toggle the is_excluded flag on an uploaded document.
+    Body: {"storage_key": "...", "is_excluded": true/false}
+    """
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser]
+
+    def patch(self, request, pk, *args, **kwargs):
+        tenant_id = _get_tenant_id(request)
+        session, err = _get_session(pk, tenant_id)
+        if err:
+            return err
+
+        storage_key = request.data.get("storage_key")
+        is_excluded = request.data.get("is_excluded", True)
+
+        if not storage_key:
+            return Response(
+                {"error": "storage_key is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Find the document by storage_key
+        doc_found = False
+        for doc in (session.uploaded_documents or []):
+            if doc.get("storage_key") == storage_key:
+                doc["is_excluded"] = bool(is_excluded)
+                doc_found = True
+                break
+
+        if not doc_found:
+            return Response(
+                {"error": f"Document with storage_key '{storage_key}' not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        session.save(update_fields=["uploaded_documents", "updated_at"])
+
+        return Response(
+            {"documents": session.uploaded_documents},
+            status=status.HTTP_200_OK,
+        )
+
+
 class W3WizardParseView(APIView):
     """
     POST /api/w3-wizard/{id}/parse/ — Kick off async ticket parsing.

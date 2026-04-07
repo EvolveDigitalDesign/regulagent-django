@@ -114,6 +114,8 @@ def parse_wizard_tickets(self, session_id: str) -> None:
         for doc in session.uploaded_documents:
             if doc.get("category") == "plan":
                 continue  # Plan processed by import_wizard_plan
+            if doc.get("is_excluded"):
+                continue  # Skip excluded documents
             storage_key = doc.get("storage_key", "")
             if storage_key:
                 local_path = _resolve_storage_path(storage_key)

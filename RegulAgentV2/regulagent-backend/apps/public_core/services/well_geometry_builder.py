@@ -121,16 +121,32 @@ def extract_historic_cement_jobs(api14: str) -> List[Dict[str, Any]]:
                     if isinstance(cement_job, dict):
                         try:
                             # Include all available fields from the cement job
+                            slurries = cement_job.get("slurries")
+                            sacks = cement_job.get("sacks")
+
+                            # Compute sacks from slurries if not explicitly provided
+                            if sacks is None and slurries:
+                                sacks = sum(
+                                    s.get("sacks", 0) or 0
+                                    for s in slurries
+                                    if isinstance(s, dict)
+                                )
+
                             job_entry: Dict[str, Any] = {
                                 "job_type": cement_job.get("job"),
                                 "interval_top_ft": cement_job.get("interval_top_ft"),
                                 "interval_bottom_ft": cement_job.get("interval_bottom_ft"),
                                 "cement_top_ft": cement_job.get("cement_top_ft"),
-                                "sacks": cement_job.get("sacks"),
+                                "sacks": sacks,
                                 "slurry_density_ppg": cement_job.get("slurry_density_ppg"),
                                 "additives": cement_job.get("additives"),
                                 "yield_ft3_per_sk": cement_job.get("yield_ft3_per_sk"),
                             }
+
+                            # Preserve per-slurry detail when available
+                            if slurries:
+                                job_entry["slurries"] = slurries
+
                             # Store all cement jobs as-is, preserving complete historical data
                             historic_cement_jobs.append(job_entry)
                         except Exception:
@@ -744,9 +760,9 @@ def normalize_vision_to_well_geometry(vision_data: Dict) -> Dict:
         if cj.get("cement_top_md_ft") is not None or cj.get("cement_bottom_md_ft") is not None:
             historic_cement_jobs.append({
                 "job_type": f"{cs.get('string_type', '')} cement",
-                "interval_top_ft": cj.get("cement_top_md_ft"),
-                "interval_bottom_ft": cj.get("cement_bottom_md_ft") or cs.get("bottom_md_ft"),
-                "cement_top_ft": cj.get("cement_top_md_ft"),
+                "interval_top_ft": cs.get("top_md_ft", 0),           # Casing string top (0 for surface)
+                "interval_bottom_ft": cs.get("bottom_md_ft"),         # Casing shoe depth
+                "cement_top_ft": cj.get("cement_top_md_ft"),          # Where cement reached (unchanged)
                 "sacks": cj.get("sacks"),
             })
 
