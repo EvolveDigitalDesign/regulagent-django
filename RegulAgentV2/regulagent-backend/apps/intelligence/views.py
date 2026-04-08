@@ -39,14 +39,30 @@ logger = logging.getLogger(__name__)
 
 
 def _get_tenant_id(request):
-    """Extract tenant_id from the authenticated user."""
-    return getattr(request.user, "tenant_id", None)
+    """
+    Extract tenant_id from the authenticated user's tenant membership.
+
+    Returns a UUID-formatted string so it works both in direct ORM queries
+    (Django auto-converts int→UUID) and when serialized for Celery tasks.
+    """
+    import uuid as _uuid
+    if not request.user or not request.user.is_authenticated:
+        return None
+    # django-tenant-users: user.tenants is a M2M to Tenant
+    tenant = request.user.tenants.first()
+    if not tenant:
+        return None
+    # Tenant PK is an integer; convert to UUID format for UUIDField compatibility
+    tid = tenant.id
+    if isinstance(tid, int):
+        return str(_uuid.UUID(int=tid))
+    return str(tid)
 
 
 class StandardResultsPagination(PageNumberPagination):
     page_size = 25
     page_size_query_param = "page_size"
-    max_page_size = 100
+    max_page_size = 1000
 
 
 # =============================================================================
@@ -444,3 +460,234 @@ class DashboardView(views.APIView):
 
         serializer = DashboardSerializer(data)
         return Response(serializer.data)
+
+
+# =============================================================================
+# Filing Sync
+# =============================================================================
+
+
+class FilingSyncView(views.APIView):
+    """
+    POST /api/intelligence/filing-status/sync/
+
+    Triggers an async sync of filings from the agency portal.
+    Returns a task_id that can be polled for completion.
+    """
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from .serializers import FilingSyncRequestSerializer
+
+        serializer = FilingSyncRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        tenant_id = _get_tenant_id(request)
+        if not tenant_id:
+            return Response(
+                {"detail": "Tenant context required."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        agency = serializer.validated_data["agency"]
+
+        # Check if tenant has portal credentials for this agency
+        from .models import PortalCredential
+        has_credentials = PortalCredential.objects.filter(
+            tenant_id=tenant_id,
+            agency=agency,
+            is_active=True,
+        ).exists()
+
+        if not has_credentials:
+            return Response(
+                {"detail": f"No active portal credentials found for {agency}. Please add your credentials first."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Dispatch async task
+        from .tasks_polling import sync_portal_filings
+        task = sync_portal_filings.delay(str(tenant_id), agency)
+
+        return Response(
+            {
+                "task_id": task.id,
+                "status": "syncing",
+                "agency": agency,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class FilingSyncStatusView(views.APIView):
+    """
+    GET /api/intelligence/filing-status/sync/<task_id>/
+
+    Check the status of an async filing sync task.
+    """
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, task_id):
+        from celery.result import AsyncResult
+
+        result = AsyncResult(task_id)
+
+        response_data = {
+            "task_id": task_id,
+            "status": result.status.lower(),  # PENDING, STARTED, SUCCESS, FAILURE, RETRY
+        }
+
+        if result.ready():
+            if result.successful():
+                response_data["result"] = result.result
+            else:
+                response_data["error"] = str(result.result)
+
+        return Response(response_data)
+
+
+# =============================================================================
+# Portal Credentials
+# =============================================================================
+
+
+class PortalCredentialListCreateView(views.APIView):
+    """
+    GET  /api/intelligence/credentials/  — list credentials for current tenant
+    POST /api/intelligence/credentials/  — add new portal credentials
+
+    Passwords are encrypted at rest and NEVER returned in responses.
+    """
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .models import PortalCredential
+        from .serializers import PortalCredentialSerializer
+
+        tenant_id = _get_tenant_id(request)
+        if not tenant_id:
+            return Response({"detail": "Tenant context required."}, status=status.HTTP_403_FORBIDDEN)
+
+        credentials = PortalCredential.objects.filter(
+            tenant_id=tenant_id,
+            is_active=True,
+        ).order_by('agency')
+
+        serializer = PortalCredentialSerializer(credentials, many=True)
+        tenant = request.user.tenants.first()
+        return Response({
+            "credentials": serializer.data,
+            "has_vault_passphrase": bool(tenant and tenant.vault_passphrase_hash),
+        })
+
+    def post(self, request):
+        from django.contrib.auth.hashers import check_password, make_password
+
+        from .models import PortalCredential
+        from .serializers import PortalCredentialCreateSerializer, PortalCredentialSerializer
+
+        tenant_id = _get_tenant_id(request)
+        if not tenant_id:
+            return Response({"detail": "Tenant context required."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = PortalCredentialCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        agency = data['agency']
+        vault_passphrase = data.get('vault_passphrase', '')
+
+        # --- Vault passphrase gate ---
+        # Fetch the tenant to check / update its vault_passphrase_hash.
+        # We use request.user.tenants.first() which is already what _get_tenant_id does.
+        tenant = request.user.tenants.first()
+        if tenant is None:
+            return Response({"detail": "Tenant context required."}, status=status.HTTP_403_FORBIDDEN)
+
+        if tenant.vault_passphrase_hash:
+            # Tenant already has a vault passphrase — caller must provide and match it.
+            if not vault_passphrase:
+                return Response(
+                    {"detail": "vault_passphrase is required for this tenant."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            if not check_password(vault_passphrase, tenant.vault_passphrase_hash):
+                return Response(
+                    {"detail": "Invalid vault passphrase."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        elif vault_passphrase:
+            # First time a passphrase is supplied — hash and persist it.
+            tenant.vault_passphrase_hash = make_password(vault_passphrase)
+            tenant.save(update_fields=['vault_passphrase_hash'])
+            logger.info("Vault passphrase registered for tenant %s", tenant_id)
+        # If neither branch applies (no existing hash, no passphrase supplied), we
+        # allow the operation — the tenant hasn't opted into vault passphrase protection yet.
+
+        # --- Upsert: update existing or create new ---
+        existing = PortalCredential.objects.filter(
+            tenant_id=tenant_id,
+            agency=agency,
+        ).first()
+
+        if existing:
+            # Re-encrypt with the same salt so the derived key is unchanged.
+            existing.set_username(data['username'])
+            existing.set_password(data['password'])
+            existing.is_active = True
+            existing.save(
+                update_fields=['encrypted_username', 'encrypted_password', 'key_salt', 'is_active', 'updated_at']
+            )
+            credential = existing
+        else:
+            credential = PortalCredential(
+                tenant_id=tenant_id,
+                agency=agency,
+            )
+            credential.set_username(data['username'])
+            credential.set_password(data['password'])
+            credential.save()
+
+        return Response(
+            PortalCredentialSerializer(credential).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class PortalCredentialDeleteView(views.APIView):
+    """
+    DELETE /api/intelligence/credentials/<uuid:pk>/  — deactivate credential
+
+    Soft-deletes by setting is_active=False rather than hard-deleting.
+    """
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        from .models import PortalCredential
+
+        tenant_id = _get_tenant_id(request)
+        if not tenant_id:
+            return Response({"detail": "Tenant context required."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            credential = PortalCredential.objects.get(
+                pk=pk,
+                tenant_id=tenant_id,
+            )
+        except PortalCredential.DoesNotExist:
+            return Response({"detail": "Credential not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        credential.is_active = False
+        credential.save(update_fields=['is_active', 'updated_at'])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

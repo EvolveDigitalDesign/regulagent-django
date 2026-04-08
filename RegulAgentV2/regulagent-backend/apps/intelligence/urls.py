@@ -28,4 +28,14 @@ urlpatterns = [
     path("trends/", views.TrendsView.as_view(), name="trends"),
     path("trends/heatmap/", views.TrendsHeatmapView.as_view(), name="trends-heatmap"),
     path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
+    # Filing Sync
+    path("filing-status/sync/", views.FilingSyncView.as_view(), name="filing-sync"),
+    path(
+        "filing-status/sync/<str:task_id>/",
+        views.FilingSyncStatusView.as_view(),
+        name="filing-sync-status",
+    ),
+    # Portal Credentials
+    path("credentials/", views.PortalCredentialListCreateView.as_view(), name="credential-list"),
+    path("credentials/<uuid:pk>/", views.PortalCredentialDeleteView.as_view(), name="credential-delete"),
 ]

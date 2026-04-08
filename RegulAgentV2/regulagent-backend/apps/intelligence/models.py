@@ -1,8 +1,12 @@
+import base64
+import hashlib
+import os
 import uuid
-from django.db import models
 from django.conf import settings
+from django.db import models
 from apps.intelligence.constants import (
     AGENCY_CHOICES,
+    FILING_SOURCE_CHOICES,
     FILING_STATUS_CHOICES,
     FORM_TYPE_CHOICES,
     INTERACTION_ACTION_CHOICES,
@@ -59,6 +63,13 @@ class FilingStatusRecord(models.Model):
     reviewer_name = models.CharField(max_length=128, blank=True)
     status_date = models.DateField(null=True, blank=True)
     portal_url = models.URLField(blank=True)
+    source = models.CharField(
+        max_length=20,
+        choices=FILING_SOURCE_CHOICES,
+        default='manual',
+        db_index=True,
+        help_text="How this filing entered the system",
+    )
     raw_portal_data = models.JSONField(default=dict)
     polled_at = models.DateTimeField(null=True, blank=True)
 
@@ -311,9 +322,13 @@ class PortalCredential(models.Model):
     tenant_id = models.UUIDField(db_index=True)
     agency = models.CharField(max_length=10, choices=AGENCY_CHOICES)
 
-    # Encrypted at rest using Fernet
+    # Encrypted at rest using per-tenant Fernet key (derived from tenant_id + ENCRYPTION_PEPPER + key_salt)
     encrypted_username = models.BinaryField()
     encrypted_password = models.BinaryField()
+
+    # Per-credential random salt for key derivation — ensures unique key per credential
+    # even within the same tenant. Must never change after first encryption.
+    key_salt = models.BinaryField(default=b'', help_text="Per-credential salt for key derivation")
 
     last_successful_login = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -328,27 +343,60 @@ class PortalCredential(models.Model):
     def __str__(self):
         return f"PortalCredential: {self.agency} / tenant {self.tenant_id}"
 
-    def encrypt(self, value: str) -> bytes:
+    @staticmethod
+    def _derive_key(tenant_id: str, salt: bytes) -> bytes:
+        """
+        Derive a Fernet-compatible key from tenant_id + server pepper + per-credential salt.
+
+        Each tenant gets a unique encryption key. Compromising one tenant's credentials
+        (even knowing tenant_id and salt) requires the server-side ENCRYPTION_PEPPER to
+        reconstruct the key. PBKDF2 with 100,000 iterations resists brute-force.
+
+        Returns URL-safe base64-encoded 32-byte key suitable for Fernet.
+        """
+        pepper = os.environ.get('ENCRYPTION_PEPPER', '')
+        if not pepper:
+            raise ValueError(
+                "ENCRYPTION_PEPPER environment variable is required for credential encryption. "
+                "Set it in the container environment."
+            )
+        raw_key = hashlib.pbkdf2_hmac(
+            'sha256',
+            f"{tenant_id}:{pepper}".encode(),
+            salt,
+            iterations=100_000,
+            dklen=32,
+        )
+        return base64.urlsafe_b64encode(raw_key)
+
+    def _ensure_salt(self) -> bytes:
+        """Return the existing salt, or generate and store a new one."""
+        if not self.key_salt:
+            self.key_salt = os.urandom(16)
+        return bytes(self.key_salt)
+
+    def _get_fernet(self):
+        """Return a Fernet instance using the per-tenant derived key."""
         from cryptography.fernet import Fernet
-        from django.conf import settings as django_settings
-        key = django_settings.PORTAL_CREDENTIAL_KEY
-        f = Fernet(key)
-        return f.encrypt(value.encode())
+        salt = self._ensure_salt()
+        key = self._derive_key(str(self.tenant_id), salt)
+        return Fernet(key)
+
+    def encrypt(self, value: str) -> bytes:
+        return self._get_fernet().encrypt(value.encode())
 
     def decrypt(self, encrypted_value: bytes) -> str:
-        from cryptography.fernet import Fernet
-        from django.conf import settings as django_settings
-        key = django_settings.PORTAL_CREDENTIAL_KEY
-        f = Fernet(key)
-        return f.decrypt(bytes(encrypted_value)).decode()
+        return self._get_fernet().decrypt(bytes(encrypted_value)).decode()
 
     def set_username(self, username: str) -> None:
+        self._ensure_salt()  # lock in the salt before first encryption
         self.encrypted_username = self.encrypt(username)
 
     def get_username(self) -> str:
         return self.decrypt(self.encrypted_username)
 
     def set_password(self, password: str) -> None:
+        self._ensure_salt()  # lock in the salt before first encryption
         self.encrypted_password = self.encrypt(password)
 
     def get_password(self) -> str:

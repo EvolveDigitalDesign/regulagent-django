@@ -8,9 +8,7 @@ import logging
 import re
 from typing import TYPE_CHECKING
 
-from asgiref.sync import async_to_sync
-from django.utils import timezone
-from playwright.async_api import async_playwright, Page
+from playwright.async_api import async_playwright
 
 if TYPE_CHECKING:
     from apps.intelligence.models import FilingStatusRecord, PortalCredential
@@ -18,32 +16,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# RRC portal constants
+# Statuses that trigger a rejection/deficiency record downstream.
+# Imported by tasks_polling.py — must remain in this module.
 # ---------------------------------------------------------------------------
-
-RRC_LOGIN_URL = "https://webapps.rrc.texas.gov/security/login.do"
-RRC_STATUS_SEARCH_URL = (
-    "https://webapps.rrc.texas.gov/EWA/ewastatus.do"
-)
-
-# Statuses that trigger a rejection/deficiency record downstream
 ADVERSE_STATUSES = {"rejected", "revision_requested", "deficiency"}
-
-# Map portal status strings to internal FilingStatusRecord choices
-RRC_STATUS_MAP = {
-    "pending": "pending",
-    "under review": "under_review",
-    "approved": "approved",
-    "rejected": "rejected",
-    "revision requested": "revision_requested",
-    "deficiency": "deficiency",
-    "deficiency notice": "deficiency",
-}
 
 
 class PortalStatusPoller:
     """
     Polls agency portals for filing status updates using Playwright browser automation.
+
+    Dispatches authentication and status-checking to the appropriate concrete
+    scraper via the portal_scrapers registry.
 
     Usage (sync, from Celery task):
         poller = PortalStatusPoller(agency='RRC')
@@ -63,9 +47,9 @@ class PortalStatusPoller:
 
         Steps:
         1. Fetch PortalCredential for tenant + agency
-        2. Authenticate to portal
+        2. Resolve scraper from registry and authenticate
         3. For each pending FilingStatusRecord: look up by filing_id
-        4. Scrape current status, remarks, reviewer, date
+        4. Scrape current status, remarks, reviewer, date via scraper
         5. Return list of status-update dicts
 
         Returns list of dicts with keys:
@@ -73,6 +57,7 @@ class PortalStatusPoller:
             remarks, reviewer_name, status_date, raw_data
         """
         from apps.intelligence.models import FilingStatusRecord, PortalCredential
+        from apps.intelligence.services.portal_scrapers import get_scraper
 
         updates = []
 
@@ -112,32 +97,21 @@ class PortalStatusPoller:
             )
             return updates
 
+        # Resolve scraper — raises KeyError if agency is not registered
+        scraper = get_scraper(self.agency)
+
         # Run browser session
         async with async_playwright() as pw:
             browser = await pw.chromium.launch(headless=True)
             try:
                 context = await browser.new_context()
-
-                if self.agency == "RRC":
-                    page = await self._authenticate_rrc(credential, context)
-                elif self.agency == "NMOCD":
-                    page = await self._authenticate_nmocd(credential, context)
-                else:
-                    logger.error("Unknown agency: %s", self.agency)
-                    return updates
+                page = await scraper.authenticate(credential, context)
 
                 for filing in pending_filings:
                     try:
-                        if self.agency == "RRC":
-                            status_data = await self._check_filing_status_rrc(
-                                page, filing.filing_id
-                            )
-                        elif self.agency == "NMOCD":
-                            status_data = await self._check_filing_status_nmocd(
-                                page, filing.filing_id
-                            )
-                        else:
-                            continue
+                        status_data = await scraper.check_filing_status(
+                            page, filing.filing_id
+                        )
 
                         updates.append(
                             {
@@ -148,8 +122,6 @@ class PortalStatusPoller:
                             }
                         )
 
-                    except NotImplementedError:
-                        raise
                     except Exception as exc:
                         logger.exception(
                             "Error checking filing %s for tenant=%s: %s",
@@ -163,222 +135,6 @@ class PortalStatusPoller:
                 await browser.close()
 
         return updates
-
-    # ------------------------------------------------------------------
-    # RRC portal methods
-    # ------------------------------------------------------------------
-
-    async def _authenticate_rrc(self, credential: "PortalCredential", context) -> Page:
-        """
-        Authenticate to RRC portal.
-        URL: webapps.rrc.texas.gov/security/login.do
-
-        Reuses the same login flow as RRCFormAutomator.authenticate().
-        Returns an authenticated Page.
-        """
-        username = await asyncio.get_event_loop().run_in_executor(
-            None, credential.get_username
-        )
-        password = await asyncio.get_event_loop().run_in_executor(
-            None, credential.get_password
-        )
-
-        page = await context.new_page()
-        await page.goto(RRC_LOGIN_URL)
-        await page.wait_for_load_state("networkidle")
-
-        logger.info("Starting RRC portal authentication for poller")
-
-        # Fill credentials via JS (mirrors RRCFormAutomator.authenticate)
-        await page.evaluate(
-            f"""
-            document.querySelector('input[name="login"]').value = '{username}';
-            document.querySelector('input[name="password"]').value = '{password}';
-            document.querySelector('input[name="login"]').dispatchEvent(new Event('input', {{ bubbles: true }}));
-            document.querySelector('input[name="password"]').dispatchEvent(new Event('input', {{ bubbles: true }}));
-            """
-        )
-
-        # Submit
-        submit_btn = page.locator('input[type="submit"], button[type="submit"]').first
-        await submit_btn.click()
-        await page.wait_for_load_state("networkidle", timeout=15000)
-
-        # Verify success: RRC shows a nav dropdown post-login
-        nav_dropdown = await page.query_selector('select[name="go"]')
-        if not nav_dropdown:
-            error_el = await page.query_selector('.error, .alert-danger, [class*="error"]')
-            error_msg = ""
-            if error_el:
-                error_msg = await error_el.inner_text()
-            raise RuntimeError(
-                f"RRC portal authentication failed for tenant credential {credential.id}. "
-                f"Portal message: {error_msg or 'unknown'}"
-            )
-
-        # Update last_successful_login
-        await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: (
-                type(credential).objects.filter(pk=credential.pk).update(
-                    last_successful_login=timezone.now()
-                )
-            ),
-        )
-
-        logger.info("RRC portal authentication successful (poller)")
-        return page
-
-    async def _check_filing_status_rrc(self, page: Page, filing_id: str) -> dict:
-        """
-        Check status of a specific filing on RRC portal.
-
-        Navigates to the e-filing status search page and queries by filing_id
-        (the agency tracking/confirmation number).
-
-        Returns:
-            {
-                new_status: str,   # one of FILING_STATUS_CHOICES keys
-                remarks: str,
-                reviewer_name: str,
-                status_date: str | None,   # ISO date string or None
-                raw_data: dict,
-            }
-        """
-        logger.debug("Checking RRC status for filing_id=%s", filing_id)
-
-        # Navigate to status search
-        await page.goto(RRC_STATUS_SEARCH_URL)
-        await page.wait_for_load_state("networkidle", timeout=15000)
-
-        # Attempt to find a search field for filing/tracking number
-        search_field = await page.query_selector(
-            'input[name="filingId"], input[name="trackingNo"], input[name="confirmationNo"], '
-            'input[name="searchValue"], input[id*="filing"], input[id*="tracking"]'
-        )
-
-        raw_data: dict = {"filing_id": filing_id, "url": page.url}
-
-        if search_field:
-            await search_field.fill(filing_id)
-            # Submit search
-            submit_btn = await page.query_selector(
-                'input[type="submit"], button[type="submit"], button[id*="search"]'
-            )
-            if submit_btn:
-                await submit_btn.click()
-                await page.wait_for_load_state("networkidle", timeout=15000)
-            raw_data["page_content_snippet"] = (await page.content())[:2000]
-        else:
-            # No search form found — capture page content for debugging
-            logger.warning(
-                "No search field found on RRC status page (url=%s). "
-                "Capturing page content for debug.",
-                page.url,
-            )
-            raw_data["page_content_snippet"] = (await page.content())[:2000]
-
-        # Parse status from page
-        page_text = await page.inner_text("body")
-        new_status = self._parse_rrc_status(page_text)
-        remarks = self._parse_rrc_remarks(page_text)
-        reviewer_name = self._parse_rrc_reviewer(page_text)
-        status_date = self._parse_rrc_date(page_text)
-
-        raw_data["parsed_text_snippet"] = page_text[:1000]
-
-        return {
-            "new_status": new_status,
-            "remarks": remarks,
-            "reviewer_name": reviewer_name,
-            "status_date": status_date,
-            "raw_data": raw_data,
-        }
-
-    # ------------------------------------------------------------------
-    # NMOCD stubs
-    # ------------------------------------------------------------------
-
-    async def _authenticate_nmocd(
-        self, credential: "PortalCredential", context
-    ) -> Page:
-        """NMOCD portal auth — stub for future implementation."""
-        raise NotImplementedError("NMOCD polling not yet implemented")
-
-    async def _check_filing_status_nmocd(
-        self, page: Page, filing_id: str
-    ) -> dict:
-        """NMOCD filing status check — stub for future."""
-        raise NotImplementedError("NMOCD polling not yet implemented")
-
-    # ------------------------------------------------------------------
-    # RRC page parsing helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _parse_rrc_status(page_text: str) -> str:
-        """
-        Map RRC portal status text to internal FilingStatusRecord status key.
-        Falls back to 'under_review' when no known status is detected.
-        """
-        text_lower = page_text.lower()
-        for portal_label, internal_key in RRC_STATUS_MAP.items():
-            if portal_label in text_lower:
-                return internal_key
-        return "under_review"
-
-    @staticmethod
-    def _parse_rrc_remarks(page_text: str) -> str:
-        """Extract remarks/notes from RRC portal page text."""
-        patterns = [
-            r"remarks?[:\s]+([^\n]+)",
-            r"notes?[:\s]+([^\n]+)",
-            r"comments?[:\s]+([^\n]+)",
-            r"reason[:\s]+([^\n]+)",
-        ]
-        for pattern in patterns:
-            match = re.search(pattern, page_text, re.IGNORECASE)
-            if match:
-                return match.group(1).strip()[:500]
-        return ""
-
-    @staticmethod
-    def _parse_rrc_reviewer(page_text: str) -> str:
-        """Extract reviewer name from RRC portal page text."""
-        patterns = [
-            r"reviewer?[:\s]+([A-Za-z ,\.]+)",
-            r"reviewed by[:\s]+([A-Za-z ,\.]+)",
-            r"assigned to[:\s]+([A-Za-z ,\.]+)",
-        ]
-        for pattern in patterns:
-            match = re.search(pattern, page_text, re.IGNORECASE)
-            if match:
-                return match.group(1).strip()[:128]
-        return ""
-
-    @staticmethod
-    def _parse_rrc_date(page_text: str) -> str | None:
-        """
-        Extract status date from RRC portal page text.
-        Returns ISO date string (YYYY-MM-DD) or None.
-        """
-        # Match MM/DD/YYYY or YYYY-MM-DD
-        patterns = [
-            r"\b(\d{2}/\d{2}/\d{4})\b",
-            r"\b(\d{4}-\d{2}-\d{2})\b",
-        ]
-        for pattern in patterns:
-            match = re.search(pattern, page_text)
-            if match:
-                raw = match.group(1)
-                if "/" in raw:
-                    parts = raw.split("/")
-                    try:
-                        return f"{parts[2]}-{parts[0].zfill(2)}-{parts[1].zfill(2)}"
-                    except IndexError:
-                        pass
-                return raw
-        return None
 
 
 # ---------------------------------------------------------------------------
