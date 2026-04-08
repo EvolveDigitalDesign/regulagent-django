@@ -33,12 +33,10 @@ logger = logging.getLogger(__name__)
 
 class ResearchSessionListCreateView(APIView):
     """
-    POST /api/research/sessions/
+    GET  /api/research/sessions/  — list sessions for the current tenant
+    POST /api/research/sessions/  — create session + kick off indexing
 
-    Create a new ResearchSession and dispatch the indexing pipeline as a
-    background Celery task.
-
-    Request body:
+    POST request body:
         api_number (str, required): Well API number.
         state (str, optional): "TX", "NM", or "UT". Auto-detected from API prefix if omitted.
 
@@ -46,6 +44,49 @@ class ResearchSessionListCreateView(APIView):
     GET /api/research/sessions/{id}/ until status == "ready".
     """
     permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        GET /api/research/sessions/
+
+        List research sessions for the current tenant.
+        Supports optional filters:
+            ?api_number=  — filter by API number (suffix match)
+            ?status=      — filter by session status
+            ?well_api14=  — filter by linked well's api14
+        """
+        import re as _re
+
+        user_tenant = request.user.tenants.first() if request.user.is_authenticated else None
+        qs = ResearchSession.objects.all().order_by("-created_at")
+
+        if user_tenant:
+            qs = qs.filter(tenant=user_tenant)
+
+        # Optional filters
+        api_number = request.query_params.get("api_number")
+        if api_number:
+            clean = _re.sub(r"\D+", "", api_number)
+            if len(clean) >= 8:
+                suffix = clean[-8:]
+                # Filter sessions whose normalized api_number ends with the same 8 digits
+                session_ids = []
+                for sess in qs.only('id', 'api_number'):
+                    sess_clean = _re.sub(r"\D+", "", str(sess.api_number or ""))
+                    if len(sess_clean) >= 8 and sess_clean[-8:] == suffix:
+                        session_ids.append(sess.id)
+                qs = qs.filter(id__in=session_ids)
+
+        status_filter = request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        well_api14 = request.query_params.get("well_api14")
+        if well_api14:
+            qs = qs.filter(well__api14=well_api14)
+
+        sessions = qs[:50]
+        return Response(ResearchSessionSerializer(sessions, many=True).data)
 
     def post(self, request):
         serializer = ResearchSessionCreateSerializer(data=request.data)

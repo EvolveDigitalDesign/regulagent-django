@@ -82,6 +82,7 @@ from apps.public_core.views.well_components import (
     well_components_view,
     delete_well_component_view,
 )
+from apps.public_core.views.manual_wbd import manual_wbd_list_create, manual_wbd_detail
 from apps.tenant_overlay.views.guardrail_policy import (
     TenantGuardrailPolicyView,
     get_risk_profiles,
@@ -206,6 +207,10 @@ urlpatterns = [
     # Usage tracking endpoints
     path('api/tenant/usage/summary/', UsageSummaryView.as_view(), name='usage_summary'),
     
+    # Manual WBD endpoints
+    path('api/tenant/manual-wbd/', manual_wbd_list_create, name='manual-wbd-list'),
+    path('api/tenant/manual-wbd/<uuid:wbd_id>/', manual_wbd_detail, name='manual-wbd-detail'),
+
     # Tenant wells endpoints (specific routes first, then generic)
     path('api/tenant/wells/import/', import_wells_view, name='tenant_wells_import'),
     path('api/tenant/wells/history/', get_tenant_well_history, name='tenant_well_history'),
