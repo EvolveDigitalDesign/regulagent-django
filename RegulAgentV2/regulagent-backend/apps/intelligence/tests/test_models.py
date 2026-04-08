@@ -301,11 +301,13 @@ class TestRecommendationInteraction:
 
 @pytest.mark.django_db
 class TestPortalCredential:
-    def test_encrypt_decrypt_roundtrip(self, settings, tenant_id):
-        from cryptography.fernet import Fernet
+    """
+    Tests use monkeypatching to set ENCRYPTION_PEPPER in the environment,
+    which is read directly from os.environ by PortalCredential._derive_key().
+    """
 
-        key = Fernet.generate_key()
-        settings.PORTAL_CREDENTIAL_KEY = key
+    def test_encrypt_decrypt_roundtrip(self, monkeypatch, tenant_id):
+        monkeypatch.setenv("ENCRYPTION_PEPPER", "test-pepper-for-unit-tests")
 
         cred = PortalCredential(tenant_id=tenant_id, agency="RRC")
         cred.set_username("testuser@rrc.state.tx.us")
@@ -314,22 +316,16 @@ class TestPortalCredential:
         assert cred.get_username() == "testuser@rrc.state.tx.us"
         assert cred.get_password() == "SecureP@ssword123!"
 
-    def test_encrypted_bytes_not_plaintext(self, settings, tenant_id):
-        from cryptography.fernet import Fernet
-
-        key = Fernet.generate_key()
-        settings.PORTAL_CREDENTIAL_KEY = key
+    def test_encrypted_bytes_not_plaintext(self, monkeypatch, tenant_id):
+        monkeypatch.setenv("ENCRYPTION_PEPPER", "test-pepper-for-unit-tests")
 
         cred = PortalCredential(tenant_id=tenant_id, agency="RRC")
         cred.set_password("mysecret")
 
         assert b"mysecret" not in bytes(cred.encrypted_password)
 
-    def test_unique_together_tenant_agency(self, db, settings, tenant_id):
-        from cryptography.fernet import Fernet
-
-        key = Fernet.generate_key()
-        settings.PORTAL_CREDENTIAL_KEY = key
+    def test_unique_together_tenant_agency(self, db, monkeypatch, tenant_id):
+        monkeypatch.setenv("ENCRYPTION_PEPPER", "test-pepper-for-unit-tests")
 
         cred1 = PortalCredential(tenant_id=tenant_id, agency="RRC")
         cred1.set_username("user1")
@@ -343,11 +339,8 @@ class TestPortalCredential:
         with pytest.raises(IntegrityError):
             cred2.save()
 
-    def test_str_representation(self, db, settings, tenant_id):
-        from cryptography.fernet import Fernet
-
-        key = Fernet.generate_key()
-        settings.PORTAL_CREDENTIAL_KEY = key
+    def test_str_representation(self, db, monkeypatch, tenant_id):
+        monkeypatch.setenv("ENCRYPTION_PEPPER", "test-pepper-for-unit-tests")
 
         cred = PortalCredential(tenant_id=tenant_id, agency="NMOCD")
         cred.set_username("nmuser")
@@ -356,3 +349,29 @@ class TestPortalCredential:
 
         assert "NMOCD" in str(cred)
         assert str(tenant_id) in str(cred)
+
+    def test_different_tenants_use_different_keys(self, monkeypatch):
+        """Two tenants with the same plaintext produce different ciphertext (different keys)."""
+        import uuid
+
+        monkeypatch.setenv("ENCRYPTION_PEPPER", "test-pepper-for-unit-tests")
+
+        tenant_a = uuid.uuid4()
+        tenant_b = uuid.uuid4()
+
+        cred_a = PortalCredential(tenant_id=tenant_a, agency="RRC")
+        cred_a.set_password("shared-password")
+
+        cred_b = PortalCredential(tenant_id=tenant_b, agency="RRC")
+        cred_b.set_password("shared-password")
+
+        # Ciphertext must differ (different salts and different tenant_id keys)
+        assert bytes(cred_a.encrypted_password) != bytes(cred_b.encrypted_password)
+
+    def test_missing_pepper_raises(self, monkeypatch, tenant_id):
+        """_derive_key must raise ValueError when ENCRYPTION_PEPPER is not set."""
+        monkeypatch.delenv("ENCRYPTION_PEPPER", raising=False)
+
+        cred = PortalCredential(tenant_id=tenant_id, agency="RRC")
+        with pytest.raises(ValueError, match="ENCRYPTION_PEPPER"):
+            cred.set_password("will-fail")
