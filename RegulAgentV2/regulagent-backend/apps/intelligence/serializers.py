@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from .models import (
     FilingStatusRecord,
+    PortalCredential,
     Recommendation,
     RecommendationInteraction,
     RejectionPattern,
@@ -35,6 +36,7 @@ class FilingStatusCreateSerializer(serializers.Serializer):
     state = serializers.CharField(required=False, default="")
     district = serializers.CharField(required=False, default="")
     county = serializers.CharField(required=False, default="")
+    source = serializers.CharField(required=False, default="manual")
 
 
 class RejectionRecordSerializer(serializers.ModelSerializer):
@@ -119,3 +121,46 @@ class DashboardSerializer(serializers.Serializer):
     top_rejection_reasons = serializers.ListField(child=serializers.DictField())
     trending_patterns = TrendSerializer(many=True)
     recent_rejections = RejectionRecordSerializer(many=True)
+
+
+class FilingSyncRequestSerializer(serializers.Serializer):
+    """For POST /api/intelligence/filing-status/sync/"""
+    agency = serializers.ChoiceField(
+        choices=[('RRC', 'Texas RRC'), ('NMOCD', 'New Mexico OCD')],
+        default='RRC',
+    )
+
+
+class PortalCredentialSerializer(serializers.ModelSerializer):
+    """Read serializer — NEVER exposes passwords."""
+    username = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PortalCredential
+        fields = ['id', 'agency', 'username', 'last_successful_login', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'last_successful_login', 'created_at', 'updated_at']
+
+    def get_username(self, obj):
+        """Return decrypted username (safe to show, unlike password)."""
+        try:
+            return obj.get_username()
+        except Exception:
+            return "***"
+
+
+class PortalCredentialCreateSerializer(serializers.Serializer):
+    """For POST — accepts plaintext credentials, encrypts on save.
+
+    vault_passphrase is optional but required when the tenant already has one set.
+    On first use, supplying a passphrase registers it for the tenant.
+    """
+    agency = serializers.ChoiceField(choices=[('RRC', 'Texas RRC'), ('NMOCD', 'New Mexico OCD')])
+    username = serializers.CharField(max_length=128)
+    password = serializers.CharField(max_length=128, write_only=True)
+    vault_passphrase = serializers.CharField(
+        max_length=128,
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        help_text="Vault passphrase required when the tenant has configured one (authorization gate)",
+    )

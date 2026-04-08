@@ -606,9 +606,12 @@ def normalize_casing_for_frontend(casing_list: list) -> list:
         hole_size = _first(c.get("hole_size_in"), c.get("bit_size_in"))
         if hole_size is None and size_in:
             hole_size = _infer_hole_size(float(size_in))
+        string_name = c.get("string_type") or c.get("casing_type") or c.get("string", "")
         normalized.append({
-            "string": c.get("string_type") or c.get("casing_type") or c.get("string", ""),
+            "string": string_name,
+            "string_type": string_name,          # alias for component-path consumers
             "size_in": size_in,
+            "outside_dia_in": size_in,           # alias for component-path consumers
             "top_ft": _first(c.get("top_ft"), c.get("top")),
             "bottom_ft": _first(c.get("shoe_depth_ft"), c.get("bottom_ft"), c.get("bottom")),
             "hole_size_in": hole_size,

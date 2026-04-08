@@ -85,3 +85,9 @@ INTERACTION_ACTION_CHOICES = [
     ('dismissed', 'Dismissed'),
     ('snoozed', 'Snoozed'),
 ]
+
+FILING_SOURCE_CHOICES = [
+    ('synced', 'Synced from Portal'),
+    ('submitted', 'Submitted via Platform'),
+    ('manual', 'Manually Created'),
+]

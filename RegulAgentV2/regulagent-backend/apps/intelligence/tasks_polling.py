@@ -257,3 +257,113 @@ def capture_post_submission_status(
             exc,
         )
         return {"created": False, "reason": str(exc)}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def sync_portal_filings(self, tenant_id: str, agency: str = "RRC"):
+    """
+    On-demand task triggered by user clicking "Sync Filings".
+
+    Launches FilingSyncer to scrape all filings from the agency portal
+    and upsert them into FilingStatusRecord.
+
+    Returns summary dict: {status, total_scraped, created, updated, unchanged, errors}
+    """
+    from apps.intelligence.services.filing_syncer import FilingSyncer
+
+    logger.info(
+        "sync_portal_filings started — tenant=%s agency=%s",
+        tenant_id,
+        agency,
+    )
+
+    syncer = FilingSyncer()
+    try:
+        result = async_to_sync(syncer.sync_filings)(tenant_id, agency)
+    except Exception as exc:
+        logger.exception(
+            "sync_portal_filings failed — tenant=%s agency=%s: %s",
+            tenant_id,
+            agency,
+            exc,
+        )
+        raise self.retry(exc=exc)
+
+    logger.info(
+        "sync_portal_filings complete — tenant=%s agency=%s result=%s",
+        tenant_id,
+        agency,
+        result,
+    )
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Per-filing remarks fetch
+# ---------------------------------------------------------------------------
+
+
+@shared_task(bind=True, max_retries=1, default_retry_delay=30)
+def fetch_filing_remarks(self, filing_status_id: str, tenant_id: str, agency: str = "RRC"):
+    """
+    Fetch return remarks for a single filing by opening its detail page.
+
+    Dispatched by FilingSyncer after upserting a returned/rejected filing.
+    Each filing gets its own short-lived browser session — no timeout risk.
+    """
+    from apps.intelligence.models import FilingStatusRecord, PortalCredential
+    from apps.intelligence.services.portal_scrapers import get_scraper
+
+    logger.info("fetch_filing_remarks: filing=%s agency=%s", filing_status_id, agency)
+
+    try:
+        filing_status = FilingStatusRecord.objects.get(id=filing_status_id)
+    except FilingStatusRecord.DoesNotExist:
+        return {"status": "error", "reason": "not_found"}
+
+    # Skip if remarks already populated
+    if filing_status.agency_remarks:
+        return {"status": "skipped", "reason": "already_has_remarks"}
+
+    try:
+        credential = PortalCredential.objects.get(
+            tenant_id=tenant_id, agency=agency, is_active=True
+        )
+    except PortalCredential.DoesNotExist:
+        return {"status": "error", "reason": "no_credentials"}
+
+    scraper = get_scraper(agency)
+
+    async def _fetch():
+        from playwright.async_api import async_playwright
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(headless=True)
+            try:
+                context = await browser.new_context(viewport={"width": 1920, "height": 1080})
+                page = await scraper.authenticate(credential, context)
+                # Get API number from raw_portal_data for search
+                api_number = (filing_status.raw_portal_data or {}).get("api_number", "")
+                remarks = await scraper.scrape_single_filing_remarks(
+                    page, filing_status.filing_id, api_number=api_number
+                )
+                return remarks
+            finally:
+                await browser.close()
+
+    try:
+        remarks = async_to_sync(_fetch)()
+    except Exception as exc:
+        logger.exception("fetch_filing_remarks failed: %s", exc)
+        raise self.retry(exc=exc)
+
+    if remarks:
+        FilingStatusRecord.objects.filter(pk=filing_status_id).update(agency_remarks=remarks)
+        logger.info("fetch_filing_remarks: updated remarks for %s: %s", filing_status_id, remarks[:100])
+
+        # Dispatch rejection pipeline
+        from apps.intelligence.tasks import create_rejection_from_status
+        create_rejection_from_status.delay(filing_status_id)
+
+        return {"status": "success", "remarks": remarks[:100]}
+
+    return {"status": "no_remarks_found"}

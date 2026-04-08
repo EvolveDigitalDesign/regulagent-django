@@ -101,10 +101,14 @@ def resolve_well_components(
             # Explicitly superseded — skip (handled below when building result)
             continue
 
+        # Include string_type in key for casing/liner to avoid collapsing different strings at same depth
+        _props = component.properties or {}
+        _string_key = _props.get("string_type") if component.component_type in ("casing", "liner") else None
         key = (
             component.component_type,
             component.top_ft,
             component.bottom_ft,
+            _string_key,
         )
         priority = _LAYER_PRECEDENCE.get(component.layer, 0)
 
@@ -236,7 +240,7 @@ def build_well_geometry_from_components(
 
         elif ctype == "tubing":
             geometry["tubing"].append({
-                "outside_dia_in": _f(c.outside_dia_in),
+                "size_in": _f(c.outside_dia_in),
                 "top_ft": _f(c.top_ft),
                 "bottom_ft": _f(c.bottom_ft),
                 "weight_ppf": _f(c.weight_ppf),
@@ -246,7 +250,7 @@ def build_well_geometry_from_components(
 
         elif ctype == "liner":
             geometry["liner"].append({
-                "outside_dia_in": _f(c.outside_dia_in),
+                "size_in": _f(c.outside_dia_in),
                 "top_ft": _f(c.top_ft),
                 "bottom_ft": _f(c.bottom_ft),
                 "cement_top_ft": _f(c.cement_top_ft),
@@ -336,6 +340,7 @@ def build_well_geometry_from_components(
                 "job_type": props.get("job_type"),
                 "interval_top_ft": _f(c.top_ft),
                 "interval_bottom_ft": _f(c.bottom_ft),
+                "cement_top_ft": _f(c.cement_top_ft),
                 "sacks": _f(c.sacks),
                 "cement_class": c.cement_class or "",
                 "_component_id": cid,
@@ -348,6 +353,9 @@ def build_well_geometry_from_components(
                 ctype,
                 cid,
             )
+
+    # Populate production_perforations from perforations for frontend consistency
+    geometry["production_perforations"] = list(geometry["perforations"])
 
     logger.info(
         "build_well_geometry_from_components: built geometry for well=%s — "

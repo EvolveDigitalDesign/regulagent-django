@@ -448,15 +448,25 @@ def extract_and_populate_components(self, api14: str, tenant_id: str = None):
                         if 'liner' in string_type.lower()
                         else WellComponent.ComponentType.CASING
                     )
+                    # Infer hole_size_in from casing OD if not in source doc
+                    hole_size = _safe_decimal(record.get('hole_size_in'))
+                    if hole_size is None:
+                        od = _safe_decimal(record.get('size_in'))
+                        if od is not None:
+                            from apps.public_core.services.well_geometry_builder import _infer_hole_size
+                            hole_size = _safe_decimal(_infer_hole_size(float(od)))
+
                     components.append(WellComponent(
                         well=well,
                         component_type=comp_type,
                         layer=WellComponent.Layer.PUBLIC,
                         lifecycle_state=WellComponent.LifecycleState.INSTALLED,
                         outside_dia_in=_safe_decimal(record.get('size_in')),
+                        weight_ppf=_safe_decimal(record.get('weight_ppf')),
+                        grade=record.get('grade', '') or '',
                         bottom_ft=_safe_decimal(record.get('shoe_depth_ft')),
                         top_ft=_safe_decimal(record.get('top_ft')),
-                        hole_size_in=_safe_decimal(record.get('hole_size_in')),
+                        hole_size_in=hole_size,
                         cement_top_ft=_safe_decimal(record.get('cement_top_ft')),
                         source_document_type='w2',
                         provenance={'extracted_document_id': str(doc.id)},
@@ -588,6 +598,14 @@ def extract_and_populate_components(self, api14: str, tenant_id: str = None):
                         if 'liner' in string_type.lower()
                         else WellComponent.ComponentType.CASING
                     )
+                    # Infer hole_size_in from casing OD if not in source doc
+                    hole_size = _safe_decimal(record.get('hole_size_in'))
+                    if hole_size is None:
+                        od = _safe_decimal(record.get('size_in'))
+                        if od is not None:
+                            from apps.public_core.services.well_geometry_builder import _infer_hole_size
+                            hole_size = _safe_decimal(_infer_hole_size(float(od)))
+
                     components.append(WellComponent(
                         well=well,
                         component_type=comp_type,
@@ -596,8 +614,9 @@ def extract_and_populate_components(self, api14: str, tenant_id: str = None):
                         outside_dia_in=_safe_decimal(record.get('size_in')),
                         bottom_ft=_safe_decimal(record.get('bottom_ft') or record.get('shoe_depth_ft') or record.get('depth_ft')),
                         top_ft=_safe_decimal(record.get('top_ft')),
-                        hole_size_in=_safe_decimal(record.get('hole_size_in')),
+                        hole_size_in=hole_size,
                         weight_ppf=_safe_decimal(record.get('weight_ppf')),
+                        grade=record.get('grade', '') or '',
                         cement_top_ft=_safe_decimal(record.get('cement_top_ft')),
                         source_document_type='c_105',
                         provenance={'extracted_document_id': str(doc.id)},
@@ -791,6 +810,47 @@ def extract_and_populate_components(self, api14: str, tenant_id: str = None):
                 f"(removed {len(components) - len(deduped_components)} duplicate casings)"
             )
         components = deduped_components
+
+        # ── Deduplicate perforations and formation tops by depth range (±5 ft tolerance) ──
+        _TOLERANCE_FT = 5
+        final_components = []
+        seen_perf_ranges = []  # list of (top, bottom) tuples
+        seen_formation_depths = []  # list of top_ft values
+
+        for comp in components:
+            if comp.component_type == WellComponent.ComponentType.PERFORATION:
+                t = float(comp.top_ft) if comp.top_ft is not None else None
+                b = float(comp.bottom_ft) if comp.bottom_ft is not None else None
+                if t is not None and b is not None:
+                    is_dup = any(
+                        abs(t - st) <= _TOLERANCE_FT and abs(b - sb) <= _TOLERANCE_FT
+                        for st, sb in seen_perf_ranges
+                    )
+                    if is_dup:
+                        continue
+                    seen_perf_ranges.append((t, b))
+                final_components.append(comp)
+            elif comp.component_type == WellComponent.ComponentType.FORMATION_TOP:
+                t = float(comp.top_ft) if comp.top_ft is not None else None
+                fname = (comp.properties or {}).get('formation', '').lower()
+                if t is not None:
+                    is_dup = any(
+                        abs(t - sd) <= _TOLERANCE_FT and fname == sf
+                        for sd, sf in seen_formation_depths
+                    )
+                    if is_dup:
+                        continue
+                    seen_formation_depths.append((t, fname))
+                final_components.append(comp)
+            else:
+                final_components.append(comp)
+
+        if len(final_components) != len(components):
+            logger.info(
+                f"[ExtractTask] Perf/formation dedup: {len(components)} → {len(final_components)} "
+                f"(removed {len(components) - len(final_components)} duplicates)"
+            )
+        components = final_components
 
         # 5. Include PublicCasingString / PublicPerforation (same as backfill command)
         for cs in PublicCasingString.objects.filter(well=well):

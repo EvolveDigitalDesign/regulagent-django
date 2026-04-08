@@ -36,6 +36,15 @@ class Tenant(TenantBase):
     slug = models.SlugField(max_length=64, unique=True)
     created_on = models.DateTimeField(auto_now_add=True)
 
+    # Vault passphrase hash (Argon2/PBKDF2 via Django's make_password) — authorization gate
+    # for credential management. The actual encryption uses a per-tenant key derived from
+    # tenant.id + ENCRYPTION_PEPPER, so background sync works without user intervention.
+    vault_passphrase_hash = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Hashed vault passphrase for credential management authorization",
+    )
+
     # Required by TenantMixin
     auto_create_schema = True
     auto_drop_schema = True  # Allows schema deletion when tenant is deleted
