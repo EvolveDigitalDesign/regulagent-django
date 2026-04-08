@@ -400,7 +400,26 @@ def extract_and_populate_components(self, api14: str, tenant_id: str = None):
         extract_completions_all_documents(api14)
 
         # 4. Query ExtractedDocument records for this well
+        # Primary: exact match on normalized api14
         extracted_docs = ExtractedDocument.objects.filter(api_number=api14, status='success')
+
+        # Fallback: suffix match for docs created by research pipeline (may store dashed format)
+        if not extracted_docs.exists():
+            import re as _re
+            clean = _re.sub(r"\D+", "", api14)
+            if len(clean) >= 8:
+                suffix = clean[-8:]
+                # Query all success docs and match by normalized suffix
+                candidate_docs = ExtractedDocument.objects.filter(status='success').only('id', 'api_number')
+                matched_ids = []
+                for ed in candidate_docs.iterator():
+                    ed_clean = _re.sub(r"\D+", "", str(ed.api_number or ""))
+                    if len(ed_clean) >= 8 and ed_clean[-8:] == suffix:
+                        matched_ids.append(ed.id)
+                if matched_ids:
+                    extracted_docs = ExtractedDocument.objects.filter(id__in=matched_ids, status='success')
+                    logger.info(f"[ExtractTask] Suffix match found {len(matched_ids)} docs for api14={api14}")
+
         logger.info(f"[ExtractTask] Found {extracted_docs.count()} extracted documents for api14={api14}")
 
         components: list[WellComponent] = []
@@ -556,6 +575,222 @@ def extract_and_populate_components(self, api14: str, tenant_id: str = None):
                         provenance={'extracted_document_id': str(doc.id)},
                         properties={},
                     ))
+
+            # ----------------------------------------------------------------
+            # C-105 (NM): casing, formation tops (equivalent of W-2)
+            # ----------------------------------------------------------------
+            elif doc_type in ('c_105', 'c105'):
+                # Casing strings
+                for record in json_data.get('casing_record', []) or []:
+                    string_type = record.get('string_type', '') or ''
+                    comp_type = (
+                        WellComponent.ComponentType.LINER
+                        if 'liner' in string_type.lower()
+                        else WellComponent.ComponentType.CASING
+                    )
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=comp_type,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        outside_dia_in=_safe_decimal(record.get('size_in')),
+                        bottom_ft=_safe_decimal(record.get('bottom_ft') or record.get('shoe_depth_ft') or record.get('depth_ft')),
+                        top_ft=_safe_decimal(record.get('top_ft')),
+                        hole_size_in=_safe_decimal(record.get('hole_size_in')),
+                        weight_ppf=_safe_decimal(record.get('weight_ppf')),
+                        cement_top_ft=_safe_decimal(record.get('cement_top_ft')),
+                        source_document_type='c_105',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties={'string_type': string_type},
+                    ))
+
+                # Formation tops
+                for record in json_data.get('formation_record', []) or []:
+                    props = {}
+                    if record.get('formation'):
+                        props['formation'] = record['formation']
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=WellComponent.ComponentType.FORMATION_TOP,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        top_ft=_safe_decimal(record.get('top_ft')),
+                        source_document_type='c_105',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties=props,
+                    ))
+
+                # Perforations (C-105 perforation_record)
+                for record in json_data.get('perforation_record', []) or []:
+                    props = {}
+                    if record.get('formation'):
+                        props['formation'] = record['formation']
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=WellComponent.ComponentType.PERFORATION,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        top_ft=_safe_decimal(record.get('top_ft') or record.get('interval_top_ft')),
+                        bottom_ft=_safe_decimal(record.get('bottom_ft') or record.get('interval_bottom_ft')),
+                        source_document_type='c_105',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties=props,
+                    ))
+
+            # ----------------------------------------------------------------
+            # C-101 (NM): casing records (Application for Permit to Drill)
+            # ----------------------------------------------------------------
+            elif doc_type in ('c_101', 'c101'):
+                for record in json_data.get('casing_record', json_data.get('casing_program', [])) or []:
+                    string_type = record.get('string_type', '') or ''
+                    comp_type = (
+                        WellComponent.ComponentType.LINER
+                        if 'liner' in string_type.lower()
+                        else WellComponent.ComponentType.CASING
+                    )
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=comp_type,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        outside_dia_in=_safe_decimal(record.get('size_in')),
+                        bottom_ft=_safe_decimal(record.get('bottom_ft') or record.get('setting_depth_ft') or record.get('shoe_depth_ft')),
+                        top_ft=_safe_decimal(record.get('top_ft')),
+                        hole_size_in=_safe_decimal(record.get('hole_size_in')),
+                        weight_ppf=_safe_decimal(record.get('weight_ppf')),
+                        cement_top_ft=_safe_decimal(record.get('cement_top_ft')),
+                        source_document_type='c_101',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties={'string_type': string_type},
+                    ))
+
+            # ----------------------------------------------------------------
+            # C-103 (NM): plugging records, casing, perforations
+            # ----------------------------------------------------------------
+            elif doc_type in ('c_103', 'c103'):
+                # Casing from casing_program
+                for record in json_data.get('casing_program', []) or []:
+                    if not isinstance(record, dict):
+                        continue
+                    string_type = record.get('string_type', '') or ''
+                    comp_type = (
+                        WellComponent.ComponentType.LINER
+                        if 'liner' in string_type.lower()
+                        else WellComponent.ComponentType.CASING
+                    )
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=comp_type,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        outside_dia_in=_safe_decimal(record.get('size_in')),
+                        bottom_ft=_safe_decimal(record.get('bottom_ft') or record.get('setting_depth_ft') or record.get('shoe_depth_ft')),
+                        top_ft=_safe_decimal(record.get('top_ft')),
+                        hole_size_in=_safe_decimal(record.get('hole_size_in')),
+                        weight_ppf=_safe_decimal(record.get('weight_ppf')),
+                        source_document_type='c_103',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties={'string_type': string_type},
+                    ))
+
+                # Plug records
+                for record in json_data.get('plug_record', []) or []:
+                    plug_type_raw = (record.get('plug_type') or record.get('material') or 'cement').lower()
+                    if 'bridge' in plug_type_raw:
+                        comp_type = WellComponent.ComponentType.BRIDGE_PLUG
+                    else:
+                        comp_type = WellComponent.ComponentType.CEMENT_PLUG
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=comp_type,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        top_ft=_safe_decimal(record.get('depth_top_ft') or record.get('top_ft')),
+                        bottom_ft=_safe_decimal(record.get('depth_bottom_ft') or record.get('bottom_ft')),
+                        sacks=_safe_decimal(record.get('sacks')),
+                        cement_class=record.get('cement_class') or '',
+                        source_document_type='c_103',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties={},
+                    ))
+
+                # Perforations
+                for record in json_data.get('perforations', []) or []:
+                    props = {}
+                    if record.get('formation'):
+                        props['formation'] = record['formation']
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=WellComponent.ComponentType.PERFORATION,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        top_ft=_safe_decimal(record.get('top_ft')),
+                        bottom_ft=_safe_decimal(record.get('bottom_ft')),
+                        source_document_type='c_103',
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties=props,
+                    ))
+
+            # ----------------------------------------------------------------
+            # W-3 / W-3A: plug records from filed forms
+            # ----------------------------------------------------------------
+            elif doc_type in ('w3', 'w3a'):
+                # Plug records
+                for record in json_data.get('plug_record', []) or []:
+                    plug_type_raw = (record.get('plug_type') or record.get('material') or 'cement').lower()
+                    if 'bridge' in plug_type_raw:
+                        comp_type = WellComponent.ComponentType.BRIDGE_PLUG
+                    else:
+                        comp_type = WellComponent.ComponentType.CEMENT_PLUG
+                    components.append(WellComponent(
+                        well=well,
+                        component_type=comp_type,
+                        layer=WellComponent.Layer.PUBLIC,
+                        lifecycle_state=WellComponent.LifecycleState.INSTALLED,
+                        top_ft=_safe_decimal(record.get('depth_top_ft') or record.get('top_ft')),
+                        bottom_ft=_safe_decimal(record.get('depth_bottom_ft') or record.get('bottom_ft')),
+                        sacks=_safe_decimal(record.get('sacks')),
+                        cement_class=record.get('cement_class') or '',
+                        source_document_type=doc_type,
+                        provenance={'extracted_document_id': str(doc.id)},
+                        properties={},
+                    ))
+
+        # ── Deduplicate casing/liner by string_type, keeping most authoritative source ──
+        _DOC_AUTHORITY = {'c_105': 1, 'w2': 2, 'c_103': 3, 'w15': 4, 'c_101': 5, 'w3': 6, 'w3a': 7}
+
+        deduped_components = []
+        seen_casing_keys = {}  # key = (component_type, string_type) → best authority
+
+        # First pass: find best authority for each casing/liner string_type
+        for comp in components:
+            if comp.component_type in (WellComponent.ComponentType.CASING, WellComponent.ComponentType.LINER):
+                string_type = (comp.properties or {}).get('string_type', '').lower()
+                key = (comp.component_type, string_type)
+                auth = _DOC_AUTHORITY.get(comp.source_document_type, 99)
+                if key not in seen_casing_keys or auth < seen_casing_keys[key]:
+                    seen_casing_keys[key] = auth
+
+        # Second pass: keep only the best-authority casing/liner, pass through everything else
+        seen_casing_added = set()
+        for comp in components:
+            if comp.component_type in (WellComponent.ComponentType.CASING, WellComponent.ComponentType.LINER):
+                string_type = (comp.properties or {}).get('string_type', '').lower()
+                key = (comp.component_type, string_type)
+                auth = _DOC_AUTHORITY.get(comp.source_document_type, 99)
+                if auth == seen_casing_keys.get(key) and key not in seen_casing_added:
+                    deduped_components.append(comp)
+                    seen_casing_added.add(key)
+                # else skip this duplicate
+            else:
+                deduped_components.append(comp)
+
+        if len(deduped_components) != len(components):
+            logger.info(
+                f"[ExtractTask] Deduplication: {len(components)} → {len(deduped_components)} "
+                f"(removed {len(components) - len(deduped_components)} duplicate casings)"
+            )
+        components = deduped_components
 
         # 5. Include PublicCasingString / PublicPerforation (same as backfill command)
         for cs in PublicCasingString.objects.filter(well=well):
