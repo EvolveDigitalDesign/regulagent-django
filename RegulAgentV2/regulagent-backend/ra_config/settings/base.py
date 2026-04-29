@@ -287,6 +287,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.intelligence.tasks.update_recommendation_metrics',
         'schedule': crontab(minute=0, hour='*/4'),
     },
+    'sync-all-tenant-filings': {
+        'task': 'apps.intelligence.tasks_polling.sync_all_tenant_filings',
+        'schedule': crontab(hour=3, minute=0),  # daily at 3am UTC
+    },
 }
 
 
