@@ -1,9 +1,5 @@
 """
-TDD: Failing tests for Card 13 — welcome email on new tenant user creation.
-
-These tests define the expected behaviour of three components that have NOT
-been implemented yet.  Running this file should produce collection errors or
-ImportErrors because the referenced modules do not exist.
+TDD: Tests for Card 13 — welcome email on new tenant user creation.
 
 Components under test
 ---------------------
@@ -14,11 +10,12 @@ TenantUserListCreateView.post()         — dispatches task after user creation
 
 import pytest
 from unittest.mock import patch, MagicMock
+from django.test import override_settings
+from django.core import mail
 from django_tenants.utils import schema_context, get_public_schema_name
 
 # ---------------------------------------------------------------------------
-# These imports MUST fail until the implementation is delivered.
-# The ImportError is the "red" signal that keeps tests properly failing.
+# These imports confirm the implementation exists.
 # ---------------------------------------------------------------------------
 from apps.tenants.services.email_service import send_welcome_email  # noqa: F401
 from apps.tenants.tasks import send_welcome_email_task  # noqa: F401
@@ -53,6 +50,34 @@ def _admin_client(api_client, admin_user):
 
 
 # ---------------------------------------------------------------------------
+# Helper: run send_welcome_email with the in-memory backend and return the
+# first outgoing message.
+# ---------------------------------------------------------------------------
+
+def _send_and_capture(user, temp_password, frontend_url="https://app.example.com"):
+    """
+    Call send_welcome_email() using Django's locmem backend so we can inspect
+    the real EmailMultiAlternatives object that was built and sent.
+    Returns the first django.core.mail.outbox entry.
+    """
+    with override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        FRONTEND_URL=frontend_url,
+    ):
+        mail.outbox = []  # reset outbox
+        send_welcome_email(user, temp_password)
+        assert mail.outbox, "No email was sent — check send_welcome_email() for exceptions."
+        return mail.outbox[0]
+
+
+def _make_mock_user(email="newuser@example.com", first_name=""):
+    user = MagicMock()
+    user.email = email
+    user.first_name = first_name
+    return user
+
+
+# ---------------------------------------------------------------------------
 # Class 1: Unit tests for the email service directly
 # ---------------------------------------------------------------------------
 
@@ -60,95 +85,101 @@ def _admin_client(api_client, admin_user):
 class TestWelcomeEmailService:
     """Unit tests for send_welcome_email() in apps/tenants/services/email_service.py."""
 
-    def _make_mock_user(self, email="newuser@example.com"):
-        """Return a simple mock object that satisfies send_welcome_email's interface."""
-        user = MagicMock()
-        user.email = email
-        return user
-
-    def test_send_welcome_email_calls_send_mail(self):
-        """send_welcome_email must call django.core.mail.send_mail exactly once
-        with to=[user.email]."""
-        user = self._make_mock_user()
-
-        with patch("django.core.mail.send_mail") as mock_send_mail:
-            send_welcome_email(user, "TmpPass123")
-
-        mock_send_mail.assert_called_once()
-        _args, kwargs = mock_send_mail.call_args
-        # Support both positional and keyword 'recipient_list'
-        recipient_list = kwargs.get("recipient_list") or _args[3]
-        assert recipient_list == [user.email], (
-            f"Expected recipient_list=[{user.email!r}], got {recipient_list!r}"
+    def test_send_welcome_email_sends_one_email(self):
+        """send_welcome_email must dispatch exactly one email to user.email."""
+        user = _make_mock_user()
+        msg = _send_and_capture(user, "TmpPass123")
+        assert msg.to == [user.email], (
+            f"Expected to=[{user.email!r}], got {msg.to!r}"
         )
 
     def test_welcome_email_subject_contains_regulagent(self):
         """The email subject must contain 'RegulAgent'."""
-        user = self._make_mock_user()
-
-        with patch("django.core.mail.send_mail") as mock_send_mail:
-            send_welcome_email(user, "TmpPass123")
-
-        _args, kwargs = mock_send_mail.call_args
-        subject = kwargs.get("subject") or _args[0]
-        assert "RegulAgent" in subject, (
-            f"Expected 'RegulAgent' in subject, got: {subject!r}"
+        user = _make_mock_user()
+        msg = _send_and_capture(user, "TmpPass123")
+        assert "RegulAgent" in msg.subject, (
+            f"Expected 'RegulAgent' in subject, got: {msg.subject!r}"
         )
 
     def test_welcome_email_subject_contains_welcome(self):
         """The email subject must contain 'Welcome'."""
-        user = self._make_mock_user()
-
-        with patch("django.core.mail.send_mail") as mock_send_mail:
-            send_welcome_email(user, "TmpPass123")
-
-        _args, kwargs = mock_send_mail.call_args
-        subject = kwargs.get("subject") or _args[0]
-        assert "Welcome" in subject, (
-            f"Expected 'Welcome' in subject, got: {subject!r}"
+        user = _make_mock_user()
+        msg = _send_and_capture(user, "TmpPass123")
+        assert "Welcome" in msg.subject, (
+            f"Expected 'Welcome' in subject, got: {msg.subject!r}"
         )
 
     def test_welcome_email_body_contains_temp_password(self):
-        """The email body must contain the temp_password value."""
-        user = self._make_mock_user()
+        """The plain-text body must contain the temp_password value."""
+        user = _make_mock_user()
         temp_password = "TmpPass123"
+        msg = _send_and_capture(user, temp_password)
+        assert temp_password in msg.body, (
+            f"Expected temp_password {temp_password!r} in plain-text body."
+        )
 
-        with patch("django.core.mail.send_mail") as mock_send_mail:
-            send_welcome_email(user, temp_password)
-
-        _args, kwargs = mock_send_mail.call_args
-        # send_mail positional: subject, message, from_email, recipient_list
-        message = kwargs.get("message") or _args[1]
-        assert temp_password in message, (
-            f"Expected temp_password {temp_password!r} in body, got: {message!r}"
+    def test_welcome_email_html_contains_temp_password(self):
+        """The HTML alternative must also contain the temp_password value."""
+        user = _make_mock_user()
+        temp_password = "TmpPass123"
+        msg = _send_and_capture(user, temp_password)
+        html_alternatives = [
+            content for content, mime in msg.alternatives if mime == "text/html"
+        ]
+        assert html_alternatives, "No text/html alternative found."
+        assert temp_password in html_alternatives[0], (
+            f"Expected temp_password {temp_password!r} in HTML body."
         )
 
     def test_welcome_email_body_contains_login_url(self):
-        """The email body must contain the FRONTEND_URL login link."""
-        user = self._make_mock_user()
+        """The plain-text body must contain the FRONTEND_URL login link."""
+        user = _make_mock_user()
         frontend_url = "https://app.example.com"
-
-        with patch("django.core.mail.send_mail") as mock_send_mail, \
-             patch("django.conf.settings.FRONTEND_URL", frontend_url, create=True):
-            send_welcome_email(user, "TmpPass123")
-
-        _args, kwargs = mock_send_mail.call_args
-        message = kwargs.get("message") or _args[1]
-        assert frontend_url in message, (
-            f"Expected FRONTEND_URL {frontend_url!r} in body, got: {message!r}"
+        msg = _send_and_capture(user, "TmpPass123", frontend_url=frontend_url)
+        assert frontend_url in msg.body, (
+            f"Expected FRONTEND_URL {frontend_url!r} in plain-text body."
         )
 
     def test_welcome_email_body_contains_change_password_prompt(self):
-        """The email body must prompt the user to change their password."""
-        user = self._make_mock_user()
+        """The plain-text body must prompt the user to change their password."""
+        user = _make_mock_user()
+        msg = _send_and_capture(user, "TmpPass123")
+        assert "change" in msg.body.lower(), (
+            f"Expected 'change' (case-insensitive) in plain-text body."
+        )
 
-        with patch("django.core.mail.send_mail") as mock_send_mail:
-            send_welcome_email(user, "TmpPass123")
+    def test_welcome_email_has_html_alternative(self):
+        """The email must carry a text/html alternative (EmailMultiAlternatives)."""
+        user = _make_mock_user()
+        msg = _send_and_capture(user, "TmpPass123")
+        mime_types = [mime for _content, mime in msg.alternatives]
+        assert "text/html" in mime_types, (
+            f"Expected a text/html alternative, found: {mime_types!r}"
+        )
 
-        _args, kwargs = mock_send_mail.call_args
-        message = kwargs.get("message") or _args[1]
-        assert "change" in message.lower(), (
-            f"Expected 'change' (case-insensitive) in body, got: {message!r}"
+    def test_welcome_email_html_contains_cta_link(self):
+        """The HTML body must contain the login URL for the CTA button."""
+        user = _make_mock_user()
+        frontend_url = "https://app.example.com"
+        msg = _send_and_capture(user, "TmpPass123", frontend_url=frontend_url)
+        html = next(c for c, m in msg.alternatives if m == "text/html")
+        assert f"{frontend_url}/signin" in html, (
+            f"Expected CTA href {frontend_url}/signin in HTML body."
+        )
+
+    def test_welcome_email_greeting_uses_first_name(self):
+        """When user.first_name is set the HTML greeting should include it."""
+        user = _make_mock_user(first_name="Ruben")
+        msg = _send_and_capture(user, "TmpPass123")
+        html = next(c for c, m in msg.alternatives if m == "text/html")
+        assert "Ruben" in html, "Expected first_name in HTML greeting."
+
+    def test_welcome_email_greeting_fallback_when_no_name(self):
+        """When user.first_name is blank the greeting should fall back to 'Hi there,'."""
+        user = _make_mock_user(first_name="")
+        msg = _send_and_capture(user, "TmpPass123")
+        assert "Hi there," in msg.body, (
+            "Expected 'Hi there,' fallback in plain-text body when no first_name."
         )
 
 
