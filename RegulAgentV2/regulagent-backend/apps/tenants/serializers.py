@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ClientWorkspace, Tenant, UsageRecord
+from .models import ClientWorkspace, Tenant, UsageRecord, User
 
 
 class ClientWorkspaceSerializer(serializers.ModelSerializer):
@@ -47,6 +47,27 @@ class ClientWorkspaceCreateSerializer(serializers.ModelSerializer):
                     f"A workspace named '{value}' already exists for this tenant."
                 )
         return value
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    """
+    Read-only serializer for listing tenant users.
+    """
+    class Meta:
+        model = User
+        fields = ["id", "email", "first_name", "last_name", "title", "is_active"]
+        read_only_fields = ["id", "email", "first_name", "last_name", "title", "is_active"]
+
+
+class UserCreateSerializer(serializers.Serializer):
+    """
+    Serializer for creating a new tenant user.
+    Email is required; all other fields are optional.
+    """
+    email = serializers.EmailField(required=True)
+    first_name = serializers.CharField(required=False, allow_blank=True, default="")
+    last_name = serializers.CharField(required=False, allow_blank=True, default="")
+    title = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
 
 
 class UsageRecordSerializer(serializers.ModelSerializer):

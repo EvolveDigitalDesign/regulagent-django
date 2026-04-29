@@ -70,7 +70,8 @@ from apps.public_core.views.filing_breakdown import FilingBreakdownView
 from apps.public_core.views.filing_breakdown_timeline import FilingBreakdownTimelineView
 from apps.tenants.views import (
     TenantInfoView, UserProfileView, ChangePasswordView,
-    ClientWorkspaceViewSet, UsageSummaryView, UsageRecordViewSet
+    ClientWorkspaceViewSet, UsageSummaryView, UsageRecordViewSet,
+    TenantUserListCreateView, TenantUserDeactivateView,
 )
 from apps.tenant_overlay.views.tenant_wells import (
     get_well_by_api,
@@ -199,6 +200,10 @@ urlpatterns = [
     
     # Tenant info endpoint
     path('api/tenant/', TenantInfoView.as_view(), name='tenant_info'),
+
+    # Tenant user management endpoints
+    path('api/tenant/users/', TenantUserListCreateView.as_view(), name='tenant-users-list'),
+    path('api/tenant/users/<int:id>/deactivate/', TenantUserDeactivateView.as_view(), name='tenant-user-deactivate'),
     
     # User profile endpoints
     path('api/user/profile/', UserProfileView.as_view(), name='user_profile'),

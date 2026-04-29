@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import secrets
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -7,15 +9,26 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from django_tenants.utils import get_tenant_model
+from django_tenants.utils import get_tenant_model, get_public_schema_name
 from django.db import connection
 
 from tenant_users.permissions.models import UserTenantPermissions
 
-from apps.tenants.services.plan_service import get_tenant_plan, get_effective_features, get_active_user_count
+from apps.tenants.services.plan_service import (
+    get_tenant_plan,
+    get_effective_features,
+    get_active_user_count,
+    can_add_user,
+)
 from apps.tenants.services.usage_tracker import get_tenant_usage_summary, get_monthly_token_usage
-from .models import ClientWorkspace, UsageRecord
-from .serializers import ClientWorkspaceSerializer, ClientWorkspaceCreateSerializer, UsageRecordSerializer
+from .models import ClientWorkspace, UsageRecord, User
+from .serializers import (
+    ClientWorkspaceSerializer,
+    ClientWorkspaceCreateSerializer,
+    UsageRecordSerializer,
+    UserListSerializer,
+    UserCreateSerializer,
+)
 
 
 class TenantInfoView(APIView):
@@ -443,3 +456,123 @@ class UsageRecordViewSet(viewsets.ReadOnlyModelViewSet):
                 pass  # Ignore invalid date format
 
         return queryset
+
+
+class TenantUserListCreateView(APIView):
+    """
+    GET  /api/tenant/users/ — List all users in the current tenant with seat summary.
+    POST /api/tenant/users/ — Create a new user in the current tenant.
+    """
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: object) -> Response:
+        user = request.user
+        tenant = user.tenants.exclude(schema_name=get_public_schema_name()).first()
+
+        if not tenant:
+            return Response({"detail": "No tenant found for user."}, status=status.HTTP_404_NOT_FOUND)
+
+        users_qs = tenant.user_set.all()
+        serializer = UserListSerializer(users_qs, many=True)
+
+        used = get_active_user_count(tenant)
+        tenant_plan = get_tenant_plan(tenant)
+        if tenant_plan and tenant_plan.user_limit is not None:
+            limit: int | None = tenant_plan.user_limit
+            available: int | None = max(0, limit - used)
+        else:
+            limit = None
+            available = None
+
+        return Response({
+            "users": serializer.data,
+            "seats": {
+                "used": used,
+                "limit": limit,
+                "available": available,
+            },
+        })
+
+    def post(self, request: object) -> Response:
+        user = request.user
+        tenant = user.tenants.exclude(schema_name=get_public_schema_name()).first()
+
+        if not tenant:
+            return Response({"detail": "No tenant found for user."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UserCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        email: str = serializer.validated_data["email"]
+        first_name: str = serializer.validated_data.get("first_name", "")
+        last_name: str = serializer.validated_data.get("last_name", "")
+        title: str | None = serializer.validated_data.get("title", None)
+
+        # Check for duplicate email
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {"detail": "A user with this email already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check seat limit
+        if not can_add_user(tenant):
+            return Response(
+                {"detail": "Seat limit reached."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        temp_password: str = secrets.token_urlsafe(12)
+        new_user = User.objects.create_user(
+            email=email,
+            password=temp_password,
+            first_name=first_name,
+            last_name=last_name,
+            title=title,
+        )
+        tenant.add_user(new_user)
+
+        return Response(
+            {
+                "id": new_user.id,
+                "email": new_user.email,
+                "first_name": new_user.first_name,
+                "last_name": new_user.last_name,
+                "title": new_user.title,
+                "is_active": new_user.is_active,
+                "temp_password": temp_password,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class TenantUserDeactivateView(APIView):
+    """
+    PATCH /api/tenant/users/<id>/deactivate/ — Deactivate a user in the current tenant.
+    """
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request: object, id: int) -> Response:
+        requesting_user = request.user
+        tenant = requesting_user.tenants.exclude(schema_name=get_public_schema_name()).first()
+
+        if not tenant:
+            return Response({"detail": "No tenant found for user."}, status=status.HTTP_404_NOT_FOUND)
+
+        target = tenant.user_set.filter(id=id).first()
+        if target is None:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if target.id == requesting_user.id:
+            return Response(
+                {"detail": "Cannot deactivate your own account."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        target.is_active = False
+        target.save()
+
+        return Response(UserListSerializer(target).data, status=status.HTTP_200_OK)

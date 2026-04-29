@@ -22,9 +22,18 @@ logger = logging.getLogger(__name__)
 
 
 def _increment_and_maybe_finalize(session_id: str) -> None:
-    """Atomically increment indexed_documents and trigger finalize if all docs are done."""
+    """Atomically increment indexed_documents and trigger finalize if all docs are done.
+
+    The increment is capped at total_documents — extra calls (e.g. from edge-case
+    error paths) are silently ignored so the counter never exceeds the expected total.
+    """
     from django.db.models import F
-    ResearchSession.objects.filter(id=session_id).update(
+    # Use a conditional update so the counter cannot exceed total_documents.
+    # This is the safety guard that prevents any stray extra call from corrupting the count.
+    ResearchSession.objects.filter(
+        id=session_id,
+        indexed_documents__lt=F("total_documents"),
+    ).update(
         indexed_documents=F("indexed_documents") + 1
     )
     # Re-read to check completion
@@ -430,7 +439,10 @@ def index_document_task(
                                 countdown=i * 30,  # stagger to avoid OOM
                             )
 
-                        _increment_and_maybe_finalize(str(session.id))
+                        # Do NOT increment here — each chunk task increments its own count.
+                        # The parent slot was replaced by len(chunk_docs) slots when
+                        # total_documents was adjusted above, so only the chunks should call
+                        # _increment_and_maybe_finalize().
                         return {
                             "success": True,
                             "chunked": True,
