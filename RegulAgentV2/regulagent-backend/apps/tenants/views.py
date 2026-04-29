@@ -9,6 +9,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from django_tenants.utils import get_tenant_model, get_public_schema_name
 from django.db import connection
 
@@ -22,10 +23,11 @@ from apps.tenants.services.plan_service import (
 )
 from apps.tenants.tasks import send_welcome_email_task
 from apps.tenants.services.usage_tracker import get_tenant_usage_summary, get_monthly_token_usage
-from .models import ClientWorkspace, UsageRecord, User
+from .models import ClientWorkspace, TenantPlanningConfig, UsageRecord, User
 from .serializers import (
     ClientWorkspaceSerializer,
     ClientWorkspaceCreateSerializer,
+    TenantPlanningConfigSerializer,
     UsageRecordSerializer,
     UserListSerializer,
     UserCreateSerializer,
@@ -579,3 +581,32 @@ class TenantUserDeactivateView(APIView):
         target.save()
 
         return Response(UserListSerializer(target).data, status=status.HTTP_200_OK)
+
+
+class TenantPlanningConfigView(APIView):
+    """
+    GET  /api/tenant/planning-config/ — retrieve (or auto-create) planning config.
+    PUT  /api/tenant/planning-config/ — partial update planning config.
+    """
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def _get_tenant(self, request):
+        tenant = request.user.tenants.exclude(schema_name=get_public_schema_name()).first()
+        if not tenant:
+            raise NotFound("No tenant found for this user.")
+        return tenant
+
+    def get(self, request):
+        tenant = self._get_tenant(request)
+        config, _ = TenantPlanningConfig.objects.get_or_create(tenant=tenant)
+        serializer = TenantPlanningConfigSerializer(config)
+        return Response(serializer.data)
+
+    def put(self, request):
+        tenant = self._get_tenant(request)
+        config, _ = TenantPlanningConfig.objects.get_or_create(tenant=tenant)
+        serializer = TenantPlanningConfigSerializer(config, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

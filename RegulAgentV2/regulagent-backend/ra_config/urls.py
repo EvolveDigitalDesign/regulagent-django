@@ -72,6 +72,7 @@ from apps.tenants.views import (
     TenantInfoView, UserProfileView, ChangePasswordView,
     ClientWorkspaceViewSet, UsageSummaryView, UsageRecordViewSet,
     TenantUserListCreateView, TenantUserDeactivateView,
+    TenantPlanningConfigView,
 )
 from apps.tenant_overlay.views.tenant_wells import (
     get_well_by_api,
@@ -224,6 +225,9 @@ urlpatterns = [
     path('api/tenant/wells/<str:api14>/components/<uuid:component_id>/', delete_well_component_view, name='well-components-delete'),
     path('api/tenant/wells/<str:api14>/', get_well_by_api, name='tenant_well_by_api'),
     
+    # Tenant planning config endpoint
+    path('api/tenant/planning-config/', TenantPlanningConfigView.as_view(), name='tenant-planning-config'),
+
     # Tenant guardrail policy endpoints
     path('api/tenant/settings/guardrails/', TenantGuardrailPolicyView.as_view(), name='tenant_guardrails'),
     path('api/tenant/settings/guardrails/risk-profiles/', get_risk_profiles, name='guardrail_profiles'),

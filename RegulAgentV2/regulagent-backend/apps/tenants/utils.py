@@ -4,12 +4,56 @@ Utility functions for tenant and user provisioning.
 Based on TestDriven.io guide:
 https://testdriven.io/blog/django-multi-tenant/#django-tenant-users
 """
-from typing import Tuple
+import logging
+from typing import Optional, Tuple
 
 from django.db import transaction
 from tenant_users.tenants.utils import create_public_tenant as tenant_users_create_public_tenant
 
 from apps.tenants.models import Tenant, Domain, User
+
+logger = logging.getLogger(__name__)
+
+
+def get_tenant_planning_config(user):
+    """Return TenantPlanningConfig for the user's tenant, or None if not found.
+
+    Safe to call from any context — returns None on any error.
+    """
+    from apps.tenants.models import TenantPlanningConfig
+    try:
+        from django_tenants.utils import get_public_schema_name
+        tenant = user.tenants.exclude(schema_name=get_public_schema_name()).first()
+        if not tenant:
+            return None
+        return TenantPlanningConfig.objects.filter(tenant=tenant).first()
+    except Exception:
+        logger.debug("get_tenant_planning_config: could not resolve config", exc_info=True)
+        return None
+
+
+def planning_config_to_preferences(config) -> dict:
+    """Convert a TenantPlanningConfig instance to a preferences dict for the kernel.
+
+    Returns an empty dict when config is None so callers always get a safe dict.
+    """
+    if config is None:
+        return {}
+    prefs = {}
+    if config.max_plug_length_ft is not None:
+        prefs['max_plug_length_ft'] = config.max_plug_length_ft
+    if config.min_plug_length_ft is not None:
+        prefs['min_plug_length_ft'] = config.min_plug_length_ft
+    if config.max_combined_plugs is not None:
+        prefs['max_combined_plugs'] = config.max_combined_plugs
+    prefs['use_cibp'] = config.use_cibp
+    prefs['cibp_cap_ft'] = config.cibp_cap_ft
+    prefs['use_bailer_method'] = config.use_bailer_method
+    prefs['use_cement_retainer'] = config.use_cement_retainer
+    prefs['cement_to_surface'] = config.cement_to_surface
+    prefs['cased_hole_excess_factor'] = config.cased_hole_excess_factor
+    prefs['open_hole_excess_factor'] = config.open_hole_excess_factor
+    return prefs
 
 
 def create_public_tenant(

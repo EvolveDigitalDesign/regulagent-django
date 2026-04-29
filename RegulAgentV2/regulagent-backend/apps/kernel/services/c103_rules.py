@@ -165,10 +165,28 @@ class C103PluggingRules:
         """
         options = options or {}
         include_narrative: bool = options.get("include_narrative", True)
-        bailer_method: bool = options.get("bailer_method", False)
+
+        # Tenant-preference overrides with regulatory fallbacks
+        use_cibp: str = options.get("use_cibp", "when_perforated")
+        use_bailer_method: bool = options.get("use_bailer_method", False)
+        # Legacy key support: 'bailer_method' maps to 'use_bailer_method'
+        bailer_method: bool = options.get("bailer_method", use_bailer_method)
+        cibp_cap_ft: int = int(options.get("cibp_cap_ft", NM_CIBP_CAP_FT))
+        cased_excess: float = float(options.get("cased_hole_excess_factor", NM_CASED_EXCESS))
+        open_excess: float = float(options.get("open_hole_excess_factor", NM_OPEN_EXCESS))
+        cement_to_surface: bool = options.get("cement_to_surface", True)
 
         api_number: str = well.get("api_number", "unknown")
         logger.info("Generating C-103 plugging plan for API %s", api_number)
+        if use_cibp != "when_perforated" or bailer_method or cibp_cap_ft != NM_CIBP_CAP_FT \
+                or cased_excess != NM_CASED_EXCESS or open_excess != NM_OPEN_EXCESS \
+                or not cement_to_surface:
+            logger.info(
+                "API %s: tenant overrides active — use_cibp=%s bailer=%s "
+                "cibp_cap=%d cased_excess=%.2f open_excess=%.2f cement_to_surface=%s",
+                api_number, use_cibp, bailer_method, cibp_cap_ft,
+                cased_excess, open_excess, cement_to_surface,
+            )
 
         # Step 1 — detect region
         region, sub_area, coa_figure = self._detect_region_and_load(well)
@@ -193,9 +211,9 @@ class C103PluggingRules:
 
         sequence: List[C103PlugRow] = []
 
-        # Steps 3–4 — CIBP + cap
-        self._generate_cibp(well, sequence)
-        self._generate_cibp_cap(well, sequence, bailer_method=bailer_method)
+        # Steps 3–4 — CIBP + cap (use_cibp controls whether CIBP is generated)
+        self._generate_cibp(well, sequence, use_cibp=use_cibp)
+        self._generate_cibp_cap(well, sequence, bailer_method=bailer_method, cibp_cap_ft=cibp_cap_ft)
 
         # Step 5 — formation plugs (mandatory NM)
         self._generate_formation_plugs(well, sequence, region, sub_area)
@@ -237,8 +255,14 @@ class C103PluggingRules:
         # Step 7 — DUQW
         self._generate_duqw_plug(well, sequence)
 
-        # Step 8 — surface plug
-        self._generate_surface_plug(well, sequence)
+        # Step 8 — surface plug (cement_to_surface=False skips it)
+        if cement_to_surface:
+            self._generate_surface_plug(well, sequence)
+        else:
+            logger.info(
+                "API %s: cement_to_surface=False — skipping surface plug generation",
+                api_number,
+            )
 
         plan.steps = sequence
 
@@ -250,7 +274,7 @@ class C103PluggingRules:
         self._classify_operations(plan, well)
 
         # Step 11 — volume calculation (uses operation_type set in step 10)
-        self._calculate_volumes(plan, well)
+        self._calculate_volumes(plan, well, cased_excess=cased_excess, open_excess=open_excess)
 
         # Aggregate totals
         plan.calculate_totals()
@@ -311,17 +335,61 @@ class C103PluggingRules:
     # ------------------------------------------------------------------
 
     def _generate_cibp(
-        self, well: Dict[str, Any], sequence: List[C103PlugRow]
+        self,
+        well: Dict[str, Any],
+        sequence: List[C103PlugRow],
+        use_cibp: str = "when_perforated",
     ) -> None:
         """Place CIBP at shallowest perforation top - 50'.
 
         The CIBP itself is a mechanical bridge plug (not cement). We add it
         to the sequence as a mechanical_plug step so that the narrative and
         spacing logic acknowledge its presence.
+
+        Args:
+            use_cibp: Tenant preference — 'always', 'when_perforated' (default), or 'never'.
+                'never'  → CIBP is never generated.
+                'always' → CIBP is placed even when no perforations are detected (at TD - 50').
+                'when_perforated' → existing behaviour (CIBP only when perforations present).
         """
+        # Tenant preference: 'never' short-circuits immediately.
+        if use_cibp == "never":
+            logger.debug("use_cibp=never; skipping CIBP placement.")
+            return
+
         perforations = well.get("perforations", [])
         if not perforations:
-            logger.debug("No perforations; skipping CIBP placement.")
+            if use_cibp == "always":
+                # No perforations but tenant wants CIBP always — place at TD - 50'.
+                total_depth = well.get("total_depth_ft")
+                if not total_depth:
+                    logger.debug("use_cibp=always but no perforations and no TD; skipping CIBP.")
+                    return
+                try:
+                    cibp_depth = max(float(total_depth) - _CIBP_SET_OFFSET_FT, 0.0)
+                except (ValueError, TypeError):
+                    logger.debug("use_cibp=always but TD is not numeric; skipping CIBP.")
+                    return
+                plug = C103PlugRow(
+                    top_ft=cibp_depth,
+                    bottom_ft=cibp_depth + 1.0,
+                    cement_class="C",
+                    step_type="mechanical_plug",
+                    operation_type="spot",
+                    hole_type="cased",
+                    sacks_required=0.0,
+                    tag_required=False,
+                    wait_hours=0,
+                    regulatory_basis=self._get_regulatory_basis("cibp", cibp_depth),
+                    special_instructions=(
+                        f"Set CIBP at {cibp_depth:,.0f} ft "
+                        f"(tenant pref: use_cibp=always; no perfs detected, placed at TD-{_CIBP_SET_OFFSET_FT}')"
+                    ),
+                )
+                sequence.append(plug)
+                logger.debug("CIBP (forced by use_cibp=always) placed at %.0f ft", cibp_depth)
+            else:
+                logger.debug("No perforations; skipping CIBP placement.")
             return
 
         shallowest_perf_top = min(p["top_ft"] for p in perforations)
@@ -351,11 +419,17 @@ class C103PluggingRules:
         well: Dict[str, Any],
         sequence: List[C103PlugRow],
         bailer_method: bool = False,
+        cibp_cap_ft: int = NM_CIBP_CAP_FT,
     ) -> None:
-        """100' cement cap above CIBP.
+        """Cement cap above CIBP.
 
-        NM CRITICAL: 100 ft (TX is only 20 ft).
-        Bailer method reduces cap to 35 ft.
+        NM CRITICAL: regulatory minimum is 100 ft (TX is only 20 ft).
+        Bailer method reduces cap to 35 ft (module-level _CIBP_CAP_BAILER_FT).
+        Tenant may override cap length via cibp_cap_ft (must be >= regulatory min for compliance).
+
+        Args:
+            bailer_method: If True, apply bailer-method cap (35 ft regulatory minimum).
+            cibp_cap_ft: Tenant override for CIBP cap length (ft). Defaults to NM_CIBP_CAP_FT.
         """
         perforations = well.get("perforations", [])
         if not perforations:
@@ -364,7 +438,8 @@ class C103PluggingRules:
         shallowest_perf_top = min(p["top_ft"] for p in perforations)
         cibp_depth = max(shallowest_perf_top - _CIBP_SET_OFFSET_FT, 0.0)
 
-        cap_length = _CIBP_CAP_BAILER_FT if bailer_method else NM_CIBP_CAP_FT
+        # Bailer method regulatory cap takes precedence over tenant override
+        cap_length = _CIBP_CAP_BAILER_FT if bailer_method else cibp_cap_ft
         cap_top = max(cibp_depth - cap_length, 0.0)
         cap_bottom = cibp_depth
 
@@ -726,13 +801,17 @@ class C103PluggingRules:
     # ------------------------------------------------------------------
 
     def _calculate_volumes(
-        self, plan: C103PluggingPlan, well: Dict[str, Any]
+        self,
+        plan: C103PluggingPlan,
+        well: Dict[str, Any],
+        cased_excess: float = NM_CASED_EXCESS,
+        open_excess: float = NM_OPEN_EXCESS,
     ) -> None:
         """Calculate cement volumes for each plug.
 
         Rules (NMAC 19.15.25):
-          - 50% excess for cased hole
-          - 100% excess for open hole
+          - 50% excess for cased hole (overridable via cased_excess)
+          - 100% excess for open hole (overridable via open_excess)
           - Minimum 25 sacks per plug
           - For squeeze/perf_and_squeeze/circulate: volume-based inside/outside split
 
@@ -742,6 +821,10 @@ class C103PluggingRules:
           sacks = max(total, NM_MIN_SACKS)
 
         where yield = 1.32 ft³/sack Class C, 1.15 ft³/sack Class H.
+
+        Args:
+            cased_excess: Excess factor for cased-hole plugs (default 0.50 = 50%).
+            open_excess: Excess factor for open-hole plugs (default 1.00 = 100%).
         """
         casing_strings = well.get("casing_strings", [])
 
@@ -768,7 +851,8 @@ class C103PluggingRules:
                 plug.conduit_id = f"casing:{casing_od}"
             casing_id = self._estimate_casing_id(casing_od)
 
-            excess_factor = NM_OPEN_EXCESS if plug.hole_type == "open" else NM_CASED_EXCESS
+            # Use tenant-overridable excess factors (defaults to NM regulatory values)
+            excess_factor = open_excess if plug.hole_type == "open" else cased_excess
             plug.excess_factor = excess_factor
 
             # Cement yield: 1.32 ft³/sack for Class C; 1.15 for Class H

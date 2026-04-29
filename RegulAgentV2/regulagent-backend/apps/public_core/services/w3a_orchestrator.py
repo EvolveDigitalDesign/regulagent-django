@@ -1487,6 +1487,19 @@ def _generate_w3a_for_nm_api(
             policy["jurisdiction"] = "NM"
             policy["form"] = "C-103"
 
+            # Inject tenant planning preferences so the kernel can apply them.
+            # Silently skipped when request/user is not available (batch jobs, tests).
+            try:
+                if request is not None and hasattr(request, 'user') and request.user is not None:
+                    from apps.tenants.utils import get_tenant_planning_config, planning_config_to_preferences
+                    tenant_config = get_tenant_planning_config(request.user)
+                    tenant_prefs = planning_config_to_preferences(tenant_config)
+                    if tenant_prefs:
+                        facts['tenant_planning_prefs'] = tenant_prefs
+                        logger.info("   ✅ Injected tenant planning prefs into facts: %s", list(tenant_prefs.keys()))
+            except Exception:
+                logger.debug("_generate_w3a_for_nm_api: failed to inject tenant prefs", exc_info=True)
+
             plan_result = plan_from_facts(facts, policy)
 
             plan_output = {

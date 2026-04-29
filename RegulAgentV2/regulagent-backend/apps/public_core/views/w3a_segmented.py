@@ -2758,6 +2758,19 @@ class W3AConfirmGeometryView(APIView):
         logger.info(f"   - Policy formation tops: {len(policy.get('effective', {}).get('district_overrides', {}).get('formation_tops', []))}")
         logger.info("=" * 80)
 
+        # Inject tenant planning preferences for NM plan generation.
+        # Silently skipped on any error so the plan still generates with defaults.
+        if jurisdiction == "NM":
+            try:
+                from apps.tenants.utils import get_tenant_planning_config, planning_config_to_preferences
+                tenant_config = get_tenant_planning_config(request.user)
+                tenant_prefs = planning_config_to_preferences(tenant_config)
+                if tenant_prefs:
+                    facts['tenant_planning_prefs'] = tenant_prefs
+                    logger.info("Injected tenant planning prefs into facts: %s", list(tenant_prefs.keys()))
+            except Exception:
+                logger.debug("w3a_segmented: failed to inject tenant prefs", exc_info=True)
+
         # Call kernel
         lpm = policy.get("preferences", {}).get("long_plug_merge", {})
         logger.warning(f"MERGE-DIAG: enabled={lpm.get('enabled')}, types={lpm.get('types')}, max_length={lpm.get('max_length_ft')}, sack_no_tag={lpm.get('sack_limit_no_tag')}")
