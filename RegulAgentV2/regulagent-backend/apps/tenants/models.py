@@ -308,51 +308,6 @@ class DeletedTenantBackup(models.Model):
         return self.hard_deleted_at is None and self.scheduled_deletion_at is not None
 
 
-class TenantPlanningConfig(models.Model):
-    """Per-tenant plan generation preferences."""
-
-    USE_CIBP_CHOICES = [
-        ('always', 'Always'),
-        ('when_perforated', 'When perforated'),
-        ('never', 'Never'),
-    ]
-    USE_CEMENT_RETAINER_CHOICES = [
-        ('always', 'Always'),
-        ('when_required', 'When required by regulation'),
-        ('never', 'Never'),
-    ]
-
-    tenant = models.OneToOneField(
-        'Tenant',
-        on_delete=models.CASCADE,
-        related_name='planning_config',
-    )
-
-    max_plug_length_ft = models.PositiveIntegerField(null=True, blank=True)
-    min_plug_length_ft = models.PositiveIntegerField(null=True, blank=True)
-    max_combined_plugs = models.PositiveIntegerField(null=True, blank=True)
-
-    use_cibp = models.CharField(max_length=20, choices=USE_CIBP_CHOICES, default='when_perforated')
-    cibp_cap_ft = models.PositiveIntegerField(default=100)
-    use_bailer_method = models.BooleanField(default=False)
-
-    use_cement_retainer = models.CharField(max_length=20, choices=USE_CEMENT_RETAINER_CHOICES, default='when_required')
-    cement_to_surface = models.BooleanField(default=True)
-
-    cased_hole_excess_factor = models.FloatField(default=0.50)
-    open_hole_excess_factor = models.FloatField(default=1.00)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'Tenant Planning Config'
-        verbose_name_plural = 'Tenant Planning Configs'
-
-    def __str__(self):
-        return f'PlanningConfig({self.tenant_id})'
-
-
 class UsageRecord(models.Model):
     """
     Track usage events for billing and analytics.

@@ -297,17 +297,6 @@ def generate_c103_steps(
             if bailer is not None:
                 options["bailer_method"] = bool(bailer)
 
-        # Merge tenant planning preferences (resolved_facts carries them from the
-        # request layer).  Tenant prefs are the base; any explicit policy options win.
-        tenant_prefs: Dict[str, Any] = resolved_facts.get("tenant_planning_prefs") or {}
-        if tenant_prefs:
-            # tenant_prefs is the default layer; options already set above take precedence
-            options = {**tenant_prefs, **options}
-            logger.debug(
-                "c103_step_generator: applied tenant planning prefs: %s",
-                list(tenant_prefs.keys()),
-            )
-
         rules = C103PluggingRules(region_engine=region_engine)
         plan = rules.generate_plugging_plan(well_data, options)
 

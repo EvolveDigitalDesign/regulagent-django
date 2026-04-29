@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ClientWorkspace, Tenant, TenantPlanningConfig, UsageRecord, User
+from .models import ClientWorkspace, Tenant, UsageRecord, User
 
 
 class ClientWorkspaceSerializer(serializers.ModelSerializer):
@@ -68,17 +68,6 @@ class UserCreateSerializer(serializers.Serializer):
     first_name = serializers.CharField(required=False, allow_blank=True, default="")
     last_name = serializers.CharField(required=False, allow_blank=True, default="")
     title = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
-
-
-class TenantPlanningConfigSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TenantPlanningConfig
-        fields = [
-            'max_plug_length_ft', 'min_plug_length_ft', 'max_combined_plugs',
-            'use_cibp', 'cibp_cap_ft', 'use_bailer_method',
-            'use_cement_retainer', 'cement_to_surface',
-            'cased_hole_excess_factor', 'open_hole_excess_factor',
-        ]
 
 
 class UsageRecordSerializer(serializers.ModelSerializer):
