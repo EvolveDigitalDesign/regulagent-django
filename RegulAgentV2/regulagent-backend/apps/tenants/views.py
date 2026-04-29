@@ -20,6 +20,7 @@ from apps.tenants.services.plan_service import (
     get_active_user_count,
     can_add_user,
 )
+from apps.tenants.tasks import send_welcome_email_task
 from apps.tenants.services.usage_tracker import get_tenant_usage_summary, get_monthly_token_usage
 from .models import ClientWorkspace, UsageRecord, User
 from .serializers import (
@@ -533,6 +534,8 @@ class TenantUserListCreateView(APIView):
             title=title,
         )
         tenant.add_user(new_user)
+
+        send_welcome_email_task.delay(new_user.id, temp_password)
 
         return Response(
             {
