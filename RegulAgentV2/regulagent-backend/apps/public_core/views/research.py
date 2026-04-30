@@ -102,37 +102,73 @@ class ResearchSessionListCreateView(APIView):
         import re as _re
         normalized_api = _re.sub(r"\D+", "", str(api_number))
 
+        user_tenant = request.user.tenants.first() if request.user.is_authenticated else None
+
         if not force_fetch:
             # Check for existing ready session — match on normalized API suffix
-            api_suffix = normalized_api[-8:] if len(normalized_api) >= 8 else normalized_api
+            # Normalise to API10 before suffix comparison — API14 has trailing 0000
+            _api_norm = normalized_api[:10] if len(normalized_api) == 14 else normalized_api
+            api_suffix = _api_norm[-8:] if len(_api_norm) >= 8 else _api_norm
+
             existing = ResearchSession.objects.filter(
-                state=state, status="ready"
+                status="ready"
             ).order_by("-created_at")
 
-            # Find first session whose api_number contains the same suffix
+            matched_session = None
             for sess in existing[:20]:
                 sess_clean = _re.sub(r"\D+", "", str(sess.api_number))
+                if len(sess_clean) == 14:
+                    sess_clean = sess_clean[:10]
                 if len(sess_clean) >= 8 and sess_clean[-8:] == api_suffix:
-                    # Only reuse if session actually has useful data
-                    if sess.failed_documents > 0 or sess.indexed_documents == 0:
-                        logger.info(
-                            f"[ResearchAPI] Skipping session {sess.id} — has failed docs or no indexed docs, will re-index"
-                        )
+                    if sess.indexed_documents == 0:
                         continue
-                    logger.info(f"[ResearchAPI] Reusing ready session {sess.id} for api={api_number}")
+                    matched_session = sess
+                    break
+
+            if matched_session:
+                sess_tenant = matched_session.tenant
+                if sess_tenant == user_tenant:
+                    # Same tenant — reuse as-is (own session with own chat)
+                    logger.info(f"[ResearchAPI] Reusing own session {matched_session.id} for api={api_number}")
                     return Response(
-                        ResearchSessionSerializer(sess).data,
+                        ResearchSessionSerializer(matched_session).data,
                         status=status.HTTP_200_OK,
+                    )
+                else:
+                    # Different tenant — create a new ready session reusing doc counts
+                    # Documents are fetched by api_number (shared), only chat is siloed
+                    new_session = ResearchSession.objects.create(
+                        api_number=matched_session.api_number,
+                        state=matched_session.state or state,
+                        status="ready",
+                        tenant=user_tenant,
+                        well=matched_session.well,
+                        total_documents=matched_session.total_documents,
+                        indexed_documents=matched_session.indexed_documents,
+                        failed_documents=matched_session.failed_documents,
+                        force_fetch=False,
+                    )
+                    logger.info(
+                        f"[ResearchAPI] Created tenant-siloed session {new_session.id} "
+                        f"for api={api_number} reusing docs from session {matched_session.id}"
+                    )
+                    return Response(
+                        ResearchSessionSerializer(new_session).data,
+                        status=status.HTTP_201_CREATED,
                     )
 
             # Check for in-progress session (same normalized matching)
             in_progress = ResearchSession.objects.filter(
-                state=state, status__in=["pending", "fetching", "indexing"],
+                status__in=["pending", "fetching", "indexing"],
             ).order_by("-created_at")
 
             for sess in in_progress[:20]:
                 sess_clean = _re.sub(r"\D+", "", str(sess.api_number))
+                if len(sess_clean) == 14:
+                    sess_clean = sess_clean[:10]
                 if len(sess_clean) >= 8 and sess_clean[-8:] == api_suffix:
+                    # Return in-progress session regardless of tenant — polling is safe,
+                    # they'll get their own ready session next time they call POST
                     logger.info(f"[ResearchAPI] Reusing in-progress session {sess.id} for api={api_number}")
                     return Response(
                         ResearchSessionSerializer(sess).data,
@@ -140,8 +176,6 @@ class ResearchSessionListCreateView(APIView):
                     )
         else:
             logger.info(f"[ResearchAPI] force_fetch=True for api={api_number}, bypassing session cache")
-
-        user_tenant = request.user.tenants.first() if request.user.is_authenticated else None
 
         session = ResearchSession.objects.create(
             api_number=api_number,

@@ -28,13 +28,12 @@ def _increment_and_maybe_finalize(session_id: str) -> None:
     error paths) are silently ignored so the counter never exceeds the expected total.
     """
     from django.db.models import F
-    # Use a conditional update so the counter cannot exceed total_documents.
-    # This is the safety guard that prevents any stray extra call from corrupting the count.
-    ResearchSession.objects.filter(
-        id=session_id,
-        indexed_documents__lt=F("total_documents"),
-    ).update(
-        indexed_documents=F("indexed_documents") + 1
+    from django.db.models.functions import Least
+    # Atomically clamp the counter at total_documents in the DB — safe under concurrency.
+    # Two workers passing the old __lt filter simultaneously could both increment and
+    # push indexed_documents above total_documents. Least() prevents that race entirely.
+    ResearchSession.objects.filter(id=session_id).update(
+        indexed_documents=Least(F("indexed_documents") + 1, F("total_documents"))
     )
     # Re-read to check completion
     session = ResearchSession.objects.get(id=session_id)
@@ -135,12 +134,13 @@ def start_research_session_task(self, session_id: str):
 
     try:
         # Resolve well
-        normalized = re.sub(r"\D+", "", str(session.api_number or ""))
-        well = WellRegistry.objects.filter(api14__icontains=normalized[-8:]).first()
+        from apps.public_core.services.api_normalization import normalize_api_14digit
+        api14_correct = normalize_api_14digit(session.api_number) or re.sub(r"\D+", "", str(session.api_number or ""))
+        well = WellRegistry.objects.filter(api14=api14_correct).first()
         if not well:
             # Create a minimal WellRegistry so documents can be linked
             well, created = WellRegistry.objects.get_or_create(
-                api14=normalized if len(normalized) >= 14 else normalized.zfill(14),
+                api14=api14_correct,
                 defaults={"state": session.state or ""},
             )
             if created:
@@ -610,11 +610,11 @@ def finalize_session_task(results: list, session_id: str):
         if session.tenant_id:
             try:
                 from apps.public_core.tasks import extract_and_populate_components
-                extract_and_populate_components.delay(
-                    session.well.api14,
-                    session.tenant_id,
+                extract_and_populate_components.apply_async(
+                    args=[session.well.api14, session.tenant_id],
+                    countdown=45,
                 )
-                logger.info(f"Triggered extract_and_populate_components for api14={session.well.api14}")
+                logger.info(f"Triggered extract_and_populate_components for api14={session.well.api14} (45s delay)")
             except Exception as e:
                 logger.warning(f"Failed to trigger component extraction for session {session_id}: {e}")
 
