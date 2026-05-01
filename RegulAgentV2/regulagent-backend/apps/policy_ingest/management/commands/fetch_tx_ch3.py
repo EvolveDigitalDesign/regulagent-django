@@ -212,6 +212,7 @@ class Command(BaseCommand):
         parser.add_argument("--write", action="store_true", help="Persist to DB (PolicyRule/PolicySection)")
         parser.add_argument("--dry-run", dest="dry_run", action="store_true", help="Print summaries even when --write is used")
         parser.add_argument("--version-tag", dest="version_tag", default="manual", help="Version tag to apply (e.g., 2025-Q4)")
+        parser.add_argument("--clear", action="store_true", help="Delete ALL TX PolicyRule and PolicySection records before fetching")
 
     def handle(self, *args, **options):
         from apps.policy_ingest.models import PolicyRule, PolicySection
@@ -220,6 +221,11 @@ class Command(BaseCommand):
         limit_rule: str | None = options.get("rule")
         do_write: bool = options.get("write", False)
         do_dry: bool = options.get("dry_run", False)
+        do_clear: bool = options.get("clear", False)
+
+        if do_clear and do_write:
+            deleted_rules, _ = PolicyRule.objects.filter(jurisdiction='TX').delete()
+            self.stdout.write(self.style.WARNING(f"Cleared {deleted_rules} TX PolicyRule records (sections cascade-deleted)."))
 
         index_html = fetch_html(BASE_URL)
         rules = parse_chapter_index(index_html)
