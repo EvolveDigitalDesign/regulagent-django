@@ -1,10 +1,10 @@
 import hashlib
 import re
 from dataclasses import dataclass
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 import requests
-from bs4 import BeautifulSoup  # type: ignore
+from bs4 import BeautifulSoup, NavigableString  # type: ignore
 from django.core.management.base import BaseCommand, CommandParser
 
 
@@ -26,27 +26,72 @@ def fetch_html(url: str) -> str:
     return resp.text
 
 
-def parse_chapter_index(html: str) -> List[Tuple[str, str]]:
-    """Return list of (rule_id, url) for §3.x pages in Chapter 3.
+def clean_text(s: str) -> str:
+    """Strip whitespace, replace tabs with spaces, collapse runs of whitespace."""
+    s = s.replace("\t", " ")
+    s = re.sub(r"[ \n\r]+", " ", s)
+    return s.strip()
 
-    More robust: match the section number from link text like "§ 3.14"; fallback to URL patterns.
+
+def _own_text(tag) -> str:
+    """Return only the direct NavigableString children of a tag, cleaned."""
+    parts = [str(child) for child in tag.children if isinstance(child, NavigableString)]
+    return clean_text("".join(parts))
+
+
+def extract_rule_title(html: str) -> str:
     """
+    Parse the human-readable rule name from <h1 id="page_title">.
+
+    Examples:
+      "16 Tex. Admin. Code § 3.14 - [Effective 7/1/2025] Plugging"  -> "Plugging"
+      "16 Tex. Admin. Code § 3.13 - Casing and Cementing"           -> "Casing and Cementing"
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    h1 = soup.find("h1", id="page_title")
+    if not h1:
+        return ""
+    raw = clean_text(h1.get_text(" "))
+    # Find the last " - " separator
+    idx = raw.rfind(" - ")
+    if idx == -1:
+        return raw
+    after_dash = raw[idx + 3:].strip()
+    # Strip leading "[Effective …]" bracket if present
+    after_dash = re.sub(r"^\[.*?\]\s*", "", after_dash).strip()
+    return after_dash
+
+
+def extract_topic(title: str) -> Optional[str]:
+    """
+    Convert a rule title to a lowercase underscore slug, max 64 chars.
+
+    "Plugging"            -> "plugging"
+    "Casing and Cementing" -> "casing_and_cementing"
+    """
+    if not title:
+        return None
+    slug = title.lower().strip()
+    slug = re.sub(r"[^a-z0-9]+", "_", slug)
+    slug = slug.strip("_")
+    return slug[:64] if slug else None
+
+
+def parse_chapter_index(html: str) -> List[Tuple[str, str]]:
+    """Return list of (rule_id, url) for §3.x pages in Chapter 3."""
     soup = BeautifulSoup(html, "html.parser")
     base = "https://www.law.cornell.edu"
     found_pairs: List[Tuple[str, str]] = []
-    seen: set[Tuple[str, str]] = set()
+    seen: set = set()
 
-    anchors = soup.find_all("a")
-    for a in anchors:
+    for a in soup.find_all("a"):
         text = (a.get_text(" ", strip=True) or "")
         href = a.get("href")
         if not href:
             continue
-        # Prefer extracting the section number from link text like "§ 3.14"
         m = re.search(r"§\s*3\.(\d+)", text)
         num = m.group(1) if m else None
         if not num:
-            # Fallback to href patterns that include the section number
             m2 = re.search(r"(?:/|-)3\.(\d+)", href)
             if m2:
                 num = m2.group(1)
@@ -64,101 +109,97 @@ def parse_chapter_index(html: str) -> List[Tuple[str, str]]:
 
 
 def parse_rule_sections(html: str) -> Iterable[Section]:
-    """Parse a rule page into ordered legal subsections using regex-based nesting.
+    """
+    Parse a Cornell LII rule page into ordered legal subsections.
 
-    Strategy:
-    - Extract textual blocks from likely content containers.
-    - Detect subsection markers at line starts: (a), (1), (A), etc.
-    - Maintain a nesting stack to build paths like a → a(1) → a(1)(A).
-    - Skip site boilerplate (Notes, Toolbox).
+    Uses the verified HTML structure:
+      - Root container: <div class="statereg-text">
+      - Each level is a <div class="subsect indentN"> with a nested <span class="designator">
+      - indent0 => (a)-level, indent1 => (1)-level, indent2 => (A)-level, indent3 => (i)-level
+      - Own text is extracted via NavigableString children only (avoids double-counting nested divs)
+      - indent2/3 nodes have no further subsect children so .get_text() is safe there
     """
     soup = BeautifulSoup(html, "html.parser")
-    # candidate containers in order of preference
-    candidates = [
-        soup.select_one("article"),
-        soup.select_one("main"),
-        soup.select_one("#content"),
-        soup.select_one(".content"),
-        soup,
-    ]
-    root = next((c for c in candidates if c), soup)
-
-    # Collect paragraph-like nodes
-    nodes = root.find_all(["p", "li", "div", "section"], recursive=True)
-    # patterns: (a) (1) (A)
-    pat = re.compile(r"^\((?P<tok>[a-z]|[0-9]+|[A-Z])\)\s*")
+    root = soup.select_one("div.statereg-text")
+    if not root:
+        # Fallback: try article or main
+        root = soup.select_one("article") or soup.select_one("main") or soup
 
     sections: List[Section] = []
-    stack: List[str] = []
-    buf_text: List[str] = []
-
-    def flush(order_idx: int):
-        if not stack:
-            return
-        path = stack[0]
-        for tok in stack[1:]:
-            path += f"({tok})"
-        text = "\n".join(buf_text).strip()
-        if not text:
-            return
-        sections.append(Section(path=path, heading="", text=text, anchor="", order_idx=order_idx))
-
     order = 0
-    for node in nodes:
-        text = node.get_text(" ", strip=True)
-        if not text:
-            continue
-        # Skip boilerplate
-        low = text.lower()
-        if low.startswith("notes") or "state regulations toolbox" in low:
-            continue
 
-        m = pat.match(text)
-        if m:
-            # new subsection token found
-            tok = m.group("tok")
-            # Determine nesting level by token type
-            # level 0: letters a-z, level 1: digits, level 2: letters A-Z
-            if tok.isalpha() and tok.islower():
-                level = 0
-            elif tok.isdigit():
-                level = 1
-            else:
-                level = 2
+    for indent0 in root.select("div.subsect.indent0"):
+        # --- Level 0: (a) ---
+        des0_tag = indent0.find("span", class_="designator")
+        if not des0_tag:
+            continue
+        des0 = clean_text(des0_tag.get_text()).strip("()")  # e.g. "a"
+        heading0 = _own_text(indent0)
+        sections.append(Section(
+            path=des0,
+            heading=heading0,
+            text="",
+            anchor="",
+            order_idx=order,
+        ))
+        order += 1
 
-            # Flush previous when changing same-or-higher level
-            if stack:
-                # trim stack to this level
-                while len(stack) > level + 1:
-                    stack.pop()
-                # If same level, flush current buffer
-                if len(stack) == level + 1:
-                    flush(order)
+        for indent1 in indent0.select("div.subsect.indent1"):
+            # --- Level 1: (1) ---
+            des1_tag = indent1.find("span", class_="designator")
+            if not des1_tag:
+                continue
+            des1 = clean_text(des1_tag.get_text()).strip("()")  # e.g. "1"
+            text1 = _own_text(indent1)
+            sections.append(Section(
+                path=f"{des0}({des1})",
+                heading="",
+                text=text1,
+                anchor="",
+                order_idx=order,
+            ))
+            order += 1
+
+            for indent2 in indent1.select("div.subsect.indent2"):
+                # --- Level 2: (A) ---
+                des2_tag = indent2.find("span", class_="designator")
+                if not des2_tag:
+                    continue
+                des2 = clean_text(des2_tag.get_text()).strip("()")  # e.g. "A"
+
+                # Check for indent3 children
+                has_indent3 = bool(indent2.select("div.subsect.indent3"))
+
+                if has_indent3:
+                    text2 = _own_text(indent2)
+                else:
+                    # No deeper nesting — safe to use full text
+                    text2 = clean_text(indent2.get_text(" "))
+
+                sections.append(Section(
+                    path=f"{des0}({des1})({des2})",
+                    heading="",
+                    text=text2,
+                    anchor="",
+                    order_idx=order,
+                ))
+                order += 1
+
+                for indent3 in indent2.select("div.subsect.indent3"):
+                    # --- Level 3: (i) ---
+                    des3_tag = indent3.find("span", class_="designator")
+                    if not des3_tag:
+                        continue
+                    des3 = clean_text(des3_tag.get_text()).strip("()")  # e.g. "i"
+                    text3 = clean_text(indent3.get_text(" "))
+                    sections.append(Section(
+                        path=f"{des0}({des1})({des2})({des3})",
+                        heading="",
+                        text=text3,
+                        anchor="",
+                        order_idx=order,
+                    ))
                     order += 1
-                    buf_text = []  # type: ignore
-
-            # Ensure stack length
-            while len(stack) < level + 1:
-                stack.append("")
-            stack[level] = tok
-            # reset deeper levels
-            del stack[level + 1 :]
-
-            # Append the remainder of text after the marker to buffer
-            remainder = text[m.end() :].strip()
-            if remainder:
-                buf_text.append(remainder)
-            continue
-
-        # Continuation of current subsection text
-        if stack:
-            buf_text.append(text)
-        else:
-            # No subsection marker yet; treat as preamble
-            continue
-
-    # Flush tail
-    flush(order)
 
     return sections
 
@@ -191,28 +232,30 @@ class Command(BaseCommand):
         for rule_id, url in rules:
             page_html = fetch_html(url)
             html_sha = hashlib.sha256(page_html.encode("utf-8")).hexdigest()
-            # Emit summary
-            self.stdout.write(f"Fetched {rule_id} -> {url} sha={html_sha[:12]}")
+
+            # Extract human-readable title and topic from page
+            title = extract_rule_title(page_html)
+            topic = extract_topic(title)
+
+            self.stdout.write(f"Fetched {rule_id} -> {url} sha={html_sha[:12]} title={title!r} topic={topic!r}")
 
             # Always show a small preview when dry-run requested or when not writing
             if do_dry or not do_write:
                 secs = list(parse_rule_sections(page_html))[:5]
                 for s in secs:
-                    self.stdout.write(f"  - {s.order_idx:03d} {s.path} {s.heading} :: {s.text[:80]}")
+                    self.stdout.write(f"  - {s.order_idx:03d} {s.path} heading={s.heading[:40]!r} :: {s.text[:80]!r}")
                 if not do_write:
                     continue
 
-            # Infer tags for now (can be refined later per rule family)
             jurisdiction = 'TX'
             doc_type = 'policy'
-            topic = 'plugging' if rule_id.endswith('3.14') else None
 
             rule_obj, _ = PolicyRule.objects.update_or_create(
                 rule_id=rule_id,
                 version_tag=version_tag,
                 defaults={
                     'citation': rule_id.replace('tx.tac.', '').replace('.', ' '),
-                    'title': '',
+                    'title': title,
                     'source_urls': [url],
                     'jurisdiction': jurisdiction,
                     'doc_type': doc_type,
@@ -240,5 +283,3 @@ class Command(BaseCommand):
                 )
             PolicySection.objects.bulk_create(batch, batch_size=500)
             self.stdout.write(f"  wrote {len(batch)} sections for {rule_id}@{version_tag}")
-
-
